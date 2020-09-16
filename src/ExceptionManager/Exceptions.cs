@@ -1,0 +1,19 @@
+﻿using System;
+using System.Collections.Generic;
+
+class Errors {
+    public int Count => Error.Count;
+    public void Add(string error, string reason, string tryTo, short lineIndex, short charIndex) {
+        Error.Add(error);
+        Reason.Add(reason);
+        TryTo.Add(tryTo);
+        LineIndex.Add(lineIndex);
+        CharIndex.Add(charIndex);
+    }
+    List<string> Error = new List<string>();
+    List<string> Reason = new List<string>();
+    List<string> TryTo = new List<string>();
+    List<short> LineIndex = new List<short>();
+    List<short> CharIndex = new List<short>();
+    public Tuple<string, string, string, short, short> this[int index] => new Tuple<string, string, string, short, short>(Error[index], Reason[index], TryTo[index], LineIndex[index], CharIndex[index]);
+}
