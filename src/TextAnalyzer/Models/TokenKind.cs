@@ -45,4 +45,6 @@
     ControlEndOfInstruction,
     SymbolComma,
     ControlEndOfLine,
+    SymbolNegation,
+    OperatorNotEqual,
 }

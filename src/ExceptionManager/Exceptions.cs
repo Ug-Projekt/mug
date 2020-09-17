@@ -10,6 +10,13 @@ class Errors {
         LineIndex.Add(lineIndex);
         CharIndex.Add(charIndex);
     }
+    public void Clear() {
+        Error.Clear();
+        Reason.Clear();
+        TryTo.Clear();
+        LineIndex.Clear();
+        CharIndex.Clear();
+    }
     List<string> Error = new List<string>();
     List<string> Reason = new List<string>();
     List<string> TryTo = new List<string>();

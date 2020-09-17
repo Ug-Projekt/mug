@@ -4,7 +4,8 @@ using System.Runtime;
 class CompilationErrors {
     static Errors Exceptions = new Errors();
     public static void Add(string Error, string Reason, string TryTo, short lineIndex, short charIndex) => Exceptions.Add(Error, Reason, TryTo, lineIndex, charIndex);
-    public static void Except() {
+    public static void Reset() => Exceptions.Clear();
+    public static void Except(bool killPocess) {
         if (Exceptions.Count > 0) {
             for (short i = 0; i < Exceptions.Count; i++) {
                 printLine(SourceInfo.GetLine(Exceptions[i].Item4, Exceptions[i].Item5), Exceptions[i].Item4, Exceptions[i].Item5);
@@ -13,7 +14,8 @@ class CompilationErrors {
                 printTryTo(Exceptions[i].Item3);
                 Console.ResetColor();
             }
-            Environment.Exit(1);
+            if (killPocess)
+                Environment.Exit(1);
         }
     }
     static void printError(string err) {

@@ -1,14 +1,13 @@
 ﻿using System;
 using System.Text;
-
 class Mug {
     static void Main(string[] args) {
-        //while (true) {
-            //Console.Write("> ");
-            var result = Lexer.GetSyntaxTree(System.IO.File.ReadAllBytes("C:/Users/Mondelli/Desktop/file.mug")/*Encoding.ASCII.GetBytes(Console.ReadLine())*/);
-            for (int i = 0; i < result.Count; i++)
-                Console.WriteLine("Line:({2}) Token: {0}{1}", result[i].Item1, (result[i].Item2 != null) ? ", "+result[i].Item2 : "", result[i].Item3);
-            CompilationErrors.Except();
-        //}
+        while (true) {
+            Console.Write("> ");
+            var result = new Parser().GetAbstractSyntaxTree(Lexer.GetSyntaxTree(Encoding.ASCII.GetBytes(Console.ReadLine())));
+            //result.PrintTree();
+            
+            CompilationErrors.Except(false);
+        }
     }
 }
