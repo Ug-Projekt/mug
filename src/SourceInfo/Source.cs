@@ -6,24 +6,30 @@ struct SourceInfo {
     public static string[] GetLinesFromSource(byte[] source) {
         List<string> lines = new List<string>();
         bool isString = false;
+        bool isInLineComment = false;
         string line = "";
-        for (int i = 0; i < source.Length; i++)
-            switch ((char)source[i]) {
-                case '\r':
-                case '\n':
-                    line += (isString) ? "\n" : "";
+        for (int i = 0; i < source.Length; i++) {
+            char Char = (char)source[i]; // ciao("ciao")
+            if (isString) {
+                if (Char == '\'' || Char == '\"')
+                    if ((char)source[i - 1] != '\\')
+                        isString = false;
+                line += Char;
+            } else if (isInLineComment) {
+                if (Char == '\n') {
+                    isInLineComment = false;
                     lines.Add(line);
                     line = "";
-                    break;
-                case '\"':
-                case '\'':
-                    line += (char)source[i];
-                    isString = !isString;
-                    break;
-                default:
-                    line += (char)source[i];
-                    break;
-            }
+                }
+            } else if (Char == '\n') {
+                line += '\n';
+                lines.Add(line);
+                line = "";
+            } else if (Char == SyntaxRules.InLineComment) {
+                isInLineComment = true;
+            } else
+                line += Char;
+        }
         if (!string.IsNullOrEmpty(line))
             lines.Add(line);
         return lines.ToArray();

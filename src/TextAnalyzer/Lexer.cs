@@ -23,7 +23,7 @@ class Lexer {
                         PassingOnString = false;
                     }
                 } else
-                    CheckCharType(SourceInfo.Source[LineIndex][CharIndex]);
+                    ProcessCharType(SourceInfo.Source[LineIndex][CharIndex]);
                 Advance();
             }
             AdvanceLine();
@@ -41,7 +41,7 @@ class Lexer {
     static bool isString(string String) => String[0] == '\"' && String[^1] == '\"';
     static bool isChar(string String) => String[0] == '\'' && String[^1] == '\'';
     static bool isBool(string String) => String == SyntaxRules.True || String == SyntaxRules.False;
-    static void CheckCharType(char Char) {
+    static void ProcessCharType(char Char) {
         if (isIdentifierChar(Char))
             Identifier += Char;
         else {
@@ -49,9 +49,7 @@ class Lexer {
                 InsertIdentifierToST();
             else
                 CheckIfIsKeyword();
-            if (char.IsControl(Char))
-                return;
-            else if (!CheckIfIsSymbol(Char))
+            if (!CheckIfIsSymbol(Char))
                 CompilationErrors.Add("Not Caratterizzable Character", $"`{Char}` is an invalid token, is not caratterizzable as Symbol, Control, Identifier", $"Remove `{Char}` from the line or replace it with the right symbol", LineIndex, CharIndex);
         }
     }
@@ -129,6 +127,9 @@ class Lexer {
             case ';':
                 InsertToken(TokenKind.ControlEndOfInstruction);
                 return true;
+            case ',':
+                InsertToken(TokenKind.SymbolComma);
+                return true;
             case '\'':
             case '\"':
                 if (!string.IsNullOrEmpty(Identifier) && !SyntaxRules.BuiltInKeyword.Contains(Identifier))
@@ -139,6 +140,14 @@ class Lexer {
                     Identifier += Char;
                 PassingOnString = true;
                 return true;
+            case '\n':
+                InsertToken(TokenKind.ControlEndOfLine);
+                return true;
+            case '\0':
+            case '\a':
+            case '\v':
+            case '\t':
+            case '\r':
             case ' ':
                 return true;
             default:
@@ -181,8 +190,8 @@ class Lexer {
         _syntaxTreeBuilder.Add(token, Identifier, LineIndex);
         Identifier = "";
     }
-    static void AdvanceLine() => LineIndex++;
-    static void AdvanceLine(short count) => LineIndex += count;
+    static void AdvanceLine() { LineIndex++; CharIndex = 0; }
+    static void AdvanceLine(short count) { LineIndex += count; CharIndex = 0; }
     static void Advance() => CharIndex++;
     static void Advance(short count) => CharIndex += count;
     static void initializeComponents(byte[] source) {

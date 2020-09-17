@@ -18,7 +18,7 @@ class CompilationErrors {
     }
     static void printError(string err) {
         Console.ForegroundColor = ConsoleColor.Red;
-        Console.Write("#[Error]: ");
+        Console.Write("#[Error] -> ");
         Console.ForegroundColor = ConsoleColor.DarkRed;
         Console.WriteLine(err);
     }
@@ -35,10 +35,14 @@ class CompilationErrors {
         Console.WriteLine(tip);
     }
     static void printLine(string[] line, short lineIndex, short charIndex) {
+        Console.ForegroundColor = ConsoleColor.Cyan;
+        Console.Write("Line:("+(lineIndex+1)+", "+(charIndex+1)+") ");
         Console.ForegroundColor = ConsoleColor.DarkCyan;
-        Console.Write("Line:("+lineIndex+", "+charIndex+") " + line[0]);
+        Console.Write(line[0]);
         Console.ForegroundColor = ConsoleColor.DarkBlue;
+        Console.BackgroundColor = ConsoleColor.DarkRed;
         Console.Write(line[1]);
+        Console.ResetColor();
         Console.ForegroundColor = ConsoleColor.DarkCyan;
         Console.WriteLine(line[2]);
     }

@@ -5,6 +5,9 @@
     BuiltInKeywordString = 3,
     BuiltInKeywordChar = 4,
     BuiltInKeywordReturn = 5,
+    BuiltInKeywordIf = 6,
+    BuiltInKeywordElif = 7,
+    BuiltInKeywordElse = 8,
     ConstString,
     ConstChar,
     ConstInt32,
@@ -40,4 +43,6 @@
     SymbolOpenParenthesis,
     SymbolCloseParenthesis,
     ControlEndOfInstruction,
+    SymbolComma,
+    ControlEndOfLine,
 }
