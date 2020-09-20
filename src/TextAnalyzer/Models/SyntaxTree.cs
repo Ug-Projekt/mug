@@ -20,5 +20,11 @@ class SyntaxTree {
             return tuple.ToArray();
         }
     }
+    public TokenKind[] GetTokensFromRange(System.Range range) {
+        var list = new List<TokenKind>();
+        for (int i = 0; i < range.End.Value; i++)
+            list.Add(TokenType[i]);
+        return list.ToArray();
+    }
     public int Count => TokenType.Count;
 }

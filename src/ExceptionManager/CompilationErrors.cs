@@ -3,7 +3,10 @@ using System.Runtime;
 
 class CompilationErrors {
     static Errors Exceptions = new Errors();
-    public static void Add(string Error, string Reason, string TryTo, short lineIndex, short charIndex) => Exceptions.Add(Error, Reason, TryTo, lineIndex, charIndex);
+    public static void Add(string Error, string Reason, string TryTo, short lineIndex, short charIndex) {
+        if (!Exceptions.Contains(Error, Reason, TryTo, lineIndex, charIndex))
+            Exceptions.Add(Error, Reason, TryTo, lineIndex, charIndex);
+    }
     public static void Reset() => Exceptions.Clear();
     public static void Except(bool killPocess) {
         if (Exceptions.Count > 0) {

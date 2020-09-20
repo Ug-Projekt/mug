@@ -3,6 +3,15 @@ using System.Collections.Generic;
 
 class Errors {
     public int Count => Error.Count;
+    public bool Contains(string error, string reason, string tryTo, short lineIndex, short charIndex) {
+        for (int i = 0; i < Count; i++)
+            if (Error[i] == error &&
+                Reason[i] == reason &&
+                TryTo[i] == tryTo &&
+                LineIndex[i] == lineIndex &&
+                CharIndex[i] == charIndex) return true;
+        return false;
+    }
     public void Add(string error, string reason, string tryTo, short lineIndex, short charIndex) {
         Error.Add(error);
         Reason.Add(reason);
