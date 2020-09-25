@@ -1,6 +1,6 @@
 using System.Collections.Generic;
-class Schema {
-   static Dictionary<TokenKind, PatternTokensKind> ParseSchema = new Dictionary<TokenKind, PatternTokensKind>()
+class TokensKindPatterns {
+   public static Dictionary<TokenKind, PatternTokensKind> Parse = new Dictionary<TokenKind, PatternTokensKind>()
    {
       {TokenKind.BuiltInKeywordInt16, PatternTokensKind.Type},
       {TokenKind.BuiltInKeywordInt32, PatternTokensKind.Type},
@@ -10,6 +10,8 @@ class Schema {
       {TokenKind.BuiltInKeywordIf, PatternTokensKind.Condition},
       {TokenKind.BuiltInKeywordElif, PatternTokensKind.Condition},
       {TokenKind.BuiltInKeywordElse, PatternTokensKind.Condition},
+      {TokenKind.BuiltInKeywordNew, PatternTokensKind.Instantiate},
+      {TokenKind.BuiltInKeywordType, PatternTokensKind.Type},
       {TokenKind.ConstBool, PatternTokensKind.Value},
       {TokenKind.ConstChar, PatternTokensKind.Value},
       {TokenKind.ConstFloat16, PatternTokensKind.Value},
@@ -28,10 +30,4 @@ class Schema {
       {TokenKind.SymbolCloseBrace, PatternTokensKind.BraceClose},
       {TokenKind.SymbolComma, PatternTokensKind.Comma},
    };
-   public static PatternTokensKind[] Parse(TokenKind[] tokens) {
-      var result = new List<PatternTokensKind>();
-      for (int i = 0; i < tokens.Length; i++)
-         result.Add(ParseSchema[tokens[i]]);
-      return result.ToArray();
-   }
 }

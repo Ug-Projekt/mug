@@ -10,4 +10,5 @@ enum PatternTokensKind {
    Condition,
    Value,
    Comma,
+    Instantiate,
 }

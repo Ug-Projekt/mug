@@ -22,7 +22,7 @@ Syntax Rules:
          } else {
             system::println("It's a number!")
          }
-         for int16 i = 0, i<x, i++ {
+         for i<x {
             system::println( system::string::format("i: .0", i) )
          }
 
