@@ -1,6 +1,7 @@
 ﻿partial class Parser {
    AstBuilder _astBuilder { get; set; } = new AstBuilder();
    SyntaxTree _syntaxTree;
+   short toAdvance {get;set;} = 0;
    int TokenIndex { get; set; }
    public Ast GetAbstractSyntaxTree(SyntaxTree synT) {
       _syntaxTree = synT;
@@ -12,5 +13,5 @@
    }
    short GetLineFromToken() => _syntaxTree[TokenIndex].Item3;
    void Advance() => TokenIndex++;
-   void Advance(int count) => TokenIndex+=count;
+   void Advance(short count) => TokenIndex+=count;
 }

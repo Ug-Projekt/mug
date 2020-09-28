@@ -8,8 +8,6 @@
     BuiltInKeywordIf = 6,
     BuiltInKeywordElif = 7,
     BuiltInKeywordElse = 8,
-    BuiltInKeywordNew = 9,
-    BuiltInKeywordType = 10,
     ConstString,
     ConstChar,
     ConstInt32,
