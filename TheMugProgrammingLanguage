@@ -1,73 +1,61 @@
 Language Standards:
-   - Native Compiled (Assembly x86-86)
-   - Compile To Object Using `as`
-   - Linking Using `ld`
+   - Non Native Compiled ()
    - Structure:
       - Lexer(Code) -> Tokens
       - Parser(Tokens) -> Ast
-      - Optimizer(Ast) -> OptimizedAst
-      - CodeGenerator(OptimizedAst) -> Assembly
+      - CodeGenerator(Ast) -> Assembly
         |__ Emitter() -> Generating Services
 Syntax Rules:
-   - Naming Conventions -> Lower Case (`system::string`)
    - Examples ->
       ```
-      use system
-      void main(systsem::array args) {
-         try int16 x = args[0] catch int16 x = 0
-         if x == 0 {
-            system::println("It's not a number!")
-         } elif x == 10 {
-            system::println("You will never see this print!")
-         } else {
-            system::println("It's a number!")
-         }
-         for int16 i = 0, i<x, i++ {
-            system::println( system::string::format("i: .0", i) )
-         }
-
-         # assing to a variable a value not declared in the function's type, but unsafe property allow ambiguos situations
-         int var = func()
+      extern mscorlib # import dotnet libraries
+      use system # import system library from default path
+      define println(arg) = System.Console::WriteLine(object) # define a macro
+      define print(arg) = System.Console::Write(object)
+      define readfast() = System.Console::ReadKey()
+      func main(args)
+         try var x = int::fromstr(args[0]) catch var x = 0
+         if x == 0
+            println("No Valid Argument Passed!")
+         elif x == int::rand(0, 10)
+            println("Right Number!")
+         else
+            println("Wrong Number!")
+         
+         for i in args
+            println( str::format("i: .0", i) )
 
          # make instance
-         type me = new person("me", "user", 0, new person("friend", "user", 0, me))
+         var me = new person("me", "user", 0, new person("friend", "user", 0, me))
          me.say("I will introduce my self...")
-         system::println(me.getstring())
-         # this will generates a compilation error, selfpropertyless function are parsed as static member of a class, so make() is not callable from an instance
-         me = me.make()
-         # this will not generates a compilation error
+         println( me.getstring() )
+         # reset me
          me = person::make()
+         print("Press any key to continue...")
+         readfast()
+      
+      class person
+         [pub] field name = ?
+         field username = ?
+         field age = ?
+         field bestfriend = ?
+         [self] operator new(_name, _username, _age, _bestfriend)
+            self.name = _name
+            self.username = _username
+            self.age = _age
+            self.bestfriend = _bestfriend
 
-         # loop
-         main([0])
-      }
-      [unsafe] void func() {
-         asm "mov eax, 100"
-      }
-      class person {
-         [pub] string name = ?
-         string username = ?
-         int16 age = ?
-         type bestfriend = ?
-         type operator[new](string _name, string _username, int16 _age, type _bestfriend) {
-            name = _name
-            username = _username
-            age = _age
-            bestfriend = _bestfriend
-         }
-         [pub, self] void say(string words) {
-            system::println( system::string::format(".0: .1 ", name, words) )
-         }
-         [pub, self] string getstring() {
-            return system::string::format("Hi, i'm .0, .1 years old, on social `.2`. My best friend is .3", name, age, username, bestfriend.name)
-         }
-         type make() {
+         
+         [pub, self] func say(words)
+            println( str::format(".0: .1 ", self.name, words) )
+         
+         [pub, self] func getstring()
+            return str::format("Hi, i'm .0, .1 years old, on socials `.2`. My best friend is .3", self.name, self.age, self.username, self.bestfriend.name)
+         
+         func make() # static public
             return new person(?, ?, ?, ?)
-         }
-      }
       ```
 Targets:
-   - Lexer(wip)
-   - Parser
-   - Optimizer
+   - Lexer(done)
+   - Parser(wip)
    - CodeGenerator

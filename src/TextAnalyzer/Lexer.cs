@@ -26,7 +26,10 @@ partial class Lexer {
             }
             AdvanceLine();
         }
+        if (Identifier != "")
+            InsertIdentifierToST();
         InsertEndOfFileToken();
+        CompilationErrors.Except(true);
         return _syntaxTreeBuilder.Build();
     }
     static void AdvanceLine() { LineIndex++; CharIndex = 0; }

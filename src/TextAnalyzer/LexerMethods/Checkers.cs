@@ -1,6 +1,6 @@
 using System.Linq;
 partial class Lexer {
-   static bool CheckIfIsSymbol(char Char) {
+    static bool CheckIfIsSymbol(char Char) {
         switch (Char) {
             case '(':
                 InsertToken(TokenKind.SymbolOpenParenthesis);
@@ -83,6 +83,9 @@ partial class Lexer {
                 else
                     InsertToken(TokenKind.SymbolNegation);
                 return true;
+            case '?':
+                InsertToken(TokenKind.ConstNull);
+                return true;
             case '\'':
             case '\"':
                 if (!string.IsNullOrEmpty(Identifier) && !SyntaxRules.BuiltInKeyword.Contains(Identifier))
@@ -94,13 +97,15 @@ partial class Lexer {
                 PassingOnString = true;
                 return true;
             case '\n':
+            //case '\r':
                 InsertToken(TokenKind.ControlEndOfLine);
+                return true;
+            case '\t':
+                InsertToken(TokenKind.ControlIndent);
                 return true;
             case '\0':
             case '\a':
             case '\v':
-            case '\t':
-            case '\r':
             case ' ':
                 return true;
             default:
@@ -120,7 +125,7 @@ partial class Lexer {
         }
     }
     static bool CheckIfEqualToNext(char Char) {
-        if (SourceInfo.Source[LineIndex].Length -1 < CharIndex+1)
+        if (SourceInfo.Source[LineIndex].Length - 1 < CharIndex + 1)
             return false;
         bool equal = SourceInfo.Source[LineIndex][CharIndex + 1] == Char;
         if (equal)
