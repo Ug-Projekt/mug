@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Generic;
 partial class Parser {
     void CheckParsable() {
+        Objects.Clear();
         // match global scope
         // todo:
         //  - global vars
@@ -18,9 +20,14 @@ partial class Parser {
     bool CheckFunction() {
         if (!CheckTokenSeries(new TokenKind[] { TokenKind.BuiltInKeywordFunc, TokenKind.ConstIdentifier, TokenKind.SymbolOpenParenthesis }))
             return false;
-        if (CheckTokenSeries(new TokenKind[] { TokenKind.BuiltInKeywordFunc, TokenKind.ConstIdentifier, TokenKind.SymbolOpenParenthesis, TokenKind.SymbolCloseParenthesis }))
+        Objects.Add(Next.Item2);
+        toAdvance = Convert.ToInt16(3+TokenIndex);
+        if (CheckTokenSeries(new TokenKind[] { TokenKind.BuiltInKeywordFunc, TokenKind.ConstIdentifier, TokenKind.SymbolOpenParenthesis, TokenKind.SymbolCloseParenthesis })) {
+            toAdvance++;
             return true;
-        for (toAdvance = Convert.ToInt16(3+TokenIndex); toAdvance<_syntaxTree.Count;toAdvance++) {
+        }
+        for (; toAdvance<_syntaxTree.Count;toAdvance++) {
+            Objects.Add(_syntaxTree[toAdvance].Item2);
             // Console.WriteLine(_syntaxTree[i+TokenIndex]);
             // intermediate param
             if (CheckTokenSeries(new TokenKind[] { TokenKind.ConstIdentifier, TokenKind.SymbolComma }, toAdvance))
@@ -35,6 +42,7 @@ partial class Parser {
                 return false;
             }
         }
+        toAdvance+=1;
         return true;
     }
     bool CheckTokenSeries(TokenKind[] pattTokSeries, int tokenIndex = -1) {

@@ -99,9 +99,16 @@ partial class Lexer {
             case '\n':
             //case '\r':
                 InsertToken(TokenKind.ControlEndOfLine);
+                if (!CheckIfEqualToNext('\t'))
+                    InsertToken(TokenKind.ControlIndent, 0);
+                else
+                    Advance(-1);
                 return true;
             case '\t':
-                InsertToken(TokenKind.ControlIndent);
+                short count = 1;
+                while (CheckIfEqualToNext('\t'))
+                    count++;
+                InsertToken(TokenKind.ControlIndent, count);
                 return true;
             case '\0':
             case '\a':
@@ -130,6 +137,19 @@ partial class Lexer {
         bool equal = SourceInfo.Source[LineIndex][CharIndex + 1] == Char;
         if (equal)
             Advance();
+        return equal;
+    }
+    static bool CheckIfEqualToNext(char Char, short count) {
+        if (SourceInfo.Source[LineIndex].Length - 1 < CharIndex + count)
+            return false;
+        bool equal = false;
+        for (int i=0;i<count;i++) {
+            equal = SourceInfo.Source[LineIndex][CharIndex + i] == Char;
+            if (!equal)
+                return false;
+        }
+        if (equal)
+            Advance(count);
         return equal;
     }
     static void CheckIfIsKeyword() {

@@ -5,6 +5,7 @@ partial class Lexer {
     }
     static void InsertEndOfFileToken() => InsertToken(TokenKind.ControlEndOfFile);
     static void InsertToken(TokenKind token) => _syntaxTreeBuilder.Add(token, null, LineIndex);
+    static void InsertToken(TokenKind token, object value) => _syntaxTreeBuilder.Add(token, value, LineIndex);
     static void InsertIdentifierToST() {
         TokenKind token = TokenKind.ConstIdentifier;
         if (isNumber(Identifier)) {

@@ -7,7 +7,8 @@ class Mug {
             Console.Write("TestingMugC@ ");
             var result = new Parser().GetAbstractSyntaxTree(
                 Lexer.GetSyntaxTree(
-                    Encoding.ASCII.GetBytes(Console.ReadLine().Replace("\\n", "\n"))
+                    System.IO.File.ReadAllBytes("file.mug")
+                    //Encoding.ASCII.GetBytes(Console.ReadLine().Replace("\\n", "\n"))
                 )
             );
             //var result = new Parser().GetAbstractSyntaxTree(Lexer.GetSyntaxTree(Encoding.ASCII.GetBytes(Console.ReadLine().Replace("\\n", "\n"))));

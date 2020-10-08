@@ -1,22 +1,16 @@
 using System;
 using System.Reflection;
+using System.Text;
 
 partial class Parser {
     void StoreFunction() {
-        Console.WriteLine("Store, function declarating: "+toAdvance);
-        Console.WriteLine("\tIdentifier: "+Next.Item2);
+        object[] obj = Objects.ToArray();
         Advance(toAdvance);
-        Console.WriteLine("\tParameters: "+Current);
-        // REMAIN HERE:
-        //   - PARAMETERS PRINTS ONLY FIRST/NOTHING IN CASE NO PARAMETERS ARE THERE
-        //   - TODO:
-        //       - TAKE FUNCTION BODY: USE 'ControlIndent'
-        //       - BUILD FUNCTION PROPERTIES
-        //object nElemVal = Next.Item2;
-        //TokenKind cTokenKind = Current.Item1;
-        //short nLineIndex = Next.Item3;
-        //Advance(toAdvance);
-        //Console.WriteLine(Current);
-        //_astBuilder.Add(AstElement.New(AstElementKind.StatementFunctionDeclarating, null, nElemVal, cTokenKind), nLineIndex);
+        if (Current.Item1 == TokenKind.ControlEndOfLine && Next.Item1 == TokenKind.ControlIndent) {
+            var body = GetBody(Convert.ToInt16(Next.Item2));
+        } else
+            CompilationErrors.Add("Wrong Write Of Statement",
+            "Cannot find expected token `\\n` and `\\t` in function declarating statement",
+            "Insert new line after statement and an indent", GetLineFromToken(), null);
     }
 }

@@ -34,6 +34,7 @@ partial class Lexer {
     }
     static void AdvanceLine() { LineIndex++; CharIndex = 0; }
     static void Advance() => CharIndex++;
+    static void Advance(short count) => CharIndex+=count;
     static void initializeComponents(byte[] source) {
         CompilationErrors.Reset();
         _syntaxTreeBuilder = new SyntaxTreeBuilder();
