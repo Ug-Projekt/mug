@@ -1,0 +1,12 @@
+enum sext {
+	male,
+	female,
+	unknow
+}
+enum cities {
+	Venice,
+	Torin,
+	Rome,
+	Milan,
+	Home
+}

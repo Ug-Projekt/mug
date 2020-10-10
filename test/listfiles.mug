@@ -1,0 +1,41 @@
+extern mscorlib;
+define type env = System.Enviroment;
+define type csl = System.Console;
+define type list = System.Collections.Generic.List;
+define type fs = System.IO.File;
+define type ccolor = System.ConsoleColor;
+define func println(value: obj): void = [mscorlib]System.Console::WriteLine(object);
+define func print(value: obj): void = [mscorlib]System.Console::Write(object);
+func main(args: str[]): ? {
+ 	type list<str> path = new();
+	if args.Lenght != 0 {
+		for p in args {
+			if fs.Path::Exists(p) {
+				path.Add(p);
+			} else {
+				csl::ForegroundColor = ccolor::DarkRed;
+				println("Invalid Path Passed");
+				end();
+			}
+		}
+	} else {
+		path.Add(env::CurrentDirectory);
+	}
+	for p in path {
+		for dir in fs.Directory::GetDirectories(p) {
+			csl::ForegroundColor = ccolor::DarkYellow;
+			println(fs.Path::GetFileName(p));
+		}
+		for file in fs.Directory::GetFiles(p) {
+			csl::ForegroundColor = ccolor::DarkGreen;
+			println(fs.Path::GetFileName(p));
+		}
+		csl::ForegroundColor = ccolor::DarkCyan;
+		println("___________________");
+	}
+	end();
+}
+func end(): ? {
+	csl::ResetColors();
+	env::Exit(0);
+}

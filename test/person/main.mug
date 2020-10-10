@@ -1,0 +1,30 @@
+use "enum.mug";
+use "person.mug";
+type person narrator = person::make("Narrator", "!", 0, 0, sext::unknow);
+type person me = person::make("Carpal", "!", 25, 1.60, sext::male);
+type person she = person::make("Carpalla", "!", 25, 1.60, sext::female);
+
+func main(): ? {
+	narrator.say("Hi, welcome in this story...");
+
+	narrator.say("Carpal borns...");
+	me.say("Yoo");
+	narrator.say("Carpal knows Carpalla...");
+	
+	me.say("Hei Carpalla :)");
+	me.say("Want you drink something? :)");
+	she.say("Mhh, yes...");
+
+	narrator.say("Maybe Carpal is trying to pick up Carpalla...");
+
+	type person mybaby = me + she;
+	me.say("That's my baby");
+	me.walk(destination::Milan);
+	she.walk(destination::Milan);
+
+	narrator.say("Carpal and Carpalla go to live to Milan");
+	me.say("Yo Carpalla, do you like Milan");
+	she.say("Yes lol");
+	
+	narrator.say("lmao");
+}

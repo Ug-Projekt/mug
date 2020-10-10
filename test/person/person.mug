@@ -1,0 +1,50 @@
+# externs directives
+extern mscorlib;
+define func println(value: obj): void = [mscorlib]System.Console::WriteLine(object);
+define func strfmt(value: str, elems: obj[]): string = [mscorlib]System.String::Format(string, object[]);
+use "enum.mug";
+
+# classes
+class person {
+	# fields
+	pub str name = ?;
+	pub str surname = ?;
+	pub i16 age = ?;
+	pub f16 height = ?;
+	pub type sext sex = sext::unknow;
+	pub type cities position = cities::Home;
+	# operators
+	operator new(name: str, surname: str, age: i16, height: f16, sex: type sext) {
+		self.name = name;
+		self.surname = surname;
+		self.age = age;
+		self.height = height;
+		self.sex = sex;
+	}
+	operator +(person: type person): type person {
+		str surname = ?;
+		if person.sex == sext::male {
+			surname = person.surname;
+		} else {
+			surname = self.surname;
+		}
+		return type person new("Baby", surname, 0, 0.5);
+	}
+
+	# instance methods
+	self pub func say(tosay: str): ? {
+		println(strfmt("{0} {1}: {2}", [name, surname, tosay]));
+	}
+	self pub func introduce(): ? {
+		self.say(strfmt("My name's {0} {1} and i'm {2}. I'm a {3} and i live in ", [self.name, self.username, self.age, self.sex, self.position]));
+	}
+	self pub func walk(destination: type cities): ? {
+		self.say(strfmt("I'm buying a ticket to go to {0}", [destination]));
+		self.position = destination;
+	}
+
+	# statics
+	pub func make(name: str, surname: str, age: i16, height: f16, sex: type sext): type person {
+		return type person new(name, surname, age, height);
+	}
+}
