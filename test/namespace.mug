@@ -1,0 +1,10 @@
+use "io.mug";
+namespace module {
+	const str hw = "Hello World!";
+	func sayhello(): ? {
+		println(module.hw);
+	}
+}
+func main(): ? {
+	module.sayhello();
+}

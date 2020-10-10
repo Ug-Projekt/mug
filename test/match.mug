@@ -1,0 +1,24 @@
+extern mscorlib;
+define type random = "[mscorlib]System.Random";
+define func println(value: obj): ? = "void [mscorlib]System.Console::WriteLine(object)";
+const str help =
+"--help|-h|-help: View this list
+-something: Do something
+-rand: Print random int32
+-nothing: Do nothing";
+
+func main(args: str[]): ? {
+	str todo = match args[0] {
+		"help": "digit `--help`|`-h`|`-help`",
+		"-help": help,
+		"--help": help,
+		"-h": help,
+		"-something": "something",
+		"-rand": rand(10),
+		"-nothing": "nothing",
+	};
+	println(todo);
+}
+func rand(max: i32): i32 {
+	return type random new().Next(max);
+}

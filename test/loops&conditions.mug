@@ -1,0 +1,28 @@
+use "io.mug";
+func main(args: str[]): ? {
+	# iterator
+	for arg in args {
+		println("arg: {0}", [arg]);
+	}
+	# classic
+	for i to args.Lenght {
+		println("arg{0}: {1}", [i, arg[i]]);
+	}
+	# while
+	i32 i = 0;
+	while i < args.Lenght {
+		println("arg{0}: {1}", [i, arg[i]]);
+		i++;
+	}
+	if args[0] == "help" {
+		do();
+	} elif args[0] == "h" {
+		do();
+	}
+	else {
+		do();
+	}
+}
+func do(): ? {
+	println("...");
+}
