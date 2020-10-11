@@ -1,8 +1,8 @@
 use "enum.mug";
 use "person.mug";
-type person narrator = person::make("Narrator", "!", 0, 0, sext::unknow);
-type person me = person::make("Carpal", "!", 25, 1.60, sext::male);
-type person she = person::make("Carpalla", "!", 25, 1.60, sext::female);
+person narrator = person::make("Narrator", "!", 0, 0, sext::unknow);
+person me = person::make("Carpal", "!", 25, 1.60, sext::male);
+person she = person::make("Carpalla", "!", 25, 1.60, sext::female);
 
 func main(): ? {
 	narrator.say("Hi, welcome in this story...");
@@ -17,7 +17,7 @@ func main(): ? {
 
 	narrator.say("Maybe Carpal is trying to pick up Carpalla...");
 
-	type person mybaby = me + she;
+	person mybaby = me + she;
 	me.say("That's my baby");
 	me.walk(destination::Milan);
 	she.walk(destination::Milan);

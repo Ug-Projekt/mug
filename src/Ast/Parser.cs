@@ -14,23 +14,7 @@ partial class Parser {
             CheckParsable();
             Advance();
         }
-        CompilationErrors.Except(true);
         return _astBuilder.Build();
-    }
-    Ast GetBody(short min_indent) {
-        var stb = new SyntaxTreeBuilder();
-        while (Current.Item1 != TokenKind.ControlEndOfFile) {
-            if (Current.Item1 == TokenKind.ControlIndent && Convert.ToInt16(Current.Item2) < min_indent)
-                break;
-            stb.Add(Current.Item1, Current.Item2, Current.Item3);
-            Advance();
-        }
-        Console.WriteLine("Body:");
-        stb.Build().PrintTree();
-        Console.WriteLine("End Body");
-        Advance(Convert.ToInt16(stb.Build().Count));
-        //return new AstBuilder().Build();
-        return new Parser().GetAbstractSyntaxTree(stb.Build());
     }
     short GetLineFromToken() => _syntaxTree[TokenIndex].Item3;
     void Advance() => TokenIndex++;

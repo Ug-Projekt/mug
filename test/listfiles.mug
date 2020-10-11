@@ -1,13 +1,13 @@
 extern mscorlib;
-define type env = "System.Enviroment";
-define type csl = "System.Console";
-define type list = "System.Collections.Generic.List";
-define type fs = "System.IO.File";
-define type ccolor = "System.ConsoleColor";
+define type env = "[mscorlib]System.Enviroment";
+define type csl = "[mscorlib]System.Console";
+define type list = "[mscorlib]System.Collections.Generic.List";
+define type fs = "[mscorlib]System.IO.File";
+define enum ccolor = "[mscorlib]System.ConsoleColor";
 define func println(value: obj): ? = "void [mscorlib]System.Console::WriteLine(object)";
 define func print(value: obj): ? = "void [mscorlib]System.Console::Write(object)";
 func main(args: str[]): ? {
- 	type list<str> path = new();
+ 	list<str> path = new();
 	if args.Lenght != 0 {
 		for p in args {
 			if fs.Path::Exists(p) {

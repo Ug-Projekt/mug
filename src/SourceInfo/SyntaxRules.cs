@@ -5,7 +5,7 @@
     public const char InLineComment = '#';
     public const string NumberPatternChecker = "01234567890";
     public static readonly string[] BuiltInKeyword = new string[] {
-        "var", "func", "try", "catch", "pub", "self", "class", "field",
-        "define", "extern", "use", "return", "if", "elif", "else"
-        };
+        "func", "pub", "self", "class", "define",
+        "extern", "use", "return", "if", "elif", "else"
+    };
 }

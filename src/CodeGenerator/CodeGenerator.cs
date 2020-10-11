@@ -1,8 +1,8 @@
 ﻿using System;
-using System.Reflection.Emit;
 class CodeGenerator {
-    public string GetAssembly(Ast ast) {
+    public void GetAssembly(Ast ast) {
         var emitter = new Emitter();
-        return "";
+
+        //return emitter.Assemble();
     }
 }

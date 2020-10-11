@@ -11,22 +11,22 @@ class person {
 	pub str surname = ?;
 	pub i16 age = ?;
 	pub f16 height = ?;
-	pub type sext sex = sext::unknow;
-	pub type cities position = cities::Home;
+	pub sext sex = sext::unknow;
+	pub cities position = cities::Home;
 	# operators
-	operator new(name: str, surname: str, age: i16, height: f16, sex: type sext) {
+	operator new(name: str, surname: str, age: i16, height: f16, sex: sext) {
 		self.name = name;
 		self.surname = surname;
 		self.age = age;
 		self.height = height;
 		self.sex = sex;
 	}
-	operator +(person: type person): type person {
+	operator +(person: person): person {
 		str surname = match person.sex {
 			sext::male => person.surname;
 			_ => self.surname;
 		}
-		return type person new("Baby", surname, 0, 0.5, sext::male);
+		return person new("Baby", surname, 0, 0.5, sext::male);
 	}
 
 	# instance methods
@@ -36,13 +36,13 @@ class person {
 	self pub func introduce(): ? {
 		self.say(strfmt("My name's {0} {1} and i'm {2}. I'm a {3} and i live in ", [self.name, self.username, self.age, self.sex, self.position]));
 	}
-	self pub func walk(destination: type cities): ? {
+	self pub func walk(destination: cities): ? {
 		self.say(strfmt("I'm buying a ticket to go to {0}", [destination]));
 		self.position = destination;
 	}
 
 	# statics
-	pub func make(name: str, surname: str, age: i16, height: f16, sex: type sext): type person {
-		return type person new(name, surname, age, height);
+	pub func make(name: str, surname: str, age: i16, height: f16, sex: sext): person {
+		return person new(name, surname, age, height);
 	}
 }

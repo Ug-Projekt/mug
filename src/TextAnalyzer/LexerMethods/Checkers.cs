@@ -67,7 +67,7 @@ partial class Lexer {
                 return true;
             case ':':
                 if (CheckIfEqualToNext(':'))
-                    InsertToken(TokenKind.SymbolColonColon);
+                    InsertToken(TokenKind.OperatorSelectStaticMethod);
                 else
                     InsertToken(TokenKind.SymbolColon);
                 return true;
@@ -86,7 +86,6 @@ partial class Lexer {
             case '?':
                 InsertToken(TokenKind.ConstNull);
                 return true;
-            case '\'':
             case '\"':
                 if (!string.IsNullOrEmpty(Identifier) && !SyntaxRules.BuiltInKeyword.Contains(Identifier))
                     InsertIdentifierToST();
@@ -97,19 +96,8 @@ partial class Lexer {
                 PassingOnString = true;
                 return true;
             case '\n':
-            //case '\r':
-                InsertToken(TokenKind.ControlEndOfLine);
-                if (!CheckIfEqualToNext('\t'))
-                    InsertToken(TokenKind.ControlIndent, 0);
-                else
-                    Advance(-1);
-                return true;
+            case '\r':
             case '\t':
-                short count = 1;
-                while (CheckIfEqualToNext('\t'))
-                    count++;
-                InsertToken(TokenKind.ControlIndent, count);
-                return true;
             case '\0':
             case '\a':
             case '\v':

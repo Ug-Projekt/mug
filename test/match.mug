@@ -20,5 +20,5 @@ func main(args: str[]): ? {
 	println(todo);
 }
 func rand(max: i32): i32 {
-	return type random new().Next(max);
+	return random new().Next(max);
 }
