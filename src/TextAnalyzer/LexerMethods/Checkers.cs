@@ -72,7 +72,7 @@ partial class Lexer {
                     InsertToken(TokenKind.SymbolColon);
                 return true;
             case ';':
-                InsertToken(TokenKind.ControlEndOfInstruction);
+                InsertToken(TokenKind.SymbolSemiColon);
                 return true;
             case ',':
                 InsertToken(TokenKind.SymbolComma);
@@ -84,7 +84,7 @@ partial class Lexer {
                     InsertToken(TokenKind.SymbolNegation);
                 return true;
             case '?':
-                InsertToken(TokenKind.ConstNull);
+                InsertToken(TokenKind.ConstIdentifier, '?');
                 return true;
             case '\"':
                 if (!string.IsNullOrEmpty(Identifier) && !SyntaxRules.BuiltInKeyword.Contains(Identifier))

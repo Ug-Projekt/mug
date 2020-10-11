@@ -1,22 +1,27 @@
 ﻿using System;
 using System.Collections.Generic;
-partial class Parser {
-    AstBuilder _astBuilder { get; set; } = new AstBuilder();
-    SyntaxTree _syntaxTree;
-    Tuple<TokenKind, object, short> Current => _syntaxTree[TokenIndex];
-    Tuple<TokenKind, object, short> Next => _syntaxTree[TokenIndex + 1];
-    short toAdvance { get; set; } = 0;
-    int TokenIndex { get; set; }
-    List<object> Objects { get; set; } = new List<object>();
-    public Ast GetAbstractSyntaxTree(SyntaxTree synT) {
-        _syntaxTree = synT;
-        while (Current.Item1 != TokenKind.ControlEndOfFile) {
-            CheckParsable();
-            Advance();
+abstract class Parser {
+    virtual public AstBuilder _astBuilder { get; set; } = new AstBuilder();
+    virtual public SyntaxTree _syntaxTree { get; set; }
+    virtual public Tuple<TokenKind, object, short> Current => _syntaxTree[TokenIndex] ;
+    virtual public Tuple<TokenKind, object, short> Next => _syntaxTree[TokenIndex + 1];
+    virtual public short toAdvance { get; set; } = 0;
+    virtual public int TokenIndex { get; set; }
+    virtual public Dictionary<string, dynamic> Objects { get; set; } = new Dictionary<string, dynamic>();
+    abstract public Ast GetAbstractSyntaxTree(SyntaxTree synT);
+    virtual public short GetLineFromToken() => _syntaxTree[TokenIndex].Item3;
+    virtual public void Advance() => TokenIndex++;
+    virtual public void Advance(short count) => TokenIndex += count;
+    virtual public bool CheckTokenSeries(TokenKind[] pattTokSeries, int tokenIndex = -1) {
+        if (tokenIndex == -1)
+            tokenIndex = TokenIndex;
+        if (_syntaxTree.Count <= pattTokSeries.Length + TokenIndex)
+            return false;
+        for (int i = 0; i < pattTokSeries.Length; i++) {
+            // Console.WriteLine(pattTokSeries[i]+" "+_syntaxTree[i].Item1);
+            if (pattTokSeries[i] != _syntaxTree[i + tokenIndex].Item1)
+                return false;
         }
-        return _astBuilder.Build();
+        return true;
     }
-    short GetLineFromToken() => _syntaxTree[TokenIndex].Item3;
-    void Advance() => TokenIndex++;
-    void Advance(short count) => TokenIndex += count;
 }

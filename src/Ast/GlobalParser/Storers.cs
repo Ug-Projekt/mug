@@ -1,0 +1,36 @@
+using System;
+using System.Reflection;
+using System.Text;
+
+partial class GlobalParser {
+    void StoreGlobalFunction() {
+        Console.WriteLine("Function: "+Objects["func"]);
+        Console.WriteLine("Parameters: " + string.Join(" ", Objects["params"]));
+        Advance(toAdvance);
+        toAdvance = 0;
+        var bodySyntaxBuilder = new SyntaxTreeBuilder();
+        short considerationBrace = -1;
+        while (Current.Item1 != TokenKind.ControlEndOfFile) {
+            if (Current.Item1 == TokenKind.SymbolOpenBrace)
+                considerationBrace++;
+            else if (Current.Item1 == TokenKind.SymbolCloseBrace)
+                considerationBrace--;
+            if (Current.Item1 != TokenKind.SymbolCloseBrace && considerationBrace != 0)
+                break;
+            bodySyntaxBuilder.Add(Current);
+            Advance();
+        }
+        Advance(-1);
+        Console.WriteLine("BodySyntaxTree:");
+        var body = bodySyntaxBuilder.Build();
+        body.PrintTree();
+        Console.WriteLine("Current: "+Current);
+        var function = new FunctionData() { Body = new LocalParser().GetAbstractSyntaxTree(body), Data = new Data { Name = Objects["func"].Name, Type = Objects["func"].Type } };
+        if (!Functions.TryAdd(Objects["func"].Name, function)) {
+            CompilationErrors.Add(
+                "Function Already Declared",
+                "Declarated a function, you can write an overload of that function, but not redeclare it",
+                "Change parameters to make the function different to its already declared similar", GetLineFromToken(), null);
+        }
+    }
+}

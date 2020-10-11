@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 struct SourceInfo {
     public static string[] Source { get; set; }
-    public static string[] GetLine(int lineIndex, short? charIndex) => new string[3] { Source[lineIndex].Substring(0, Convert.ToInt16(charIndex)), Source[lineIndex][Convert.ToInt16(charIndex)].ToString(), Source[lineIndex].Substring(Convert.ToInt16(charIndex + 1)) };
+    public static string[] GetLine(int lineIndex, short? charIndex) => new string[3] { Source[lineIndex].Substring(0, Convert.ToInt16(charIndex)), Source[lineIndex][Convert.ToInt16(charIndex)].ToString(), Source[lineIndex].Substring(Convert.ToInt16(charIndex + 1)).Trim(new char[] { '\n', '\r' }) };
     public static string GetFlatLine(int lineIndex) { if (lineIndex >= Source.Length) return Source[^1]; return Source[lineIndex]; }
     public static string[] GetLinesFromSource(byte[] source) {
         List<string> lines = new List<string>();

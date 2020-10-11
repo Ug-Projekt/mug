@@ -16,11 +16,10 @@ partial class Lexer {
                 token = TokenKind.ConstInt32;
             else if (intSizeSolver <= long.MaxValue && intSizeSolver >= long.MinValue)
                 token = TokenKind.ConstInt64;
-        } else if (isString(Identifier))
+        } else if (isString(Identifier)) {
             token = TokenKind.ConstString;
-        else if (isChar(Identifier))
-            token = TokenKind.ConstChar;
-        else if (isBool(Identifier))
+            Identifier = Identifier[1..^1];
+        } else if (isBool(Identifier))
             token = TokenKind.ConstBool;
         _syntaxTreeBuilder.Add(token, Identifier, LineIndex);
         Identifier = "";

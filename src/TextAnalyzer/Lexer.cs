@@ -13,12 +13,15 @@ partial class Lexer {
             while (CharIndex < SourceInfo.Source[LineIndex].Length) {
                 if (PassingOnString) {
                     Identifier += SourceInfo.Source[LineIndex][CharIndex];
-                    if (SourceInfo.Source[LineIndex][CharIndex] == '\'' || SourceInfo.Source[LineIndex][CharIndex] == '\"') {
+                    if (SourceInfo.Source[LineIndex][CharIndex] == '\"') {
                         if (!string.IsNullOrEmpty(Identifier) && !SyntaxRules.BuiltInKeyword.Contains(Identifier))
                             InsertIdentifierToST();
                         else
                             CheckIfIsKeyword();
                         PassingOnString = false;
+                    } else if (SourceInfo.Source[LineIndex][CharIndex] == '\\') {
+                        Advance();
+                        Identifier = Identifier.Remove(Identifier.Length-1)+SourceInfo.Source[LineIndex][CharIndex];
                     }
                 } else
                     ProcessCharType(SourceInfo.Source[LineIndex][CharIndex]);

@@ -2,7 +2,7 @@ extern mscorlib;
 define type env = "[mscorlib]System.Enviroment";
 define type csl = "[mscorlib]System.Console";
 define type list = "[mscorlib]System.Collections.Generic.List";
-define type fs = "[mscorlib]System.IO.File";
+define type io = "[mscorlib]System.IO";
 define enum ccolor = "[mscorlib]System.ConsoleColor";
 define func println(value: obj): ? = "void [mscorlib]System.Console::WriteLine(object)";
 define func print(value: obj): ? = "void [mscorlib]System.Console::Write(object)";
@@ -10,7 +10,7 @@ func main(args: str[]): ? {
  	list<str> path = new();
 	if args.Lenght != 0 {
 		for p in args {
-			if fs.Path::Exists(p) {
+			if io::Path::Exists(p) {
 				path.Add(p);
 			} else {
 				csl::ForegroundColor = ccolor::DarkRed;
@@ -22,13 +22,13 @@ func main(args: str[]): ? {
 		path.Add(env::CurrentDirectory);
 	}
 	for p in path {
-		for dir in fs.Directory::GetDirectories(p) {
+		for dir in io::Directory::GetDirectories(p) {
 			csl::ForegroundColor = ccolor::DarkYellow;
-			println(fs.Path::GetFileName(p));
+			println(io::Path::GetFileName(p));
 		}
-		for file in fs.Directory::GetFiles(p) {
+		for file in io::Directory::GetFiles(p) {
 			csl::ForegroundColor = ccolor::DarkGreen;
-			println(fs.Path::GetFileName(p));
+			println(io::Path::GetFileName(p));
 		}
 		csl::ForegroundColor = ccolor::DarkCyan;
 		println("___________________");

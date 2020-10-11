@@ -1,2 +1,3 @@
-func main(args: str[]): ? {
+func getstr(args: str[]): ? {
+	println("ciao");
 }

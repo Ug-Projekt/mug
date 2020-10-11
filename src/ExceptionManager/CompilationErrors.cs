@@ -11,7 +11,7 @@ class CompilationErrors {
         if (Exceptions.Count > 0) {
             for (short i = 0; i < Exceptions.Count; i++) {
                 if (Exceptions[i].Item5 == null)
-                    printLine(SourceInfo.GetFlatLine(Exceptions[i].Item4), Exceptions[i].Item5);
+                    printLine(SourceInfo.GetFlatLine(Exceptions[i].Item4).Trim(new char[] { '\n', '\r' }), Exceptions[i].Item5);
                 else
                     printLine(SourceInfo.GetLine(Exceptions[i].Item4, Exceptions[i].Item5), Exceptions[i].Item4, Exceptions[i].Item5);
                 printError(Exceptions[i].Item1);
