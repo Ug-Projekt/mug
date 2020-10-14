@@ -1,0 +1,13 @@
+C:\Users\Mondelli\desktop\MugProgrammingLanguage\MugProgrammingLanguage\bin\x64\Release\netcoreapp3.1\MugProgrammingLanguage.exe
+C:\Users\Mondelli\desktop\MugProgrammingLanguage\MugProgrammingLanguage\bin\x64\Release\netcoreapp3.1\MugProgrammingLanguage.deps.json
+C:\Users\Mondelli\desktop\MugProgrammingLanguage\MugProgrammingLanguage\bin\x64\Release\netcoreapp3.1\MugProgrammingLanguage.runtimeconfig.json
+C:\Users\Mondelli\desktop\MugProgrammingLanguage\MugProgrammingLanguage\bin\x64\Release\netcoreapp3.1\MugProgrammingLanguage.runtimeconfig.dev.json
+C:\Users\Mondelli\desktop\MugProgrammingLanguage\MugProgrammingLanguage\bin\x64\Release\netcoreapp3.1\MugProgrammingLanguage.dll
+C:\Users\Mondelli\desktop\MugProgrammingLanguage\MugProgrammingLanguage\bin\x64\Release\netcoreapp3.1\MugProgrammingLanguage.pdb
+C:\Users\Mondelli\desktop\MugProgrammingLanguage\MugProgrammingLanguage\obj\x64\Release\netcoreapp3.1\MugProgrammingLanguage.AssemblyInfoInputs.cache
+C:\Users\Mondelli\desktop\MugProgrammingLanguage\MugProgrammingLanguage\obj\x64\Release\netcoreapp3.1\MugProgrammingLanguage.AssemblyInfo.cs
+C:\Users\Mondelli\desktop\MugProgrammingLanguage\MugProgrammingLanguage\obj\x64\Release\netcoreapp3.1\MugProgrammingLanguage.csproj.CoreCompileInputs.cache
+C:\Users\Mondelli\desktop\MugProgrammingLanguage\MugProgrammingLanguage\obj\x64\Release\netcoreapp3.1\MugProgrammingLanguage.dll
+C:\Users\Mondelli\desktop\MugProgrammingLanguage\MugProgrammingLanguage\obj\x64\Release\netcoreapp3.1\MugProgrammingLanguage.pdb
+C:\Users\Mondelli\desktop\MugProgrammingLanguage\MugProgrammingLanguage\obj\x64\Release\netcoreapp3.1\MugProgrammingLanguage.genruntimeconfig.cache
+C:\Users\Mondelli\desktop\MugProgrammingLanguage\MugProgrammingLanguage\obj\x64\Release\netcoreapp3.1\MugProgrammingLanguage.csprojAssemblyReference.cache
