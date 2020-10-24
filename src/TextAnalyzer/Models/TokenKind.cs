@@ -50,4 +50,5 @@
     ControlEndOfLine,
     SymbolNegation,
     OperatorNotEqual,
+    Const,
 }

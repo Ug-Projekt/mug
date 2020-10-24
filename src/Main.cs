@@ -5,7 +5,7 @@ class Mug {
         compile();
     }
     static void compile() {
-        const string path = @"..\..\..\Source\test\base.mug";
+        const string path = @"..\..\..\test\base.mug";
         Console.Title = "MugC";
 
         //Console.Write("TestingMugC@ ");
@@ -14,6 +14,8 @@ class Mug {
 
         Console.WriteLine("SyntaxTree:");
         syntaxTree.PrintTree();
+        Console.ReadKey();
+        Console.Clear();
 
         var abstractSyntaxTree = new GlobalParser().GetAbstractSyntaxTree(syntaxTree);
         CompilationErrors.Except(true);

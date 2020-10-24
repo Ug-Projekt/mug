@@ -3,17 +3,8 @@ using System.Collections.Generic;
 partial class GlobalParser {
     void CheckGlobalParsable() {
         Objects.Clear();
-        // match global scope
-        // todo:
-        //  - global vars
-        //  - global funcs (main, etc...)
-        //  - classes
-        //  - directives
-        //  - function properties
         if (CheckGlobalFunction())
             StoreGlobalFunction();
-        //else if (CheckVariable())
-          //  StoreVariable();
         else
             CompilationErrors.Add("Unexpected Global Statement",
             "Cannot use this statement as valid once",

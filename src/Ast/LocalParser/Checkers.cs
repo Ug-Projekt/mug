@@ -1,20 +1,12 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 
 partial class LocalParser : Parser {
     string Identifier { get; set; } = "";
     void CheckLocalParsable() {
         Objects.Clear();
-        // match local scope
-        // todo:
-        //  - local vars
-        //  - micro directives
-        //  - local statements (cycles, etc...)
         if (CheckFunctionCalling())
             StoreFunctionCalling();
-        else if (CheckMethodReference())
-            Identifier += Current.Item2+"::";
-        else if (CheckStaticReference())
-            Identifier += Current.Item2 + ".";
         else
             CompilationErrors.Add("Unexpected Global Statement",
             "Cannot use this statement as valid once",
@@ -23,19 +15,31 @@ partial class LocalParser : Parser {
     bool CheckFunctionCalling() {
         if (!CheckTokenSeries(new TokenKind[] { TokenKind.ConstIdentifier, TokenKind.SymbolOpenParenthesis }))
             return false;
+        int isRelativeBrace = 0;
         Identifier += Current.Item2.ToString();
-        Objects.Add("func", new Data() { Name = Identifier, Type = GlobalParser.GetFunction(Current.Item2.ToString()).Data.Type });
+        Objects.Add("func", new Data() { Name = Identifier });
         Objects.Add("params", new List<object>());
+        for (toAdvance = Convert.ToInt16(1+TokenIndex); ; toAdvance++) {
+            Console.WriteLine("-> "+_syntaxTree[toAdvance]);
+            if (_syntaxTree[toAdvance].Item1 == TokenKind.SymbolCloseParenthesis && isRelativeBrace == 0)
+                break;
+            else if (_syntaxTree[toAdvance].Item1 == TokenKind.SymbolOpenParenthesis)
+                isRelativeBrace++;
+            else if (_syntaxTree[toAdvance].Item1 == TokenKind.SymbolCloseParenthesis)
+                isRelativeBrace--;
+            else
+                Objects["params"].Add(_syntaxTree[toAdvance].Item2);
+        }
         Identifier = "";
         return true;
     }
-    bool CheckMethodReference() {
+    bool CheckStaticElement() {
         if (!CheckTokenSeries(new TokenKind[] { TokenKind.ConstIdentifier, TokenKind.OperatorSelectStaticMethod }))
             return false;
         Advance();
         return true;
     }
-    bool CheckStaticReference() {
+    bool CheckInstanceElement() {
         if (!CheckTokenSeries(new TokenKind[] { TokenKind.ConstIdentifier, TokenKind.SymbolDot }))
             return false;
         Advance();

@@ -1,3 +1,4 @@
+using System;
 partial class Lexer {
     static void InsertKeyword(TokenKind token) {
         Identifier = "";
@@ -7,21 +8,27 @@ partial class Lexer {
     static void InsertToken(TokenKind token) => _syntaxTreeBuilder.Add(token, null, LineIndex);
     static void InsertToken(TokenKind token, object value) => _syntaxTreeBuilder.Add(token, value, LineIndex);
     static void InsertIdentifierToST() {
-        TokenKind token = TokenKind.ConstIdentifier;
+        dynamic id = Identifier;
         if (isNumber(Identifier)) {
             long intSizeSolver = long.Parse(Identifier);
             if (intSizeSolver <= short.MaxValue && intSizeSolver >= short.MinValue)
-                token = TokenKind.ConstInt16;
+                id = new ConstPrimitiveTInt(Convert.ToInt32(Identifier)); // fix 16 bit
             else if (intSizeSolver <= int.MaxValue && intSizeSolver >= int.MinValue)
-                token = TokenKind.ConstInt32;
+                id = new ConstPrimitiveTInt(Convert.ToInt32(Identifier));
             else if (intSizeSolver <= long.MaxValue && intSizeSolver >= long.MinValue)
-                token = TokenKind.ConstInt64;
+                id = new ConstPrimitiveTInt(Convert.ToInt32(Identifier)); // fix 64 bit
         } else if (isString(Identifier)) {
-            token = TokenKind.ConstString;
-            Identifier = Identifier[1..^1];
+            id = new ConstPrimitiveTString(Identifier[1..^1]);
         } else if (isBool(Identifier))
-            token = TokenKind.ConstBool;
-        _syntaxTreeBuilder.Add(token, Identifier, LineIndex);
+            id = new ConstPrimitiveTBool(Convert.ToBoolean(Identifier));
+        else
+        {
+            _syntaxTreeBuilder.Add(TokenKind.ConstIdentifier, id, LineIndex);
+            Identifier = "";
+            return;
+        }
+        _syntaxTreeBuilder.Add(TokenKind.Const, id, LineIndex);
         Identifier = "";
+        return;
     }
 }
