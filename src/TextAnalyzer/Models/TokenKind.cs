@@ -1,4 +1,5 @@
-﻿enum TokenKind {
+﻿enum TokenKind
+{
     BuiltInKeywordFunc = 0,
     BuiltInKeywordPub = 1,
     BuiltInKeywordSelf = 2,

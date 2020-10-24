@@ -1,6 +1,8 @@
-partial class Lexer {
+partial class Lexer
+{
     static bool isIdentifierChar(char Char) => SyntaxRules.IdentifierPatternChecker.Contains(char.ToLower(Char));
-    static bool isNumber(string String) {
+    static bool isNumber(string String)
+    {
         for (int i = 0; i < String.Length; i++)
             if (!SyntaxRules.NumberPatternChecker.Contains(String[i]))
                 return false;

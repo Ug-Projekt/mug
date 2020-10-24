@@ -5,5 +5,5 @@
     {
         value = val;
     }
-    public override string ToString() => ".bool "+value.ToString();
+    public override string ToString() => ".bool " + value.ToString();
 }

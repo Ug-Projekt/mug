@@ -1,7 +1,10 @@
-﻿partial class LocalParser : Parser {
-    public override Ast GetAbstractSyntaxTree(SyntaxTree synT) {
+﻿partial class LocalParser : Parser
+{
+    public override Ast GetAbstractSyntaxTree(SyntaxTree synT)
+    {
         _syntaxTree = synT;
-        while (TokenIndex < synT.Count) {
+        while (TokenIndex < synT.Count)
+        {
             CheckLocalParsable();
             Advance();
         }

@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 
-class SyntaxTree {
-    public void PrintTree() {
+class SyntaxTree
+{
+    public void PrintTree()
+    {
         for (int i = 0; i < Count; i++)
             Console.WriteLine("Line:({2}) Token: {0}{1}", TokenType[i], !(TokenValue[i] is null) ? ", " + TokenValue[i] : "", LineIndex[i]);
     }

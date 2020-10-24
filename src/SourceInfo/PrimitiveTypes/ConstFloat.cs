@@ -5,5 +5,5 @@
     {
         value = val;
     }
-    public override string ToString() => ".f32 "+value.ToString();
+    public override string ToString() => ".f32 " + value.ToString();
 }

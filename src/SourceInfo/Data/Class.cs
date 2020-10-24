@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 
-struct ClassData {
+struct ClassData
+{
     public Data Data;
     public List<FunctionData> Functions;
     public List<VariableData> Variables;

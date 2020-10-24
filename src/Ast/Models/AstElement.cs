@@ -1,5 +1,7 @@
-class AstElement {
-    public AstElement(AstElementKind ek, Ast subAst, dynamic ev, TokenKind evt) {
+class AstElement
+{
+    public AstElement(AstElementKind ek, Ast subAst, dynamic ev, TokenKind evt)
+    {
         ElementKind = ek;
         ElementBody = subAst;
         ElementValue = ev;

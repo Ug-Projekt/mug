@@ -1,3 +1,4 @@
-﻿class Evaluator {
+﻿class Evaluator
+{
 
 }

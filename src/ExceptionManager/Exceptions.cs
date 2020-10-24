@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 
-class Errors {
+class Errors
+{
     public int Count => Error.Count;
-    public bool Contains(string error, string reason, string tryTo, short lineIndex, short? charIndex) {
+    public bool Contains(string error, string reason, string tryTo, short lineIndex, short? charIndex)
+    {
         for (int i = 0; i < Count; i++)
             if (Error[i] == error &&
                 Reason[i] == reason &&
@@ -13,14 +15,16 @@ class Errors {
                 return true;
         return false;
     }
-    public void Add(string error, string reason, string tryTo, short lineIndex, short? charIndex) {
+    public void Add(string error, string reason, string tryTo, short lineIndex, short? charIndex)
+    {
         Error.Add(error);
         Reason.Add(reason);
         TryTo.Add(tryTo);
         LineIndex.Add(lineIndex);
         CharIndex.Add(charIndex);
     }
-    public void Clear() {
+    public void Clear()
+    {
         Error.Clear();
         Reason.Clear();
         TryTo.Clear();

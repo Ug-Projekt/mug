@@ -1,7 +1,10 @@
 using System.Linq;
-partial class Lexer {
-    static bool CheckIfIsSymbol(char Char) {
-        switch (Char) {
+partial class Lexer
+{
+    static bool CheckIfIsSymbol(char Char)
+    {
+        switch (Char)
+        {
             case '(':
                 InsertToken(TokenKind.SymbolOpenParenthesis);
                 return true;
@@ -107,10 +110,12 @@ partial class Lexer {
                 return false;
         }
     }
-    static void ProcessCharType(char Char) {
+    static void ProcessCharType(char Char)
+    {
         if (isIdentifierChar(Char))
             Identifier += Char;
-        else {
+        else
+        {
             if (!string.IsNullOrEmpty(Identifier) && !SyntaxRules.BuiltInKeyword.Contains(Identifier))
                 InsertIdentifierToST();
             else
@@ -119,7 +124,8 @@ partial class Lexer {
                 CompilationErrors.Add("Not Caratterizzable Character", $"`{Char}` is an invalid token, is not caratterizzable as Symbol, Control, Identifier", $"Remove `{Char}` from the line or replace it with the right symbol", LineIndex, CharIndex);
         }
     }
-    static bool CheckIfEqualToNext(char Char) {
+    static bool CheckIfEqualToNext(char Char)
+    {
         if (SourceInfo.Source[LineIndex].Length - 1 < CharIndex + 1)
             return false;
         bool equal = SourceInfo.Source[LineIndex][CharIndex + 1] == Char;
@@ -127,11 +133,13 @@ partial class Lexer {
             Advance();
         return equal;
     }
-    static bool CheckIfEqualToNext(char Char, short count) {
+    static bool CheckIfEqualToNext(char Char, short count)
+    {
         if (SourceInfo.Source[LineIndex].Length - 1 < CharIndex + count)
             return false;
         bool equal = false;
-        for (int i=0;i<count;i++) {
+        for (int i = 0; i < count; i++)
+        {
             equal = SourceInfo.Source[LineIndex][CharIndex + i] == Char;
             if (!equal)
                 return false;
@@ -140,7 +148,8 @@ partial class Lexer {
             Advance(count);
         return equal;
     }
-    static void CheckIfIsKeyword() {
+    static void CheckIfIsKeyword()
+    {
         for (short i = 0; i < SyntaxRules.BuiltInKeyword.Length; i++)
             if (Identifier == SyntaxRules.BuiltInKeyword[i])
                 InsertKeyword((TokenKind)i);

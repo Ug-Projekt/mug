@@ -1,4 +1,5 @@
-enum PatternTokensKind {
+enum PatternTokensKind
+{
     ValueType,
     Id,
     ParOpen,

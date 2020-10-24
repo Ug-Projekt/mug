@@ -1,3 +1,5 @@
-enum AstElementKind {
+enum AstElementKind
+{
     StatementFunctionDeclarating,
+    PassingValueInFCStatement,
 }

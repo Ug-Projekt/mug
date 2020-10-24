@@ -1,10 +1,12 @@
 ﻿using System;
-using System.Text;
-class Mug {
-    static void Main(string[] args) {
+class Mug
+{
+    static void Main(string[] args)
+    {
         compile();
     }
-    static void compile() {
+    static void compile()
+    {
         const string path = @"..\..\..\test\base.mug";
         Console.Title = "MugC";
 
@@ -12,15 +14,18 @@ class Mug {
         var syntaxTree = Lexer.GetSyntaxTree(System.IO.File.ReadAllBytes(path));
         CompilationErrors.Except(true);
 
-        Console.WriteLine("SyntaxTree:");
-        syntaxTree.PrintTree();
-        Console.ReadKey();
-        Console.Clear();
+        //Console.WriteLine("SyntaxTree:");
+        //syntaxTree.PrintTree();
+        //Console.ReadKey();
+        //Console.Clear();
 
         var abstractSyntaxTree = new GlobalParser().GetAbstractSyntaxTree(syntaxTree);
         CompilationErrors.Except(true);
 
-        Console.WriteLine("AbstractSyntaxTree:");
-        abstractSyntaxTree.PrintTree();
+        //Console.WriteLine("AbstractSyntaxTree:");
+        //abstractSyntaxTree.PrintTree();
+
+        ///*var Code = */new CodeGenerator().GetAssembly(abstractSyntaxTree);
+        //CompilationErrors.Except(true);
     }
 }
