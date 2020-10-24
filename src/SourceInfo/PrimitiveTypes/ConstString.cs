@@ -1,6 +1,6 @@
 ﻿struct ConstPrimitiveTString
 {
-    string value;
+    public string value;
     public ConstPrimitiveTString(string val)
     {
         value = val;

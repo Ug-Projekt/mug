@@ -1,6 +1,6 @@
 ﻿struct ConstPrimitiveTInt
 {
-    int value;
+    public int value;
     public ConstPrimitiveTInt(int val)
     {
         value = val;

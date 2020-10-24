@@ -1,6 +1,6 @@
 ﻿struct ConstPrimitiveTFloat
 {
-    float value;
+    public float value;
     public ConstPrimitiveTFloat(float val)
     {
         value = val;

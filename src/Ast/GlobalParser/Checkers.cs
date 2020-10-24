@@ -22,7 +22,7 @@ partial class GlobalParser
         if (CheckTokenSeries(new TokenKind[] { TokenKind.BuiltInKeywordFunc, TokenKind.ConstIdentifier, TokenKind.SymbolOpenParenthesis, TokenKind.SymbolCloseParenthesis, TokenKind.SymbolColon }))
         {
             Objects["func"] = new Data() { Name = Objects["func"].Name, Type = _syntaxTree[toAdvance + 2].Item2 };
-            toAdvance++;
+            toAdvance+=3;
             return true;
         }
         for (; toAdvance < _syntaxTree.Count; toAdvance++)

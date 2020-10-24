@@ -1,6 +1,6 @@
 ﻿struct ConstPrimitiveTBool
 {
-    bool value;
+    public bool value;
     public ConstPrimitiveTBool(bool val)
     {
         value = val;

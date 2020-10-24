@@ -12,6 +12,6 @@ partial class GlobalParser : Parser
             CheckGlobalParsable();
             Advance();
         }
-        return _astBuilder.Build();
+        return _astBuilder.Build(); // fix
     }
 }

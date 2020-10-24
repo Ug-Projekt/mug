@@ -21,8 +21,7 @@ partial class LocalParser : Parser
         int isRelativeBrace = 0;
         Identifier += Current.Item2.ToString();
         Objects.Add("func", new Data() { Name = Identifier });
-        Objects.Add("params", new List<object>());
-        AstBuilder paramBuilder = new AstBuilder();
+        var paramBuilder = new List<AstElement>();
         for (toAdvance = Convert.ToInt16(1 + TokenIndex); ; toAdvance++)
         {
             //Console.WriteLine("-> "+_syntaxTree[toAdvance]);
@@ -34,17 +33,18 @@ partial class LocalParser : Parser
                 isRelativeBrace--;
             else if (_syntaxTree[toAdvance].Item1 == TokenKind.SymbolComma && isRelativeBrace == 1)
             {
-                Objects["params"].Add(paramBuilder.Build());
+                paramBuilder.Add(); // fix parameters incompatibility with another method
                 paramBuilder.Clear();
             }
             else
                 paramBuilder.Add(AstElement.New(
-                    AstElementKind.PassingValueInFCStatement,
-                    null, _syntaxTree[toAdvance].Item2, _syntaxTree[toAdvance].Item1), GetLineFromToken());
+                    AstElementKind.SubStatementPassingValue,
+                    null, _syntaxTree[toAdvance].Item2), GetLineFromToken());
         }
-        if (!paramBuilder.IsEmpty())
-            Objects["params"].Add(paramBuilder.Build());
+        if (paramBuilder.Count > 0)
+            Objects["params"].Add(paramBuilder);
         Identifier = "";
+        Objects.Add("params", paramBuilder);
         return true;
     }
 }

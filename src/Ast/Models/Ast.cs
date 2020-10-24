@@ -1,5 +1,4 @@
-﻿
-using System;
+﻿using System;
 class Ast
 {
     public Ast(AstElement[] ElementKind, int[] LineIndex)
@@ -20,8 +19,6 @@ class Ast
             Console.Write(Elements[i].ElementKind);
             Console.ForegroundColor = ConsoleColor.DarkRed;
             Console.Write(" -> ");
-            Console.ForegroundColor = ConsoleColor.DarkCyan;
-            Console.Write(Elements[i].ElementValueType + " ");
             Console.ForegroundColor = ConsoleColor.DarkYellow;
             Console.WriteLine(Elements[i].ElementValue);
             Console.ResetColor();
@@ -33,7 +30,7 @@ class Ast
     {
         for (int i = 0; i < Length; i++)
         {
-            tree += indent + "(" + LineIndex[i] + ") " + Elements[i].ElementKind + " -> " + Elements[i].ElementValueType + " " + Elements[i].ElementValue + "\n";
+            tree += indent + "(" + LineIndex[i] + ") " + Elements[i].ElementKind + " -> " + Elements[i].ElementValue + "\n";
             if (Elements[i].ElementBody != null && Elements[i].ElementBody.Length != 0)
                 Elements[i].ElementBody.TreeToString(ref tree, indent + "    ");
         }

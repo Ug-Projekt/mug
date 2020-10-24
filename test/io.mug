@@ -1,4 +1,3 @@
-extern mscorlib;
 define func println(value: str, elems: obj[]): ? = "void [mscorlib]System.Console::WriteLine(string, object[])";
 define func println(value: str): ? = "void [mscorlib]System.Console::WriteLine(string)";
 define func println(value: obj): ? = "void [mscorlib]System.Console::WriteLine(object)";

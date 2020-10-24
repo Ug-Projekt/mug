@@ -1,3 +1,4 @@
+using System;
 partial class GlobalParser
 {
     void StoreGlobalFunction()
@@ -8,6 +9,7 @@ partial class GlobalParser
         toAdvance = 0;
         var bodySyntaxBuilder = new SyntaxTreeBuilder();
         short considerationBrace = -1;
+        //Console.WriteLine("Current: "+Current);
         while (Current.Item1 != TokenKind.ControlEndOfFile)
         {
             if (Current.Item1 == TokenKind.SymbolOpenBrace)
@@ -20,6 +22,7 @@ partial class GlobalParser
             Advance();
         }
         //Console.WriteLine("BodySyntaxTree:");
+        //Console.WriteLine("Count: "+bodySyntaxBuilder.Count);
         bodySyntaxBuilder.Remove(0);
         bodySyntaxBuilder.Remove(bodySyntaxBuilder.Count - 1);
         var body = bodySyntaxBuilder.Build();

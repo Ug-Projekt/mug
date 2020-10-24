@@ -1,5 +1,4 @@
 # externs directives
-extern mscorlib;
 define func println(value: obj): ? = "void [mscorlib]System.Console::WriteLine(object)";
 define func strfmt(value: str, elems: obj[]): str = "string [mscorlib]System.String::Format(string, object[])";
 use "enum.mug";

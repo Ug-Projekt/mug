@@ -3,4 +3,5 @@
     public Data Data;
     public Ast Body;
     public object[] Parameters;
+    public string Reference;
 }
