@@ -2,6 +2,6 @@
 {
     public Data Data;
     public Ast Body;
-    public object[] Parameters;
+    public Data[] Parameters;
     public string Reference;
 }

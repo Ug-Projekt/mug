@@ -9,6 +9,5 @@ class AstElement
     public AstElementKind ElementKind;
     public dynamic ElementValue;
     public Ast ElementBody;
-    public void BuildAst(Ast ast) => ElementBody = ast;
     public static AstElement New(AstElementKind elementKind, Ast elementBody, dynamic elementValue) => new AstElement(elementKind, elementBody, elementValue);
 }

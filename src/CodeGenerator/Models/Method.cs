@@ -21,8 +21,9 @@
     }
     public override string ToString() =>
         ".method "+Modifiers+" "+Type+" "+Name+"("+string.Join(", ", Parameters)+") cil managed {\n"
-        +".maxstack "+Maxstack
-        +"\n.init locals ("+string.Join(",\n", LocalVariables)+"\n)\n"
+        + (EntryPoint ? "\t.entrypoint\n" : "")
+        + "\t.maxstack "+Maxstack
+        +"\n\t.locals init ("+string.Join("\t,\n", LocalVariables)+"\n\t)\n"
         +Body
-        +"}";
+        +"\n}";
 }

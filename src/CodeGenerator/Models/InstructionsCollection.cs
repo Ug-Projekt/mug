@@ -14,7 +14,7 @@
         string instructions = "";
         for (int i = 0; i < OpCode.Length; i++)
         {
-            instructions += (Labels[i] != "" ? Labels[i] + ":" : "") + OpCode[i] + " " + Arg[i];
+            instructions += "\n\t"+(Labels[i] != "" ? Labels[i] + ": " : "") + OpCode[i] + " " + Arg[i];
         }
         return instructions;
     }

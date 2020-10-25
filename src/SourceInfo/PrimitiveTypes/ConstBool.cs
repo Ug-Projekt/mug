@@ -1,9 +1,9 @@
 ﻿struct ConstPrimitiveTBool
 {
-    public bool value;
+    public bool Value;
     public ConstPrimitiveTBool(bool val)
     {
-        value = val;
+        Value = val;
     }
-    public override string ToString() => ".bool " + value.ToString();
+    public override string ToString() => ".bool " + Value.ToString();
 }

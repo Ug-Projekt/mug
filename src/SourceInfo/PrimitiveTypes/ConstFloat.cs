@@ -1,9 +1,9 @@
 ﻿struct ConstPrimitiveTFloat
 {
-    public float value;
+    public float Value;
     public ConstPrimitiveTFloat(float val)
     {
-        value = val;
+        Value = val;
     }
-    public override string ToString() => ".f32 " + value.ToString();
+    public override string ToString() => ".f32 " + Value.ToString();
 }

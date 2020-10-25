@@ -14,5 +14,13 @@ class SyntaxTree
     readonly List<short> LineIndex = new List<short>();
     public Tuple<TokenKind, dynamic, short> this[int index] =>
         new Tuple<TokenKind, dynamic, short>(TokenType[index], TokenValue[index], LineIndex[index]);
+    public override string ToString()
+    {
+        string tree = "";
+        const string e = "";
+        for (int i = 0; i < Count; i++)
+            tree += $"Line:({LineIndex[i]}) Token: {TokenType[i]}{(!(TokenValue[i] is null) ? ", " + TokenValue[i] : e)}\n\t";
+        return tree;
+    }
     public int Count => TokenType.Count;
 }

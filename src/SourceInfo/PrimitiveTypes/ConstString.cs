@@ -1,9 +1,9 @@
 ﻿struct ConstPrimitiveTString
 {
-    public string value;
+    public string Value;
     public ConstPrimitiveTString(string val)
     {
-        value = val;
+        Value = val;
     }
-    public override string ToString() => ".str " + value.ToString();
+    public override string ToString() => ".str " + Value.ToString();
 }

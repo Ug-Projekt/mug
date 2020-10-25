@@ -5,16 +5,26 @@ partial class CodeGenerator
     {
         // support for const only
         List<string> paramsTypes = new List<string>();
-        foreach (var elem in Current.Item1.ElementBody.Elements)
+        // foreach expression (parameter)
+        foreach (AstElement param in Current.Item1.ElementBody.Elements)
         {
-            string instruction = "";
-            if (elem.ElementValue is ConstPrimitiveTString)
-                instruction = "ldstr";
-            else if (elem.ElementValue is ConstPrimitiveTInt)
-                instruction = "ld.i4.s";
-            paramsTypes.Add(instruction.Replace("ldstr", "string").Replace("ld.i4.s", "int32"));
-            Emitter.Emit(instruction, elem.ElementValue.Value);
+            // foreach token in expression (param)
+            var tok = param.ElementValue as SyntaxTree;
+            for (int i=0; i < tok.Count; i++)
+            {
+                //System.Console.WriteLine("Token: "+ tok[i].Item2.GetType());
+                string instruction = "";
+                string arg = tok[i].Item2.Value;
+                if (tok[i].Item2 is ConstPrimitiveTString) {
+                    arg = "\""+tok[i].Item2.Value + "\"";
+                    instruction = "ldstr";
+                }
+                else if (tok[i].Item2 is ConstPrimitiveTInt)
+                    instruction = "ld.i4.s";
+                paramsTypes.Add(instruction.Replace("ldstr", "string").Replace("ld.i4.s", "int32"));
+                Emitter.Emit(instruction, arg);
+            }
         }
-        Emitter.Emit("call", GlobalParser.Functions[Current.Item1.ElementValue.Value].Reference == "" ? GlobalParser.Functions[Current.Item1.ElementValue.Value].Data.Type + " " + Current.Item1.ElementValue.Value + "(" + string.Join(", ", paramsTypes) + ")" : GlobalParser.Functions[Current.Item1.ElementValue.Value].Reference);
+        Emitter.Emit("call", GlobalParser.Functions[Current.Item1.ElementValue].Reference == "" ? GlobalParser.Functions[Current.Item1.ElementValue].Data.Type + " " + Current.Item1.ElementValue + "(" + string.Join(", ", paramsTypes) + ")" : GlobalParser.Functions[Current.Item1.ElementValue].Reference);
     }
 }

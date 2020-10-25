@@ -21,10 +21,10 @@ partial class LocalParser : Parser
         int isRelativeBrace = 0;
         Identifier += Current.Item2.ToString();
         Objects.Add("func", new Data() { Name = Identifier });
-        var paramBuilder = new List<AstElement>();
+        var exprBuilder = new SyntaxTreeBuilder();
+        var paramBuilder = new AstBuilder();
         for (toAdvance = Convert.ToInt16(1 + TokenIndex); ; toAdvance++)
         {
-            //Console.WriteLine("-> "+_syntaxTree[toAdvance]);
             if (_syntaxTree[toAdvance].Item1 == TokenKind.SymbolCloseParenthesis && isRelativeBrace == 1)
                 break;
             else if (_syntaxTree[toAdvance].Item1 == TokenKind.SymbolOpenParenthesis)
@@ -33,18 +33,29 @@ partial class LocalParser : Parser
                 isRelativeBrace--;
             else if (_syntaxTree[toAdvance].Item1 == TokenKind.SymbolComma && isRelativeBrace == 1)
             {
-                paramBuilder.Add(); // fix parameters incompatibility with another method
-                paramBuilder.Clear();
+                paramBuilder.Add(
+                    AstElement.New(
+                        AstElementKind.Expression,
+                        null, exprBuilder.Build()
+                    ),
+                    GetLineFromToken()
+                );
+                exprBuilder = new SyntaxTreeBuilder();
             }
             else
-                paramBuilder.Add(AstElement.New(
-                    AstElementKind.SubStatementPassingValue,
-                    null, _syntaxTree[toAdvance].Item2), GetLineFromToken());
+                exprBuilder.Add(_syntaxTree[toAdvance]);
         }
-        if (paramBuilder.Count > 0)
-            Objects["params"].Add(paramBuilder);
+        if (exprBuilder.Count > 0)
+            paramBuilder.Add(
+                AstElement.New(
+                    AstElementKind.Expression,
+                    null, exprBuilder.Build()
+                ),
+                GetLineFromToken()
+            );
+
         Identifier = "";
-        Objects.Add("params", paramBuilder);
+        Objects.Add("params", paramBuilder.Build());
         return true;
     }
 }
