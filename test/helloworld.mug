@@ -1,9 +1,6 @@
-use "io.mug";
+use "shell.mug";
+use "bag.mug";
 func main(args: str[]): ? {
 	# hello world
-	println("Hello World!");
-	# super hello world
-	println("Hello {0}{1}{2}{3}{4}!", ["w", "o", "r", "l", "d"]);
-	# advanced hello world
-	println(10);
+	io::println("Hello World!");
 }

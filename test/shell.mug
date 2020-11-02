@@ -1,0 +1,20 @@
+use "bag.mug";
+name io {
+	define func println(value: str, elems: obj[]): ? = "void [mscorlib]System.Console::WriteLine(string, object[])";
+	define func println(value: str): ? = "void [mscorlib]System.Console::WriteLine(string)";
+	define func println(value: obj): ? = "void [mscorlib]System.Console::WriteLine(object)";
+	define func print(value: str, elems: obj[]): ? = "void [mscorlib]System.Console::Write(string, object[])";
+	define func print(value: str): ? = "void [mscorlib]System.Console::Write(string)";
+	define func print(value: obj): ? = "void [mscorlib]System.Console::Write(object)";
+	define func cls(): ? = "void [mscorlib]System.Console::Clear()";
+	define func readln(): str = "string [mscorlib]System.Console::ReadLine()";
+	define func readchr(): i32 = "int32 [mscorlib]System.Console::Read()";
+}
+name ctrl {
+	define type col = "valuetype [mscorlib]System.ConsoleColor";
+	define func setfg(color: col): ? = "void [mscorlib]System.Console::set_ForegroundColor(valuetype [mscorlib]System.ConsoleColor)";
+	define func setbg(color: col): ? = "void [mscorlib]System.Console::set_BackgroundColor(valuetype [mscorlib]System.ConsoleColor)";
+	define func getfg(): col = "valuetype [mscorlib]System.ConsoleColor [mscorlib]System.Console::get_ForegroundColor()";
+	define func getbg(): col = "valuetype [mscorlib]System.ConsoleColor [mscorlib]System.Console::get_BackgroundColor()";
+	define func rescol(): ? = "void [mscorlib]System.Console::ResetColors()";
+}

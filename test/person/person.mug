@@ -1,7 +1,6 @@
-# externs directives
-define func println(value: obj): ? = "void [mscorlib]System.Console::WriteLine(object)";
-define func strfmt(value: str, elems: obj[]): str = "string [mscorlib]System.String::Format(string, object[])";
 use "enum.mug";
+use "shell.mug"
+define func strfmt(value: str, elems: obj[]): str = "string [mscorlib]System.String::Format(string, object[])";
 
 # classes
 class person {
@@ -21,16 +20,20 @@ class person {
 		self.sex = sex;
 	}
 	operator +(person: person): person {
-		str surname = match person.sex {
-			sext::male => person.surname;
-			_ => self.surname;
+		str surname = match self.sex {
+			sext::male {
+				return self.surname;
+			}
+			else {
+				return person.surname;
+			}
 		}
-		return person new("Baby", surname, 0, 0.5, sext::male);
+		return person("Baby", surname, 0, 0.5, sext::male);
 	}
 
 	# instance methods
 	self pub func say(tosay: str): ? {
-		println(strfmt("{0} {1}: {2}", [name, surname, tosay]));
+		io::println(strfmt("{0} {1}: {2}", [name, surname, tosay]));
 	}
 	self pub func introduce(): ? {
 		self.say(strfmt("My name's {0} {1} and i'm {2}. I'm a {3} and i live in ", [self.name, self.username, self.age, self.sex, self.position]));
@@ -42,6 +45,6 @@ class person {
 
 	# statics
 	pub func make(name: str, surname: str, age: i16, height: f16, sex: sext): person {
-		return person new(name, surname, age, height);
+		return person(name, surname, age, height);
 	}
 }

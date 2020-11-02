@@ -1,0 +1,20 @@
+use "shell.mug"
+use "bag.mug"
+class interop: obj {
+	pub str msg = "Hello From Dll Intended For C#";
+	pub self func hello(): ? {
+		println(self.msg);
+	}
+	operator new() { # .ctor
+		initobj(self);
+	}
+	pub func new(): interop {
+		return interop();
+	}
+}
+# public C {
+# 	public static void Main() {
+#		interop x = interop.new();
+#     x.hello();
+#  }
+# }

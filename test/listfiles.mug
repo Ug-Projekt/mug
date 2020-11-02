@@ -1,40 +1,39 @@
-define type env = "[mscorlib]System.Enviroment";
-define type csl = "[mscorlib]System.Console";
-define type list = "[mscorlib]System.Collections.Generic.List";
-define type io = "[mscorlib]System.IO";
-define enum ccolor = "[mscorlib]System.ConsoleColor";
-define func println(value: obj): ? = "void [mscorlib]System.Console::WriteLine(object)";
-define func print(value: obj): ? = "void [mscorlib]System.Console::Write(object)";
-func main(args: str[]): ? {
- 	list<str> path = new();
-	if args.Lenght != 0 {
-		for p in args {
-			if io::Path::Exists(p) {
-				path.Add(p);
-			} else {
-				csl::ForegroundColor = ccolor::DarkRed;
-				println("Invalid Path Passed");
-				end();
-			}
-		}
-	} else {
-		path.Add(env::CurrentDirectory);
-	}
-	for p in path {
-		for dir in io::Directory::GetDirectories(p) {
-			csl::ForegroundColor = ccolor::DarkYellow;
-			println(io::Path::GetFileName(p));
-		}
-		for file in io::Directory::GetFiles(p) {
-			csl::ForegroundColor = ccolor::DarkGreen;
-			println(io::Path::GetFileName(p));
-		}
-		csl::ForegroundColor = ccolor::DarkCyan;
-		println("___________________");
-	}
-	end();
+use "csl.mug";
+use "bag.mug";
+
+define type env = "valuetype [mscorlib]System.Enviroment";
+define name ios = "[mscorlib]System.IO";
+
+func error(err: str, arg: str): ? {
+	io::println("{0}: `{1}`", [err, arg]);
+	end(1);
 }
-func end(): ? {
-	csl::ResetColors();
-	env::Exit(0);
+
+func ls(path: str): ? {
+	for dir: str in ios::Directory::GetDirectories(path) {
+		ctrl::setfg(ctrl::col::DarkYellow);
+		io::println(ios::Path::GetFileName(path));
+	}
+	for file: str in ios::Directory::GetFiles(p) {
+		ctrl::setfg(ctrl::col::DarkGreen);
+		io::println(ios::Path::GetFileName(path));
+	}
+}
+
+func main(args: str[]): ? {
+	if args.Lenght == 0 {
+		ls(".");
+		end(0);
+	}
+	for arg: str in args {
+		if !ios::Path::Exists(arg) {
+			error("Invalid Path", arg)
+		}
+		ls(arg);
+	}
+	end(0);
+}
+func end(code: i32): ? {
+	ctrl::rescol();
+	env::Exit(code);
 }

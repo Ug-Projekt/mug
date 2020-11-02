@@ -1,17 +1,20 @@
-use "io.mug";
+use "shell.mug";
+use "bag.mug"
 func main(args: str[]): ? {
+	if (args.Lenght == 0)
+		panic basepanic("Give a parameter");
 	# iterator
-	for arg in args {
-		println("arg: {0}", [arg]);
+	for arg: str in args {
+		io::println("arg: {0}", [arg]);
 	}
 	# classic
-	for i to args.Lenght {
-		println("arg{0}: {1}", [i, arg[i]]);
+	for i: i32 to args.Lenght {
+		io::println("arg{0}: {1}", [i, arg[i]]);
 	}
 	# while
 	i32 i = 0;
 	while i < args.Lenght {
-		println("arg{0}: {1}", [i, arg[i]]);
+		io::println("arg{0}: {1}", [i, arg[i]]);
 		i++;
 	}
 	if args[0] == "help" {
@@ -22,7 +25,15 @@ func main(args: str[]): ? {
 	else {
 		do();
 	}
+	match args[0] {
+		"help", "h" {
+			io::println("Help")
+		}
+		else {
+			io::println("fail")
+		}
+	}
 }
 func do(): ? {
-	println("...");
+	io::println("...");
 }

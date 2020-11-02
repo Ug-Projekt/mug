@@ -1,5 +1,7 @@
-define type random = "[mscorlib]System.Random";
-define func println(value: obj): ? = "void [mscorlib]System.Console::WriteLine(object)";
+use "shell.mug";
+use "bag.mug";
+define type random = "valuetype [mscorlib]System.Random";
+
 const str help =
 "--help|-h|-help: View this list
 -something: Do something
@@ -8,16 +10,27 @@ const str help =
 
 func main(args: str[]): ? {
 	str todo = match args[0] {
-		"help": "digit `--help`|`-h`|`-help`",
-		"-help": help,
-		"--help": help,
-		"-h": help,
-		"-something": "something",
-		"-rand": rand(10),
-		"-nothing": "nothing",
+		"help" {
+			return "digit `--help`|`-h`|`-help`";
+		}
+		"-help", "--help", "-h" {
+			return help;
+		}
+		"-something" {
+			return "something";
+		}
+		"-rand" {
+			return rand(10);
+		}
+		"-nothing" {
+			return "nothing";
+		}
+		else {
+			return "";
+		}
 	};
-	println(todo);
+	io::println(todo);
 }
 func rand(max: i32): i32 {
-	return random new().Next(max);
+	return random().Next(max);
 }

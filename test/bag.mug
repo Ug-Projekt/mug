@@ -1,0 +1,13 @@
+define type i8 = "int8";
+define type i16 = "int16";
+define type i32 = "int32";
+define type i64 = "int64";
+define type f32 = "float32";
+define type f64 = "float64";
+define type str = "string";
+define type chr = "char";
+define type obj = "object";
+define type bool = "bool";
+define type basepanic = "valuetype [mscorlib]System.Exception";
+define type unknow = "class [mscorlib]System.Type";
+define func initobj(selfobj: obj): ? = "istance void [mscorlib]System.Object::.ctor()"

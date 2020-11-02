@@ -1,8 +1,9 @@
-use "io.mug";
-namespace module {
+use "shell.mug";
+use "bag.mug";
+name module {
 	const str hw = "Hello World!";
 	func sayhello(): ? {
-		println(module::hw);
+		io::println(module::hw);
 	}
 }
 func main(): ? {

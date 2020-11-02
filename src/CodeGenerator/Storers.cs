@@ -14,17 +14,17 @@ partial class CodeGenerator
             {
                 //System.Console.WriteLine("Token: "+ tok[i].Item2.GetType());
                 string instruction = "";
-                string arg = tok[i].Item2.Value;
+                string arg = tok[i].Item2.Value.ToString();
                 if (tok[i].Item2 is ConstPrimitiveTString) {
-                    arg = "\""+tok[i].Item2.Value + "\"";
+                    arg = "\""+ arg + "\"";
                     instruction = "ldstr";
                 }
                 else if (tok[i].Item2 is ConstPrimitiveTInt)
-                    instruction = "ld.i4.s";
-                paramsTypes.Add(instruction.Replace("ldstr", "string").Replace("ld.i4.s", "int32"));
+                    instruction = "ldc.i4.s";
+                paramsTypes.Add(instruction.Replace("ldstr", "string").Replace("ldc.i4.s", "int32"));
                 Emitter.Emit(instruction, arg);
             }
         }
-        Emitter.Emit("call", GlobalParser.Functions[Current.Item1.ElementValue].Reference == "" ? GlobalParser.Functions[Current.Item1.ElementValue].Data.Type + " " + Current.Item1.ElementValue + "(" + string.Join(", ", paramsTypes) + ")" : GlobalParser.Functions[Current.Item1.ElementValue].Reference);
+        Emitter.Emit("call", GlobalParser.Functions[Current.Item1.ElementValue.ToString()].Reference == "" ? GlobalParser.Functions[Current.Item1.ElementValue.ToString()].Data.Type + " " + Current.Item1.ElementValue + "(" + string.Join(", ", paramsTypes) + ")" : GlobalParser.Functions[Current.Item1.ElementValue.ToString()].Reference);
     }
 }
