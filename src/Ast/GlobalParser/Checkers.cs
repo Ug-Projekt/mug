@@ -14,12 +14,12 @@ partial class GlobalParser
     }
     bool CheckGlobalFunction()
     {
-        if (!CheckTokenSeries(new TokenKind[] { TokenKind.BuiltInKeywordFunc, TokenKind.ConstIdentifier, TokenKind.SymbolOpenParenthesis }))
+        if (!CheckTokenSeries(new TokenKind[] { TokenKind.BuiltInKeywordFunc, TokenKind.Identifier, TokenKind.SymbolOpenParenthesis }))
             return false;
         Objects.Add("func", new Data() { Name = Next.Item2.ToString() });
         Objects.Add("params", new List<Data>());
         toAdvance = Convert.ToInt16(3 + TokenIndex);
-        if (CheckTokenSeries(new TokenKind[] { TokenKind.BuiltInKeywordFunc, TokenKind.ConstIdentifier, TokenKind.SymbolOpenParenthesis, TokenKind.SymbolCloseParenthesis, TokenKind.SymbolColon }))
+        if (CheckTokenSeries(new TokenKind[] { TokenKind.BuiltInKeywordFunc, TokenKind.Identifier, TokenKind.SymbolOpenParenthesis, TokenKind.SymbolCloseParenthesis, TokenKind.SymbolColon }))
         {
             Objects["func"] = new Data() { Name = Objects["func"].Name, Type = _syntaxTree[toAdvance + 2].Item2 };
             toAdvance+=3;
@@ -28,35 +28,35 @@ partial class GlobalParser
         for (; toAdvance < _syntaxTree.Count; toAdvance++)
         {
             // intermediate param
-            if (CheckTokenSeries(new TokenKind[] { TokenKind.ConstIdentifier, TokenKind.SymbolColon, TokenKind.ConstIdentifier, TokenKind.SymbolComma }, toAdvance))
+            if (CheckTokenSeries(new TokenKind[] { TokenKind.Identifier, TokenKind.SymbolColon, TokenKind.Identifier, TokenKind.SymbolComma }, toAdvance))
             {
                 Objects["params"].Add(new Data() { Name = _syntaxTree[toAdvance].Item2.ToString(), Type = _syntaxTree[toAdvance + 2].Item2 });
                 toAdvance += 3;
             }
-            else if (CheckTokenSeries(new TokenKind[] { TokenKind.ConstIdentifier, TokenKind.SymbolColon, TokenKind.ConstIdentifier, TokenKind.SymbolOpenBracket, TokenKind.SymbolCloseBracket, TokenKind.SymbolComma }, toAdvance))
+            else if (CheckTokenSeries(new TokenKind[] { TokenKind.Identifier, TokenKind.SymbolColon, TokenKind.Identifier, TokenKind.SymbolOpenBracket, TokenKind.SymbolCloseBracket, TokenKind.SymbolComma }, toAdvance))
             {
                 Objects["params"].Add(new Data() { Name = _syntaxTree[toAdvance].Item2.ToString(), Type = _syntaxTree[toAdvance + 2].Item2 + "[]" });
                 toAdvance += 5;
             }
-            else if (CheckTokenSeries(new TokenKind[] { TokenKind.ConstIdentifier, TokenKind.SymbolColon, TokenKind.ConstIdentifier, TokenKind.SymbolMinor, TokenKind.ConstIdentifier, TokenKind.SymbolMajor, TokenKind.SymbolComma }, toAdvance))
+            else if (CheckTokenSeries(new TokenKind[] { TokenKind.Identifier, TokenKind.SymbolColon, TokenKind.Identifier, TokenKind.SymbolMinor, TokenKind.Identifier, TokenKind.SymbolMajor, TokenKind.SymbolComma }, toAdvance))
             {
                 Objects["params"].Add(new Data() { Name = _syntaxTree[toAdvance].Item2.ToString(), Type = _syntaxTree[toAdvance + 2].Item2 + "<" + _syntaxTree[toAdvance + 4].Item2 + ">" });
                 toAdvance += 6;
             }
             // last param
-            else if (CheckTokenSeries(new TokenKind[] { TokenKind.ConstIdentifier, TokenKind.SymbolColon, TokenKind.ConstIdentifier, TokenKind.SymbolCloseParenthesis }, toAdvance))
+            else if (CheckTokenSeries(new TokenKind[] { TokenKind.Identifier, TokenKind.SymbolColon, TokenKind.Identifier, TokenKind.SymbolCloseParenthesis }, toAdvance))
             {
                 Objects["params"].Add(new Data() { Name = _syntaxTree[toAdvance].Item2.ToString(), Type = _syntaxTree[toAdvance + 2].Item2 });
                 toAdvance += 3;
                 break;
             }
-            else if (CheckTokenSeries(new TokenKind[] { TokenKind.ConstIdentifier, TokenKind.SymbolColon, TokenKind.ConstIdentifier, TokenKind.SymbolOpenBracket, TokenKind.SymbolCloseBracket, TokenKind.SymbolCloseParenthesis }, toAdvance))
+            else if (CheckTokenSeries(new TokenKind[] { TokenKind.Identifier, TokenKind.SymbolColon, TokenKind.Identifier, TokenKind.SymbolOpenBracket, TokenKind.SymbolCloseBracket, TokenKind.SymbolCloseParenthesis }, toAdvance))
             {
                 Objects["params"].Add(new Data() { Name = _syntaxTree[toAdvance].Item2.ToString(), Type = _syntaxTree[toAdvance + 2].Item2 + "[]" });
                 toAdvance += 5;
                 break;
             }
-            else if (CheckTokenSeries(new TokenKind[] { TokenKind.ConstIdentifier, TokenKind.SymbolColon, TokenKind.ConstIdentifier, TokenKind.SymbolMinor, TokenKind.ConstIdentifier, TokenKind.SymbolMajor, TokenKind.SymbolCloseParenthesis }, toAdvance))
+            else if (CheckTokenSeries(new TokenKind[] { TokenKind.Identifier, TokenKind.SymbolColon, TokenKind.Identifier, TokenKind.SymbolMinor, TokenKind.Identifier, TokenKind.SymbolMajor, TokenKind.SymbolCloseParenthesis }, toAdvance))
             {
                 Objects["params"].Add(new Data() { Name = _syntaxTree[toAdvance].Item2.ToString(), Type = _syntaxTree[toAdvance + 2].Item2 + "<" + _syntaxTree[toAdvance + 4].Item2 + ">" });
                 toAdvance += 6;

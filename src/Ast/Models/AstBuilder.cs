@@ -2,8 +2,8 @@
 class AstBuilder
 {
     List<AstElement> ElementKind = new List<AstElement> { };
-    List<int> LineIndex = new List<int>();
-    public void Add(AstElement astElement, int lineIndex)
+    List<short> LineIndex = new List<short>();
+    public void Add(AstElement astElement, short lineIndex)
     {
         ElementKind.Add(astElement);
         LineIndex.Add(lineIndex);

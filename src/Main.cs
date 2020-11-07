@@ -3,10 +3,6 @@ class Mug
 {
     static void Main(string[] args)
     {
-        //if (args.Length < 1)
-        //    Console.WriteLine("Insufficient Arguments");
-        //else
-        //    compile(System.IO.Path.GetFullPath(args[0]));
         compile(System.IO.Path.GetFullPath(@"C:\Users\Mondelli\Desktop\MugProgrammingLanguage\MugProgrammingLanguage\test\base.mug"));
     }
     static void compile(string path)

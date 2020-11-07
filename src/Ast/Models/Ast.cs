@@ -1,14 +1,14 @@
 ﻿using System;
 class Ast
 {
-    public Ast(AstElement[] ElementKind, int[] LineIndex)
+    public Ast(AstElement[] ElementKind, short[] LineIndex)
     {
         this.Elements = ElementKind;
         this.LineIndex = LineIndex;
     }
     public int Length => Elements.Length;
     public AstElement[] Elements = { };
-    public int[] LineIndex = { };
+    public short[] LineIndex = { };
     public void PrintTree(string indent = "")
     {
         for (int i = 0; i < Length; i++)
@@ -41,5 +41,5 @@ class Ast
         TreeToString(ref tree, "");
         return tree;
     }
-    public Tuple<AstElement, int> this[int index] => new Tuple<AstElement, int>(Elements[index], LineIndex[index]);
+    public Tuple<AstElement, short> this[int index] => new Tuple<AstElement, short>(Elements[index], LineIndex[index]);
 }

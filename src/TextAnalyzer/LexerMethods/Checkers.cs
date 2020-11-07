@@ -87,7 +87,7 @@ partial class Lexer
                     InsertToken(TokenKind.SymbolNegation);
                 return true;
             case '?':
-                InsertToken(TokenKind.ConstIdentifier, '?');
+                InsertToken(TokenKind.Identifier, '?');
                 return true;
             case '\"':
                 if (!string.IsNullOrEmpty(Identifier) && !SyntaxRules.BuiltInKeyword.Contains(Identifier))

@@ -23,14 +23,12 @@ partial class Lexer
                 id = new ConstPrimitiveTInt(Convert.ToInt32(Identifier)); // fix 64 bit
         }
         else if (isString(Identifier))
-        {
             id = new ConstPrimitiveTString(Identifier[1..^1]);
-        }
         else if (isBool(Identifier))
             id = new ConstPrimitiveTBool(Convert.ToBoolean(Identifier));
         else
         {
-            _syntaxTreeBuilder.Add(TokenKind.ConstIdentifier, id, LineIndex);
+            _syntaxTreeBuilder.Add(TokenKind.Identifier, id, LineIndex);
             Identifier = "";
             return;
         }

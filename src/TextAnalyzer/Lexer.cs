@@ -41,7 +41,7 @@ partial class Lexer
         if (Identifier != "")
             InsertIdentifierToST();
         InsertEndOfFileToken();
-        return _syntaxTreeBuilder.Build();
+        return _syntaxTreeBuilder.NormalizeAndBuild();
     }
     static void AdvanceLine() { LineIndex++; CharIndex = 0; }
     static void Advance() => CharIndex++;

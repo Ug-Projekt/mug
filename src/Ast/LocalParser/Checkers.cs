@@ -16,7 +16,7 @@ partial class LocalParser : Parser
     }
     bool CheckFunctionCalling()
     {
-        if (!CheckTokenSeries(new TokenKind[] { TokenKind.ConstIdentifier, TokenKind.SymbolOpenParenthesis }))
+        if (!CheckTokenSeries(new TokenKind[] { TokenKind.Identifier, TokenKind.SymbolOpenParenthesis }))
             return false;
         int isRelativeBrace = 0;
         Identifier += Current.Item2.ToString();

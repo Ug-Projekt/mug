@@ -1,5 +1,8 @@
 func main(): ? {
 	# this is simple test: note this is note an example but a debug test
 	# print function is not a built in, but in this test to simple debug it will be a built in function
-	print("Hello"); print(" "); print("World"); println("!");
+	io::console::print("Hello"); # static method access support
+	io # testing for the lexer (instance support)
+	.
+	console.print("Hello");
 }

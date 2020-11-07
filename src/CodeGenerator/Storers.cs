@@ -3,6 +3,8 @@ partial class CodeGenerator
 {
     void StoreCallFunctionStatement()
     {
+        // to remove and replace with 
+        #region to remove and replace with Evaluator.EvaluateExpression(AstElement)
         // support for const only
         List<string> paramsTypes = new List<string>();
         // foreach expression (parameter)
@@ -25,6 +27,14 @@ partial class CodeGenerator
                 Emitter.Emit(instruction, arg);
             }
         }
-        Emitter.Emit("call", GlobalParser.Functions[Current.Item1.ElementValue.ToString()].Reference == "" ? GlobalParser.Functions[Current.Item1.ElementValue.ToString()].Data.Type + " " + Current.Item1.ElementValue + "(" + string.Join(", ", paramsTypes) + ")" : GlobalParser.Functions[Current.Item1.ElementValue.ToString()].Reference);
+        #endregion
+        FunctionData func;
+        if (!GlobalParser.Functions.TryGetValue(Current.Item1.ElementValue.ToString(), out func))
+            CompilationErrors.Add(
+                "Undefined Function",
+                "Cannot find the declared reference",
+                "Define the reference or write the correct identifer", Current.Item2, null);
+        else
+            Emitter.Emit("call", func.Reference == "" ? func.Data.Type + " " + Current.Item1.ElementValue + "(" + string.Join(", ", paramsTypes) + ")" : func.Reference);
     }
 }

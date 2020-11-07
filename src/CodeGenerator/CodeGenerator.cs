@@ -4,7 +4,7 @@ partial class CodeGenerator
 {
     Emitter Emitter = new Emitter();
     Ast _ast;
-    Tuple<AstElement, int> Current => _ast[ElementIndex];
+    Tuple<AstElement, short> Current => _ast[ElementIndex];
     int ElementIndex = 0;
     public InstructionsCollection GetMethodAssembly(Ast ast)
     {
