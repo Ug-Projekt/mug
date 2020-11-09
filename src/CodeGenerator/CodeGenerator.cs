@@ -3,6 +3,7 @@ using System.Collections.Generic;
 partial class CodeGenerator
 {
     Emitter Emitter = new Emitter();
+    Dictionary<string, LowData> Variables = new Dictionary<string, LowData>();
     Ast _ast;
     Tuple<AstElement, short> Current => _ast[ElementIndex];
     int ElementIndex = 0;

@@ -1,0 +1,11 @@
+use "bag.mug";
+use "shell.mug";
+
+func main(): ? {
+	i32[] vec = [1, 2, 3];
+	for i: i32 in vec.Length {
+		alias elem = "vec[i]";
+		println("Elem: ", elem); # compile time sostituition of identifiers
+										 # result = println("Elem: ", vec[i]);
+	}
+}

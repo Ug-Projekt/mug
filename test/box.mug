@@ -1,6 +1,0 @@
-use "bag.mug";
-use "shell.mug" 
-
-func main(): ? {
-	println(box(10));
-}
