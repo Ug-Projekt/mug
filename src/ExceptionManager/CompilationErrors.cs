@@ -2,7 +2,7 @@
 
 class CompilationErrors
 {
-    static Errors Exceptions = new Errors();
+    static ErrorCollection Exceptions = new ErrorCollection();
     public static void Add(string Error, string Reason, string TryTo, short lineIndex, short? charIndex)
     {
         if (!Exceptions.Contains(Error, Reason, TryTo, lineIndex, charIndex))

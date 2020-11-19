@@ -7,7 +7,7 @@ partial class CodeGenerator
     Ast _ast;
     Tuple<AstElement, short> Current => _ast[ElementIndex];
     int ElementIndex = 0;
-    public InstructionsCollection GetMethodAssembly(Ast ast)
+    public InstructionCollection GetMethodAssembly(Ast ast)
     {
         _ast = ast;
         while (ElementIndex < ast.Length)

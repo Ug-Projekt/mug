@@ -4,7 +4,7 @@ using System.Collections.Generic;
 partial class LocalParser : Parser
 {
     string Identifier { get; set; } = "";
-    void CheckLocalParsable()
+    void ParseLocal()
     {
         Objects.Clear();
         if (CheckFunctionCalling())
@@ -16,12 +16,12 @@ partial class LocalParser : Parser
     }
     bool CheckFunctionCalling()
     {
-        if (!CheckTokenSeries(new TokenKind[] { TokenKind.Identifier, TokenKind.SymbolOpenParenthesis }))
+        if (!MatchTokens(new TokenKind[] { TokenKind.Identifier, TokenKind.SymbolOpenParenthesis }))
             return false;
         int isRelativeBrace = 0;
         Identifier += Current.Item2.ToString();
         Objects.Add("func", new Data() { Name = Identifier });
-        var exprBuilder = new SyntaxTreeBuilder();
+        var exprBuilder = new TokenCollector();
         var paramBuilder = new AstBuilder();
         for (toAdvance = Convert.ToInt16(1 + TokenIndex); ; toAdvance++)
         {
@@ -40,7 +40,7 @@ partial class LocalParser : Parser
                     ),
                     GetLineFromToken()
                 );
-                exprBuilder = new SyntaxTreeBuilder();
+                exprBuilder = new TokenCollector();
             }
             else
                 exprBuilder.Add(_syntaxTree[toAdvance]);

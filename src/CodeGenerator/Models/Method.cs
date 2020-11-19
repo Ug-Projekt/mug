@@ -7,8 +7,8 @@
     public readonly string[] LocalVariables;
     public readonly bool EntryPoint;
     public readonly short Maxstack;
-    public readonly InstructionsCollection Body;
-    public Method(string name, string type, string modifiers, string[] parameters, string[] localVariables, bool entryPoint, InstructionsCollection instructions, short maxstack = 8)
+    public readonly InstructionCollection Body;
+    public Method(string name, string type, string modifiers, string[] parameters, string[] localVariables, bool entryPoint, InstructionCollection instructions, short maxstack = 8)
     {
         Name = name;
         Type = type;

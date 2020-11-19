@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-class Errors
+class ErrorCollection
 {
     public int Count => Error.Count;
     public bool Contains(string error, string reason, string tryTo, short lineIndex, short? charIndex)

@@ -5,7 +5,7 @@ class Emitter
     List<string> instructions = new List<string>();
     List<string> args = new List<string>();
     List<string> labels = new List<string>();
-    public InstructionsCollection Instructions => new InstructionsCollection(instructions.ToArray(), args.ToArray(), labels.ToArray());
+    public InstructionCollection Instructions => new InstructionCollection(instructions.ToArray(), args.ToArray(), labels.ToArray());
     public void Emit(string opCode, string arg, string label)
     {
         instructions.Add(opCode);

@@ -10,16 +10,16 @@ class Mug
         Console.Title = "MugC";
 
         //Console.Write("TestingMugC@ ");
-        var syntaxTree = Lexer.GetSyntaxTree(System.IO.File.ReadAllBytes(path));
+        var tokenCollection = Lexer.GetSyntaxTree(System.IO.File.ReadAllBytes(path));
     	CompilationErrors.Except(true);
 
         if (ask("Show Tokens"))
         {
         	Console.WriteLine("SyntaxTree:");
-        	syntaxTree.PrintTree();
+        	tokenCollection.PrintTree();
         	pause();
         }
-        new GlobalParser().GetAbstractSyntaxTree(syntaxTree);
+        new GlobalParser().GetAbstractSyntaxTree(tokenCollection);
     	if (!GlobalParser.Functions.TryGetValue("main", out FunctionData entrypoint))
     	CompilationErrors.Add(
     		"Main Function Missing",
@@ -30,7 +30,7 @@ class Mug
 		if (ask("Show Main Ast"))
         {
         	Console.WriteLine("AbstractSyntaxTree:");
-        	GlobalParser.Functions["main"].Body.PrintTree();
+        	entrypoint.Body.PrintTree();
 		}
 		if (ask("Generate Assembly"))
     	{

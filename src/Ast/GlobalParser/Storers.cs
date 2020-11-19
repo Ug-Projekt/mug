@@ -7,7 +7,7 @@ partial class GlobalParser
         //Console.WriteLine("Parameters: " + string.Join(" ", Objects["params"]));
         Advance(toAdvance);
         toAdvance = 0;
-        var bodySyntaxBuilder = new SyntaxTreeBuilder();
+        var bodySyntaxBuilder = new TokenCollector();
         short considerationBrace = -1;
         //Console.WriteLine("Current: "+Current);
         while (Current.Item1 != TokenKind.ControlEndOfFile)

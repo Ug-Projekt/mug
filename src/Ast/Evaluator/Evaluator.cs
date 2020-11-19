@@ -5,7 +5,7 @@ using System.Runtime.InteropServices.ComTypes;
 class Evaluator
 {
     // to replace with EvaluateExpression and checkers
-    [Obsolete] public static void EvaluateSimpleExpression(ref Dictionary<string, LowData> variables, SyntaxTree tokens, ref Emitter Emitter, ref string type /*param type, type...*/)
+    [Obsolete] public static void EvaluateSimpleExpression(ref Dictionary<string, LowData> variables, TokenCollection tokens, ref Emitter Emitter, ref string type /*param type, type...*/)
     {
         // foreach token in expression (param)
         for (int i = 0; i < tokens.Count; i++)

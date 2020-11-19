@@ -1,14 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 
-class SyntaxTree
+class TokenCollection
 {
     public void PrintTree()
     {
         for (int i = 0; i < Count; i++)
             Console.WriteLine("Line:({2}) Token: {0}{1}", TokenType[i], !(TokenValue[i] is null) ? ", " + TokenValue[i] : "", LineIndex[i]);
     }
-    public SyntaxTree(List<TokenKind> tokens, List<dynamic> values, List<short> lineIndexes) { TokenType = tokens; TokenValue = values; LineIndex = lineIndexes; }
+    public TokenCollection(List<TokenKind> tokens, List<dynamic> values, List<short> lineIndexes) { TokenType = tokens; TokenValue = values; LineIndex = lineIndexes; }
     readonly List<TokenKind> TokenType = new List<TokenKind>();
     readonly List<dynamic> TokenValue = new List<dynamic>();
     readonly List<short> LineIndex = new List<short>();

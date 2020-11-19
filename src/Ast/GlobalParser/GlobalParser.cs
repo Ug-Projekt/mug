@@ -8,12 +8,12 @@ partial class GlobalParser : Parser
     };
     public static Dictionary<string, ClassData> Classes = new Dictionary<string, ClassData>();
     public static Dictionary<string, VariableData> Variables = new Dictionary<string, VariableData>();
-    override public Ast GetAbstractSyntaxTree(SyntaxTree synT)
+    override public Ast GetAbstractSyntaxTree(TokenCollection synT)
     {
         _syntaxTree = synT;
         while (Current.Item1 != TokenKind.ControlEndOfFile)
         {
-            CheckGlobalParsable();
+            ParseGlobal();
             Advance();
         }
         return _astBuilder.Build(); // fix

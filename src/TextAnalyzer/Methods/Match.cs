@@ -1,7 +1,7 @@
 using System.Linq;
 partial class Lexer
 {
-    static bool CheckIfIsSymbol(char Char)
+    static bool MatchSymbols(char Char)
     {
         switch (Char)
         {
@@ -24,43 +24,43 @@ partial class Lexer
                 InsertToken(TokenKind.SymbolCloseBrace);
                 return true;
             case '=':
-                if (CheckIfEqualToNext('='))
+                if (MatchNext('='))
                     InsertToken(TokenKind.OperatorEqualEqual);
                 else
                     InsertToken(TokenKind.SymbolEqual);
                 return true;
             case '>':
-                if (CheckIfEqualToNext('='))
+                if (MatchNext('='))
                     InsertToken(TokenKind.OperatorMajorEqual);
                 else
                     InsertToken(TokenKind.SymbolMajor);
                 return true;
             case '<':
-                if (CheckIfEqualToNext('='))
+                if (MatchNext('='))
                     InsertToken(TokenKind.OperatorMinorEqual);
                 else
                     InsertToken(TokenKind.SymbolMinor);
                 return true;
             case '+':
-                if (CheckIfEqualToNext('='))
+                if (MatchNext('='))
                     InsertToken(TokenKind.OperatorPlusEqual);
                 else
                     InsertToken(TokenKind.SymbolPlus);
                 return true;
             case '-':
-                if (CheckIfEqualToNext('='))
+                if (MatchNext('='))
                     InsertToken(TokenKind.OperatorMinusEqual);
                 else
                     InsertToken(TokenKind.SymbolMinus);
                 return true;
             case '/':
-                if (CheckIfEqualToNext('='))
+                if (MatchNext('='))
                     InsertToken(TokenKind.OperatorSlashEqual);
                 else
                     InsertToken(TokenKind.SymbolSlash);
                 return true;
             case '*':
-                if (CheckIfEqualToNext('='))
+                if (MatchNext('='))
                     InsertToken(TokenKind.SymbolStarEqual);
                 else
                     InsertToken(TokenKind.SymbolStar);
@@ -69,7 +69,7 @@ partial class Lexer
                 InsertToken(TokenKind.SymbolDot);
                 return true;
             case ':':
-                if (CheckIfEqualToNext(':'))
+                if (MatchNext(':'))
                     InsertToken(TokenKind.OperatorSelectStaticMethod);
                 else
                     InsertToken(TokenKind.SymbolColon);
@@ -81,7 +81,7 @@ partial class Lexer
                 InsertToken(TokenKind.SymbolComma);
                 return true;
             case '!':
-                if (CheckIfEqualToNext('='))
+                if (MatchNext('='))
                     InsertToken(TokenKind.OperatorNotEqual);
                 else
                     InsertToken(TokenKind.SymbolNegation);
@@ -93,7 +93,7 @@ partial class Lexer
                 if (!string.IsNullOrEmpty(Identifier) && !SyntaxRules.BuiltInKeyword.Contains(Identifier))
                     InsertIdentifierToST();
                 else
-                    CheckIfIsKeyword();
+                    MatchKeyword();
                 if (!PassingOnString)
                     Identifier += Char;
                 PassingOnString = true;
@@ -119,12 +119,12 @@ partial class Lexer
             if (!string.IsNullOrEmpty(Identifier) && !SyntaxRules.BuiltInKeyword.Contains(Identifier))
                 InsertIdentifierToST();
             else
-                CheckIfIsKeyword();
-            if (!CheckIfIsSymbol(Char))
+                MatchKeyword();
+            if (!MatchSymbols(Char))
                 CompilationErrors.Add("Not Caratterizzable Character", $"`{Char}` is an invalid token, is not caratterizzable as Symbol, Control, Identifier", $"Remove `{Char}` from the line or replace it with the right symbol", LineIndex, CharIndex);
         }
     }
-    static bool CheckIfEqualToNext(char Char)
+    static bool MatchNext(char Char)
     {
         if (SourceInfo.Source[LineIndex].Length - 1 < CharIndex + 1)
             return false;
@@ -133,7 +133,7 @@ partial class Lexer
             Advance();
         return equal;
     }
-    static bool CheckIfEqualToNext(char Char, short count)
+    static bool MatchNext(char Char, short count)
     {
         if (SourceInfo.Source[LineIndex].Length - 1 < CharIndex + count)
             return false;
@@ -148,7 +148,7 @@ partial class Lexer
             Advance(count);
         return equal;
     }
-    static void CheckIfIsKeyword()
+    static void MatchKeyword()
     {
         for (short i = 0; i < SyntaxRules.BuiltInKeyword.Length; i++)
             if (Identifier == SyntaxRules.BuiltInKeyword[i])

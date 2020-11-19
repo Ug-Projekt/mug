@@ -6,8 +6,8 @@ partial class Lexer
     static short CharIndex { get; set; }
     static short LineIndex { get; set; }
     static string Identifier { get; set; }
-    static SyntaxTreeBuilder _syntaxTreeBuilder { get; set; }
-    public static SyntaxTree GetSyntaxTree(byte[] source)
+    static TokenCollector _syntaxTreeBuilder { get; set; }
+    public static TokenCollection GetSyntaxTree(byte[] source)
     {
         initializeComponents(source);
 
@@ -23,7 +23,7 @@ partial class Lexer
                         if (!string.IsNullOrEmpty(Identifier) && !SyntaxRules.BuiltInKeyword.Contains(Identifier))
                             InsertIdentifierToST();
                         else
-                            CheckIfIsKeyword();
+                            MatchKeyword();
                         PassingOnString = false;
                     }
                     else if (SourceInfo.Source[LineIndex][CharIndex] == '\\')
@@ -49,7 +49,7 @@ partial class Lexer
     static void initializeComponents(byte[] source)
     {
         CompilationErrors.Reset();
-        _syntaxTreeBuilder = new SyntaxTreeBuilder();
+        _syntaxTreeBuilder = new TokenCollector();
         SourceInfo.Source = SourceInfo.GetLinesFromSource(source);
         CharIndex = 0;
         LineIndex = 0;
