@@ -1,3 +1,2 @@
-define func println = "void [mscorlib]System.Console::WriteLine(string)";
-define func print = "void [mscorlib]System.Console::Write(string)";
-define type 
+define func println(val: str): ? = "void [mscorlib]System.Console::WriteLine(string)";
+define func print(val: str): ? = "void [mscorlib]System.Console::Write(string)";
