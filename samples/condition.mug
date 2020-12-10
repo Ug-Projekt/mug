@@ -1,0 +1,13 @@
+use "libs/shell.mug";
+
+func main(): ? {
+	const i32 left = 90;
+	if left < 0 {
+		println("left < right");
+	} else if left == 90 {
+		println("left == right");
+	} else {
+		println("left > right");
+	}
+	println("finally");
+}
