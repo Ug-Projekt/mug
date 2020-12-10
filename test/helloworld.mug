@@ -1,6 +1,0 @@
-use "shell.mug";
-use "bag.mug";
-func main(args: str[]): ? {
-	# hello world
-	io::println("Hello World!");
-}
