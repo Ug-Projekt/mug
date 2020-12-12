@@ -1,12 +1,3 @@
 ﻿using System;
-
-namespace mug
-{
-    class Program
-    {
-        static void Main(string[] args)
-        {
-            Console.WriteLine("Hello World!");
-        }
-    }
-}
+using System.Diagnostics;
+using System.Collections;

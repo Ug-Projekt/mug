@@ -1,5 +1,14 @@
 use "libs/shell.mug"
 
-func main(): ? {
-	println("Hello World!");
+func main() {
+	println("Hello World"+"!");
 }
+
+# Generator {
+#   main {
+#      load:str "Hello World"
+#      load:str "!"
+#      call:ins add(.)
+#      call println(.)
+#   }
+# }

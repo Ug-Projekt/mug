@@ -1,8 +1,15 @@
-func main(args: str[]): ? {
-	i32 i = match args[0] {
-		"0": 0,
-		"1": 1,
-		"2": 2,
-		else: 3
+use "libs/shell.mug";
+use "libs/sys.mug";
+
+func main(args) {
+	if args.len() <= 1 {
+		basepanic("Insufficient Arguments", 1, "BasePanic").throw();
 	}
+	var i = match args[0] {
+		"one": 1,
+		"two": 2,
+		"three": 3,
+		else: 9
+	}
+	println("i: "+i);
 }

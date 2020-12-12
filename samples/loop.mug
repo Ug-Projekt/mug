@@ -1,0 +1,14 @@
+use "libs/shell.mug";
+
+func main(args) {
+	for i in args {
+		println("arg: "+arg);
+	}
+	for i to args.len() {
+		println("arg["+i+"]: "+args.get(i));
+	}
+	var i = 0;
+	while i = 0 < args.len() {
+		println("arg["+i+"]: "+args.get(i));
+	}
+}
