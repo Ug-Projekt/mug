@@ -3,15 +3,44 @@ type LimitedList[type G] {
 	len: u32,
 	max: read i32
 }
-func make_limitedlist[type G](max: i32): {
+func make_limitedlist[type G](max: i32): LimitedList[G] {
 	return {_: G[] {}, len: 0, max: max};
 }
 
-func add(self: LimitedList[type G], value: G): ? {
-	if self.len == 
+func find(self: LimitedList[type G], value: G): bool {
+	for i: i32 to self.len {
+		if self._[i] == value {
+			return true;
+		}
+	}
+	return false;
+}
+func get(self: LimitedList[type G], index: u32): G {
+	if index <= self.len {
+		return self._[index];
+	}
+	return null;
+}
+func set(self: LimitedList[type G], index: u32, value: G): ? {
+	if index <= self.len {
+		self._[index] = value;
+	}
 }
 func add(self: LimitedList[type G], value: G): ? {
-	if self.len > 0 {
-		
+	if self.len < self.max {
+		self._[self.len++] = value;
 	}
+}
+func pop_top(self: LimitedList[type G]): ? {
+	if self.len > 0 {
+		self._[self.len--] = null;
+	}
+}
+func pop(self: LimitedList[type G]): G {
+	if self.len == 0 {
+		return null;
+	}
+	var tmp: G = self._[self.len-1];
+	self._[self.len--] = null;
+	return tmp;
 }
