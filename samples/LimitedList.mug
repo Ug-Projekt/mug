@@ -4,7 +4,7 @@ type LimitedList[type G] {
 	max: read i32
 }
 func make_limitedlist[type G](max: i32): LimitedList[G] {
-	return {_: G[] {}, len: 0, max: max};
+	return {_: G[max] {}, len: 0, max: max};
 }
 
 func find(self: LimitedList[type G], value: G): bool {
