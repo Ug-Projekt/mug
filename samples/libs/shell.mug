@@ -1,2 +1,0 @@
-declare func println(val);
-declare func print(val);

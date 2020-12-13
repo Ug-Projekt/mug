@@ -1,0 +1,23 @@
+func rtrue(): bool {
+	return true;
+}
+func rtrue1(): bool {
+	return true;
+}
+func rfalse(): bool {
+	return false;
+}
+
+func main(): ? {
+	chain {
+		rtrue() {
+			println("Executed");
+		}
+		rtrue1() {
+			println("Not executed, rtrue() returns true -> else if");
+		}
+		rfalse() {
+			println("Never executed");
+		}
+	}
+}

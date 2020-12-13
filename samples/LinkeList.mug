@@ -1,0 +1,92 @@
+type Node[type G] {
+	value: G,
+	next: ptr node[G]
+}
+type LinkedList[type G] {
+	link: Node[G],
+	len: u32,
+	max: read i32
+}
+func make_linkedlist[type G](max: i32): LinkedList[G] {
+	return LinkedList[G] {link: null, len: 0, max: max};
+}
+
+
+func add(self: LinkedList[type G], value: G): ? {
+	if self.len+1 > self.max {
+		return;
+	}
+	if self.len == 0 {
+		self.link = Node[G] {value: value, next: null};
+	} else {
+		var top: ptr Node[G] = &self.link;
+		for i: i32 to self.len-1 {
+			top = top.next;
+		}
+		top.next = &Node[G] {value: value, next: null};
+	}
+	self.len++;
+}
+func pop_top(self: LinkedList[type G]): ? {
+	if self.len == 0 {
+		return;
+	}
+	if self.len == 1 {
+		self.link.value = null;
+	}
+	else {
+		var top: ptr Node[G] = &self.link;
+		for i: i32 to self.len-2 {
+			top = top.next;
+		}
+		top.next = null;
+	}
+	self.len--;
+}
+func pop(self: LinkedList[type G]): G {
+	if self.len == 0 {
+		return null;
+	}
+	var res: G;
+	if self.len == 1 {
+		res = self.link.value;
+		self.link = null;
+	}
+	else {
+		var top: ptr Node[G] = &self.link;
+		for i: i32 to self.len-2 {
+			top = top.next;
+		}
+		res = top.next.value;
+		top.next = null;
+	}
+	self.len--;
+	return res;
+}
+func get(self: LinkedList[type G], index: i32): G {
+	if self.len == 0 || index >= self.len {
+		return null;
+	}
+	if index == 0 {
+		return self.link.value;
+	}
+	else {
+		var top: ptr Node[G] = &self.link;
+		for i: i32 to index {
+			top = top.next;
+		}
+		return top.value;
+	}
+}
+func tostr(self: LinkedList[type G], value: G): str {
+	if self.len == 0 {
+		return "[]";
+	}
+	var res: str = "[";
+	var top: ptr Node[G] = &self.link;
+	for i: i32 to self.len-1 {
+		res += ", "+top.value.tostr();
+		top = top.next;
+	}
+	return res + top.value.tostr() + "]";
+}

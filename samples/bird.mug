@@ -1,9 +1,0 @@
-use "libs/shell.mug"
-
-type person {
-	func
-	operator new(name, age) {
-		self.name = name;
-		self.age = age;
-	}
-}

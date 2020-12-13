@@ -1,7 +1,5 @@
-use "libs/shell.mug";
-
-func main(args) {
-	const left = 90;
+func main(): ? {
+	const left: i8 = 90;
 	if left < 0 {
 		println("left < right");
 	} else if left == 90 {

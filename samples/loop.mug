@@ -1,14 +1,11 @@
-use "libs/shell.mug";
+func main(): ? {
+	var args: i32[] = {2,4,4,3};
 
-func main(args) {
-	for i in args {
-		println("arg: "+arg);
-	}
-	for i to args.len() {
-		println("arg["+i+"]: "+args.get(i));
+	for i: i32 to args.len() {
+		println("arg[", i, "]: ", args[i]);
 	}
 	var i = 0;
-	while i = 0 < args.len() {
-		println("arg["+i+"]: "+args.get(i));
+	while i < args.len() {
+		println("arg[", i, "]: ", args[i]);
 	}
 }

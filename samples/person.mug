@@ -1,0 +1,12 @@
+type Person {
+	name: str,
+	age: i8
+}
+
+func main(): ? {
+	var me: Person = {
+		name: "carpal",
+		age: 15
+	};
+	println("My name is: ", me.name, " and I'm ", me.age);
+}

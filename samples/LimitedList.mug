@@ -1,0 +1,17 @@
+type LimitedList[type G] {
+	_: G[],
+	len: u32,
+	max: read i32
+}
+func make_limitedlist[type G](max: i32): {
+	return {_: G[] {}, len: 0, max: max};
+}
+
+func add(self: LimitedList[type G], value: G): ? {
+	if self.len == 
+}
+func add(self: LimitedList[type G], value: G): ? {
+	if self.len > 0 {
+		
+	}
+}
