@@ -1,8 +1,11 @@
 CompilationMap {
    new CompilationUnit(path) & CompUnit.GenerateIR() {
       IRGenerator.GenerateIR(string) |result| {
-         Parser.GenerateAST(UserInput) {
-         Lexer.GenerateTC(UserInput)
+         Parser.GenerateAST(UserInput) |ast| {
+            Lexer.GenerateTC(UserInput) |tc| {
+               // tokenizing UserInput into tc
+            } => // parsing tc into ast
+         } => // converting ast into llvm ir, doing typechecking and more
       } => WriteFile(result.TempOutputPath, result.Assembly);
       while !ExistsFile(result.TempOutputPath)
          Print('.');
