@@ -1,0 +1,61 @@
+CompilationMap {
+   UserInput => new CompilationUnit & CompUnit.GenerateIR() {
+
+   }
+}
+
+OnlyPublic = true
+CompilationUnit {
+   Instances {
+      Parser,
+      IRGenerator
+   }
+   Methods {
+      GetTokenCollection(): List[Token],
+      GetParseTree(): List[ImperativeStatement],
+      GenerateIR(): 
+   }
+}
+TokenKinds: enum {
+   ...
+}
+Token: struct {
+   Kind: TokenKinds,
+   Value: Object,
+   Position: Range
+}
+Lexer: class {
+   Instances {
+      TokenCollection: List[Token],
+   }
+   Methods {
+      GetInput(): string,
+      GetLineInput(Token): string
+   }
+}
+ImperativeStatement: interface {
+   Kind: StatementKinds,
+   Body: ImperativeStatement,
+   Position: Range
+}
+ModuleDefinition: struct extends ImperativeStatement {
+
+}
+FuncDefinition: struct extends ImperativeStatement {
+   Kind = TokenKinds::FunctionDefinition,
+   Body = ,
+   Position = ...,
+
+}
+Parser: class {
+   Instances {
+      Scanner: Lexer
+      ParseTree: List[ImperativeStatement]
+   }
+   Methods {
+      GenerateAST()
+   }
+}
+IntermediateLanguage {
+
+}
