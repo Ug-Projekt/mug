@@ -4,7 +4,7 @@ func main(): ? {
 	for i: i32 to args.len() {
 		println("arg[", i, "]: ", args[i]);
 	}
-	var i = 0;
+	var i: i32 = 0;
 	while i < args.len() {
 		println("arg[", i, "]: ", args[i]);
 	}

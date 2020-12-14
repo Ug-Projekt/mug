@@ -1,8 +1,0 @@
-use "List.mug";
-
-func main() {
-	var list: List[i32] = make_list(2);
-	list.add(90);
-	list.add(90);
-	list.add(90);
-}

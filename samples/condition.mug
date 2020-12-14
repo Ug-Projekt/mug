@@ -1,8 +1,8 @@
 func main(): ? {
 	const left: i8 = 90;
-	if left < 0 {
+	if left < 0.cast[i8]() {
 		println("left < right");
-	} else if left == 90 {
+	} else if left.cast[i32]() == 90 {
 		println("left == right");
 	} else {
 		println("left > right");

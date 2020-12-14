@@ -1,10 +1,10 @@
 func main(): ? {
-	var i: i8;
+	var i: i32;
 	i = match "none" {
 		"one": 1,
 		"two": 2,
 		"three": 3,
 		else: 9
 	};
-	println("i: ", i);
+	println("i: ", i.tostr());
 }

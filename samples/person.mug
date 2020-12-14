@@ -6,7 +6,7 @@ type Person {
 func main(): ? {
 	var me: Person = {
 		name: "carpal",
-		age: 15
+		age: 15.cast[i8]()
 	};
-	println("My name is: ", me.name, " and I'm ", me.age);
+	println("My name is: ", me.name.tostr(), " and I'm ", me.age.tostr());
 }
