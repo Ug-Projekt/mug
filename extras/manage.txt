@@ -1,22 +1,30 @@
 CompilationMap {
-   UserInput => new CompilationUnit & CompUnit.GenerateIR() {
-
+   new CompilationUnit(path) & CompUnit.GenerateIR() {
+      IRGenerator.GenerateIR(string) |result| {
+         Parser.GenerateAST(UserInput) {
+         Lexer.GenerateTC(UserInput)
+      } => WriteFile(result.TempOutputPath, result.Assembly);
+      while !ExistsFile(result.TempOutputPath)
+         Print('.');
+      CommandPrompt("clang -S "+result.TempOutputPath+" -o "+ChangeExtension(path, "exe"))
    }
 }
 
 OnlyPublic = true
-CompilationUnit {
+CompilationUnit(string) {
    Instances {
-      Parser,
       IRGenerator
    }
    Methods {
       GetTokenCollection(): List[Token],
-      GetParseTree(): List[ImperativeStatement],
-      GenerateIR(): 
+      GetParseTree(): ModuleDefinition,
+      GenerateIR(): IntermediateLanguage
    }
 }
 TokenKinds: enum {
+   ...
+}
+MugType: enum {
    ...
 }
 Token: struct {
@@ -26,36 +34,71 @@ Token: struct {
 }
 Lexer: class {
    Instances {
-      TokenCollection: List[Token],
+      TokenCollection: List[Token]
    }
    Methods {
+      GenerateTC(string): List[Token],
       GetInput(): string,
       GetLineInput(Token): string
    }
 }
-ImperativeStatement: interface {
+ImperativeStatement: struct {
    Kind: StatementKinds,
-   Body: ImperativeStatement,
+   Body: Object,
    Position: Range
 }
-ModuleDefinition: struct extends ImperativeStatement {
-
+ModuleDefinition: struct {
+   Name: string,
+   Body: List[ImperativeStatement]
 }
-FuncDefinition: struct extends ImperativeStatement {
-   Kind = TokenKinds::FunctionDefinition,
-   Body = ,
-   Position = ...,
-
+FuncDefinition: struct {
+   ReturnType: MugType,
+   Name: string,
+   ParameterTypes: ConstTuple,
+   Body: List[ImperativeStatement]
 }
 Parser: class {
    Instances {
-      Scanner: Lexer
+      Scanner: Lexer,
       ParseTree: List[ImperativeStatement]
    }
    Methods {
-      GenerateAST()
+      GenerateAST(string): ModuleDefinition
    }
 }
-IntermediateLanguage {
-
+IRGlobalEmitter: class {
+   Instances {
+      AssemblyBuilder: StringBuilder
+   }
+   Methods {
+      GetAssembled(): string,
+      DefineFunction(FuncDefinition): void,
+      DeclareFunction(MugType, string, ConstTuple): void,
+      ...
+   }
+}
+IRLobalEmitter: class {
+   Instances {
+      AssemblyBuilder: StringBuilder
+   }
+   Methods {
+      GetAssembled(): string,
+      CallFunction(MugType, string, ConstTuple, ConstTuple): void
+      ...
+   }
+}
+IRGenerator: class {
+   Instances {
+      Parser: Parser
+      Emitter: IRGlobalEmitter,
+      Symbols: Dictionary[string, Object]
+   }
+   Methods {
+      GenerateIR(string): IntermediateLanguage
+   }
+}
+IntermediateLanguage: struct {
+   Assembly: string,
+   CompilationTime: DateTime,
+   TempOutputPath: string
 }

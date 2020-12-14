@@ -17,4 +17,5 @@ define void @cnll(i8*) {
    ret void
 }
 define void @main() {
+  ret void
 }
