@@ -1,10 +1,10 @@
-func rtrue(): bool {
+func rtrue(): bit {
 	return true;
 }
-func rtrue1(): bool {
+func rtrue1(): bit {
 	return true;
 }
-func rfalse(): bool {
+func rfalse(): bit {
 	return false;
 }
 
