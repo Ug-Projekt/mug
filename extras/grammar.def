@@ -1,0 +1,14 @@
+grammar Mug;
+Lexer:
+   Identifier: [a-z] | [A-Z] | _
+   Digit: [0-9 & .]
+   Plus: '+'
+   Minus: '-'
+   Star: '*'
+   Slash: '/'
+   OpenPar: '('
+   ClosePar: ')'
+   OpenBracket: '['
+   CloseBracket: ']'
+   OpenBrace: '{'
+   CloseBrace: '}'
