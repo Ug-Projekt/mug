@@ -7,7 +7,7 @@ func make_limitedlist[type G](max: i32): LimitedList[G] {
 	return {_: G[max] {}, len: 0, max: max};
 }
 
-func find(self: LimitedList[type G], value: G): bool {
+func find(self: LimitedList[type G], value: G): bit {
 	for i: i32 to self.len {
 		if self._[i] == value {
 			return true;

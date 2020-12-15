@@ -49,6 +49,7 @@ func pop(self: List[type G]): G {
 		return null;
 	}
 	var tmp: G = self._[self.len-1];
+	
 	self._[self.len--] = null;
 	return tmp;
 }
