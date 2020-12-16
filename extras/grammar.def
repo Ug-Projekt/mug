@@ -6,11 +6,23 @@ Lexer:
    Minus: '-'
    Star: '*'
    Slash: '/'
+   Colon: ':'
+   ExclamationMark: '!'
+   Equal: '='
+   Semicolon: ';'
+   OperatorEQ: '=='
+   OperatorNEQ: '!='
    OpenPar: '('
    ClosePar: ')'
    OpenBracket: '['
    CloseBracket: ']'
    OpenBrace: '{'
    CloseBrace: '}'
+<<<<<<< HEAD
 Parser:
    FuncDef: Identifier
+=======
+   KeyFunc: 'func'
+   KeyVar: 'var'
+   KeyConst: 'const'
+>>>>>>> 7f0bc055522a6f16b71d9c269f7437576eec6e9e
