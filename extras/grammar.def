@@ -12,3 +12,5 @@ Lexer:
    CloseBracket: ']'
    OpenBrace: '{'
    CloseBrace: '}'
+Parser:
+   FuncDef: Identifier
