@@ -1,7 +1,8 @@
 grammar Mug;
 Lexer:
-   Identifier: [a-z] | [A-Z] | _
-   Digit: [0-9 & .]
+   ConstString: '"'..'"'
+   Identifier: (_[aA-zZ] [0-9])
+   ConstDigit: [0-9] | [0-9] (.) [0-9]
    Plus: '+'
    Minus: '-'
    Star: '*'
@@ -9,20 +10,58 @@ Lexer:
    Colon: ':'
    ExclamationMark: '!'
    Equal: '='
+   Comma: ','
+   Dot: '.'
    Semicolon: ';'
+   OperatorDecrement: '--'
+   OperatorIncrement: '++'
    OperatorEQ: '=='
    OperatorNEQ: '!='
+   OperatorLT: '<'
+   OperatorGT: '>'
+   OperatorLE: '<='
+   OperatorGE: '>='
+   OperatorXOR: '|'
+   OperatorAND: '&'
    OpenPar: '('
    ClosePar: ')'
    OpenBracket: '['
    CloseBracket: ']'
    OpenBrace: '{'
    CloseBrace: '}'
-<<<<<<< HEAD
-Parser:
-   FuncDef: Identifier
-=======
    KeyFunc: 'func'
    KeyVar: 'var'
    KeyConst: 'const'
->>>>>>> 7f0bc055522a6f16b71d9c269f7437576eec6e9e
+   KeyType: 'type'
+   KeyIF: 'if'
+   KeyELSE: 'else'
+   KeyTstr: 'str'
+   KeyTi32: 'i32'
+   KeyTf32: 'f32'
+   KeyTchr: 'chr'
+Parser:
+   GenericTypeDef: KeyType Identifier
+   TypeDef: Type Identifier
+   GenericSpecification: Identifier OpenBracket Type @(?(Comma Type)) CloseBracket
+   GenericDef: OpenBracket GenericTypeDef @(?(Comma GenericTypeDef)) CloseBracket
+   Value: FuncCallStatement | InstancePeek | Identifier | ConstDigit | ConstString | ConstArray
+   SimpleExpression: (Value Slash Value) | (Value) | (OpenPar ValueChange ClosePar)
+   Expression: (SimpleExpression) | (Expression (Minus | Plus) Expression)
+   ParamsBlockDef: (OpenPar ClosePar) | (OpenPar TypeDef @(?(Comma TypeDef)) ClosePar)
+   ParamsBlockSpecification: (OpenPar ClosePar) | (OpenPar Expression @(?(Comma Expression)) ClosePar)
+   ConstArray: (OpenBracket CloseBracket) | (OpenBracket Expression @(?(Comma Expression)) CloseBracket)
+   Type: Identifier | KeyTstr | KeyTi32 | KeyTf32 | KeyTchr | GenericDef
+   VarDef: KeyVar Identifier Colon Type Expression Semicolon
+   ValueChange: ValueIncrement | ValueDecrement
+   ValueIncrement: Identifier OperatorIncrement
+   ValueDecrement: Identifier OperatorDecrement
+   Instruction: (VarDef) | (Increment Semicolon) | (ValueDecrement Semicolon)
+   BooleanOperator: OperatorEQ | OperatorNEQ | OperatorLT | OperatorGT | OperatorLE | OperatorGE
+   BooleanExpression: (ExclamationMark BooleanExpression) | (Expression BooleanOperator Expression) | (FuncCallStatement)
+   InstancePeek: Dot Identifier
+   FuncCallStatement: (InstancePeek ParamsBlockSpecification) | (GenericSpecification ParamsBlockSpecification) | (Identifier ParamsBlockSpecification)
+   ConditionalStatement: KeyIF BooleanExpression BraceBlock
+   Statement: (ConditionalStatement) | (FuncCallStatement Semicolon)
+   LocalBlock: Instruction | Statement
+   BraceBlock: OpenBrace @(?(Instruction | Statement)) CloseBrace
+   FuncDef: KeyFunc Identifier ParamsBlockDef BraceBlock

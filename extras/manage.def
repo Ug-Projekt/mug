@@ -107,31 +107,22 @@ Parser: class {
       GenerateAST(string): ModuleDefinition
    }
 }
-IRGlobalEmitter: class {
+IREmitter: class {
    Instances {
       AssemblyBuilder: StringBuilder
    }
    Methods {
       GetAssembled(): string,
-      DefineFunction(FuncDefinition): void,
-      DeclareFunction(MugType, string, ConstTuple): void,
-      ...
-   }
-}
-IRLobalEmitter: class {
-   Instances {
-      AssemblyBuilder: StringBuilder
-   }
-   Methods {
-      GetAssembled(): string,
-      CallFunction(MugType, string, ConstTuple, ConstTuple): void
+      EmitCall(MugType, string, ConstTuple, ConstTuple): void,
+      EmitStore(MugType, string, ConstTuple, ConstTuple): void,
+      EmitLoad(MugType, string, ConstTuple, ConstTuple): void
       ...
    }
 }
 IRGenerator: class {
    Instances {
-      Parser: Parser
-      Emitter: IRGlobalEmitter,
+      Parser: Parser,
+      Emitter: IREmitter,
       Symbols: Dictionary[string, Object]
    }
    Methods {
