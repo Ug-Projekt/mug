@@ -1,11 +1,11 @@
 func main(): ? {
-	var args: %[i32] = %[i32, 4] {2,4,4,3};
+	var args: [i32] = [i32, 4] {2,4,4,3};
 
-	for i: i32 to args.len()-1 {
+	for i: u32 to args.len {
 		println("arg[", i, "]: ", args[i]);
 	}
-	var i: i32;
-	while i < args.len() {
+	var i: u32;
+	while i < args.len {
 		println("arg[", i, "]: ", args[i]);
 	}
 }

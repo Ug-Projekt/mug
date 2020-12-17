@@ -1,10 +1,15 @@
 ﻿using System;
 
 /// <summary>
-///  use it to print debug information; in release it will not work
+///  use it to print debug informations; in release it will not work
 /// </summary>
 class debug
 {
+    public static void exit(params string[] msg)
+    {
+        Console.WriteLine(string.Join("", msg));
+        Environment.Exit(0);
+    }
     public static void print(params string[] msg)
     {
 #if DEBUG

@@ -1,46 +1,45 @@
-type Node[type G] {
+/*type Node[type G] {
 	value: G,
-	next: ptr node[G]
+	next: ptr Node[G]
 }
 type LinkedList[type G] {
 	link: Node[G],
 	len: u32,
-	max: read i32
+	max: read u32
 }
-func make_linkedlist[type G](max: i32): LinkedList[G] {
-	return LinkedList[G] {link: null, len: 0, max: max};
+func make_linkedlist[type G](max: u32): LinkedList[G] {
+	return LinkedList[G] {
+		Node[G] {},
+		0,
+		max
+	};
 }
-
+func err_outofrange(len: u32, index: u32) {
+	panic("Index out of range: len "++", index "+index.to_str());
+}
+func err_emptylist() {
+	panic("Read from an empty list");
+}
 
 func add(self: LinkedList[type G], value: G): ? {
-	if self.len+1 > self.max {
-		return;
+	var last: ptr Node[G] = ptr self.link;
+	for i: u32 to self.len {
+		last = last.next;
 	}
-	if self.len == 0 {
-		self.link = Node[G] {value: value, next: null};
-	} else {
-		var top: ptr Node[G] = &self.link;
-		for i: i32 to self.len-1 {
-			top = top.next;
-		}
-		top.next = &Node[G] {value: value, next: null};
-	}
+	last.value = value;
+	last.next = Node[G] {};
 	self.len++;
 }
 func pop_top(self: LinkedList[type G]): ? {
 	if self.len == 0 {
-		return;
+		err_emptylist();
 	}
-	if self.len == 1 {
-		self.link.value = null;
+	var last: ptr Node[G] = ptr self.link;
+	for i: u32 to self.len-1 {
+		last = last.next;
 	}
-	else {
-		var top: ptr Node[G] = &self.link;
-		for i: i32 to self.len-2 {
-			top = top.next;
-		}
-		top.next = null;
-	}
+	last.value = value;
+	last.next = Node[G] {};
 	self.len--;
 }
 func pop(self: LinkedList[type G]): G {
@@ -79,14 +78,4 @@ func get(self: LinkedList[type G], index: i32): G {
 	}
 }
 func tostr(self: LinkedList[type G], value: G): str {
-	if self.len == 0 {
-		return "[]";
-	}
-	var res: str = "[";
-	var top: ptr Node[G] = &self.link;
-	for i: i32 to self.len-1 {
-		res += ", "+top.value.tostr();
-		top = top.next;
-	}
-	return res + top.value.tostr() + "]";
-}
+}*/

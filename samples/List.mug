@@ -1,59 +1,73 @@
 type List[type G] {
-	_: %[G],
+	raw: [G],
 	len: u32,
 	seg: u32
 }
-func make_list[type G](segmentation: i32): List[G] {
-	return {
-		%[G, segmentation] {},
+func make_list[type G](segmentation: u32): List[G] {
+	return List[G] {
+		[G, segmentation] {},
 		0,
 		segmentation
 	};
 }
+func err_outofrange(len: u32, index: u32) {
+	panic("Index out of range: len "++", index "+index.to_str());
+}
+func err_emptylist() {
+	panic("Read from an empty list");
+}
+
 func add(self: List[type G], value: G): ? {
 	if self.len < self.seg {
-		self._[self.len++] = value;
+		self.raw[self.len] = value;
+		self.len++;
 	} else {
-		var old: %[G] = self._;
-		self._ = %[G, self.seg*=2] {};
-		for i: i32 to self.len {
-			self._[i] = old[i];
+		var old: [G] = self.raw;
+		self.seg *= 2;
+		self.raw = [G, self.seg] {};
+		for i: u32 to self.len {
+			self.raw[i] = old[i];
 		}
-		self._[self.len] = value;
+		self.raw[self.len] = value;
 		self.len++;
 	}
 }
-
 func find(self: List[type G], value: G): bit {
-	for i: i32 to self.len {
-		if self._[i] == value {
+	for i: u32 to self.len {
+		if self.raw[i] == value {
 			return true;
 		}
 	}
 	return false;
 }
 func get(self: List[type G], index: u32): G {
-	if index <= self.len {
-		return self._[index];
+	if index < self.len {
+		return self.raw[index];
 	}
-	return null;
+	err_outofrange(self.len.to_str(), index.to_str());
 }
 func set(self: List[type G], index: u32, value: G): ? {
-	if index <= self.len {
-		self._[index] = value;
+	if index < self.len {
+		self.raw[index] = value;
 	}
+	err_outofrange(self.len.to_str(), index.to_str());
 }
 func pop_top(self: List[type G]): ? {
-	if self.len > 0 {
-		self._[self.len--] = null;
+	if self.len == 0 {
+		err_emptylist();
 	}
+	self.len--;
 }
 func pop(self: List[type G]): G {
 	if self.len == 0 {
-		return null;
+		err_emptylist();
 	}
-	var tmp: G = self._[self.len-1];
-	
-	self._[self.len--] = null;
-	return tmp;
+	return self.raw[self.len--];
+}
+func to_str(self: List[type G]): str {
+	var res: str = "[";
+	for i: u32 to self.len {
+		res += ", "+self.raw[i].to_str();
+	}
+	return res+"]";
 }
