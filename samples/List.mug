@@ -1,22 +1,26 @@
 type List[type G] {
-	_: G[],
+	_: %[G],
 	len: u32,
 	seg: u32
 }
 func make_list[type G](segmentation: i32): List[G] {
-	return {_: G[segmentation] {}, len: 0, seg: segmentation};
+	return {
+		%[G, segmentation] {},
+		0,
+		segmentation
+	};
 }
 func add(self: List[type G], value: G): ? {
 	if self.len < self.seg {
 		self._[self.len++] = value;
 	} else {
-		var old: G[] = self._;
-		self._ = G[self.seg*=2] {};
-		for i: i32 to self.len-1 {
+		var old: %[G] = self._;
+		self._ = %[G, self.seg*=2] {};
+		for i: i32 to self.len {
 			self._[i] = old[i];
 		}
 		self._[self.len] = value;
-		self.len
+		self.len++;
 	}
 }
 

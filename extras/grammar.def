@@ -39,6 +39,7 @@ Lexer:
    KeyElse: 'else'
    KeyPtr: 'ptr'
    KeyTstr: 'str'
+   KeyTvoid: '?'
    KeyTi32: 'i32'
    KeyTf32: 'f32'
    KeyTchr: 'chr'
@@ -54,7 +55,7 @@ Parser:
    ParamsBlockSpecification: (OpenPar ClosePar) | (OpenPar Expression @(?(Comma Expression)) ClosePar)
    ConstArray: (OpenBracket CloseBracket) | (OpenBracket Expression @(?(Comma Expression)) CloseBracket)
    ArraySpecification: (Percent OpenBracket Type CloseBracket) | (Percent OpenBracket Type Comma Expression CloseBracket)
-   Type: Identifier | KeyTstr | KeyTi32 | KeyTf32 | KeyTchr | GenericSpecification | (KeyPtr Identifier) | ArraySpecification
+   Type: Identifier | KeyTstr | KeyTi32 | KeyTf32 | KeyTvoid | KeyTchr | GenericSpecification | (KeyPtr Identifier) | ArraySpecification
    InstantiableType: Identifier | GenericSpecification | (KeyPtr Identifier) | ArraySpecification
    TypeSpecification: Colon Type
    InstantingBlock: (OpenBrace CloseBrace) | (OpenBrace Expression @(?(Comma Expression)) CloseBrace)

@@ -1,12 +1,16 @@
 type Person {
 	name: str,
-	age: i8
+	age: i8,
+	family: %[Person]
 }
 
 func main(): ? {
 	var me: Person = @Person {
 		"carpal",
-		15
+		15,
+		%[Person, 0] {
+
+		}
 	};
 	println("My name is: ", me.name.tostr(), " and I'm ", me.age.tostr());
 }
