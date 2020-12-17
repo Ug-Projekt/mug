@@ -4,9 +4,9 @@ type Person {
 }
 
 func main(): ? {
-	var me: Person = {
-		name: "carpal",
-		age: 15.cast[i8]()
+	var me: Person = @Person {
+		"carpal",
+		15
 	};
 	println("My name is: ", me.name.tostr(), " and I'm ", me.age.tostr());
 }

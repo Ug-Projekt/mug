@@ -23,6 +23,8 @@ Lexer:
    OperatorGE: '>='
    OperatorXOR: '|'
    OperatorAND: '&'
+   CommercialAt: '@'
+   Percent: '%'
    OpenPar: '('
    ClosePar: ')'
    OpenBracket: '['
@@ -33,8 +35,9 @@ Lexer:
    KeyVar: 'var'
    KeyConst: 'const'
    KeyType: 'type'
-   KeyIF: 'if'
-   KeyELSE: 'else'
+   KeyIf: 'if'
+   KeyElse: 'else'
+   KeyPtr: 'ptr'
    KeyTstr: 'str'
    KeyTi32: 'i32'
    KeyTf32: 'f32'
@@ -45,23 +48,30 @@ Parser:
    GenericSpecification: Identifier OpenBracket Type @(?(Comma Type)) CloseBracket
    GenericDef: OpenBracket GenericTypeDef @(?(Comma GenericTypeDef)) CloseBracket
    Value: FuncCallStatement | InstancePeek | Identifier | ConstDigit | ConstString | ConstArray
-   SimpleExpression: (Value Slash Value) | (Value) | (OpenPar ValueChange ClosePar)
-   Expression: (SimpleExpression) | (Expression (Minus | Plus) Expression)
+   SimpleExpression: (Value Slash Value) | (Value) | (OpenPar ValueChange ClosePar) | Instantiating
+   Expression: (SimpleExpression) | (Expression (Minus | Plus) Expression) | (OpenPar Expression ClosePar)
    ParamsBlockDef: (OpenPar ClosePar) | (OpenPar TypeDef @(?(Comma TypeDef)) ClosePar)
    ParamsBlockSpecification: (OpenPar ClosePar) | (OpenPar Expression @(?(Comma Expression)) ClosePar)
    ConstArray: (OpenBracket CloseBracket) | (OpenBracket Expression @(?(Comma Expression)) CloseBracket)
-   Type: Identifier | KeyTstr | KeyTi32 | KeyTf32 | KeyTchr | GenericDef
-   VarDef: KeyVar Identifier Colon Type Expression Semicolon
+   ArraySpecification: (Percent OpenBracket Type CloseBracket) | (Percent OpenBracket Type Comma Expression CloseBracket)
+   Type: Identifier | KeyTstr | KeyTi32 | KeyTf32 | KeyTchr | GenericSpecification | (KeyPtr Identifier) | ArraySpecification
+   InstantiableType: Identifier | GenericSpecification | (KeyPtr Identifier) | ArraySpecification
+   TypeSpecification: Colon Type
+   InstantingBlock: (OpenBrace CloseBrace) | (OpenBrace Expression @(?(Comma Expression)) CloseBrace)
+   Instantiating: CommercialAt InstantiableType InstantingBlock
+   VarDef: KeyVar Identifier TypeSpecification Expression Semicolon
    ValueChange: ValueIncrement | ValueDecrement
    ValueIncrement: Identifier OperatorIncrement
    ValueDecrement: Identifier OperatorDecrement
-   Instruction: (VarDef) | (Increment Semicolon) | (ValueDecrement Semicolon)
+   Instruction: VarDef | (Increment Semicolon) | (ValueDecrement Semicolon)
    BooleanOperator: OperatorEQ | OperatorNEQ | OperatorLT | OperatorGT | OperatorLE | OperatorGE
    BooleanExpression: (ExclamationMark BooleanExpression) | (Expression BooleanOperator Expression) | (FuncCallStatement)
    InstancePeek: Dot Identifier
    FuncCallStatement: (InstancePeek ParamsBlockSpecification) | (GenericSpecification ParamsBlockSpecification) | (Identifier ParamsBlockSpecification)
-   ConditionalStatement: KeyIF BooleanExpression BraceBlock
-   Statement: (ConditionalStatement) | (FuncCallStatement Semicolon)
+   ConditionalStatement: KeyIf BooleanExpression BraceBlock
+   ElseIfConditionalStatement: KeyElse KeyIf BooleanExpression BraceBlock
+   ElseConditionalStatement: KeyElse BraceBlock
+   Statement: ConditionalStatement | ElseIfConditionalStatement | ElseConditionalStatement | (FuncCallStatement Semicolon)
    LocalBlock: Instruction | Statement
    BraceBlock: OpenBrace @(?(Instruction | Statement)) CloseBrace
-   FuncDef: KeyFunc Identifier ParamsBlockDef BraceBlock
+   FuncDef: KeyFunc Identifier ParamsBlockDef TypeSpecification BraceBlock

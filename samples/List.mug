@@ -1,7 +1,7 @@
 type List[type G] {
 	_: G[],
 	len: u32,
-	seg: i32
+	seg: u32
 }
 func make_list[type G](segmentation: i32): List[G] {
 	return {_: G[segmentation] {}, len: 0, seg: segmentation};
@@ -20,7 +20,7 @@ func add(self: List[type G], value: G): ? {
 	}
 }
 
-func find(self: List[type G], value: G): bool {
+func find(self: List[type G], value: G): bit {
 	for i: i32 to self.len {
 		if self._[i] == value {
 			return true;
