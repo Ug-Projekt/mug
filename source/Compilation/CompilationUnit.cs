@@ -1,24 +1,28 @@
-﻿using System;
+﻿using Mug.Models;
+using Mug.Models.Lexer;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
 
-namespace Mug.Models
+namespace Mug
 {
     public class CompilationUnit
     {
-        private string ModuleName;
-        private MugLexer Lexer;
-        public CompilationUnit(string moduleName, string userInput)
+        string ModuleName;
+        IRGenerator IRGenerator;
+        public CompilationUnit(string moduleName, string source)
         {
-            this.ModuleName = moduleName;
+            ModuleName = moduleName;
+            IRGenerator = new (source);
         }
         public CompilationUnit(string path)
         {
             if (!File.Exists(path))
                 debug.exit("`", path, "`: ", "Invalid Path");
-            this.ModuleName = path;
-            this.Lexer = new (File.ReadAllText(path));
+            ModuleName = path;
+            IRGenerator = new (File.ReadAllText(path));
         }
+        public List<Token> GetTokenCollection() => IRGenerator.GetTokenCollection();
     }
 }
