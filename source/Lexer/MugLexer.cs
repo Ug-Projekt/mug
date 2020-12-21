@@ -22,7 +22,7 @@ namespace Mug.Models.Lexer
         }
         void AddToken(TokenKind kind, object value)
         {
-            TokenCollection.Add(new (CurrentLine, kind, value, new (CurrentIndex, CurrentIndex+value.ToString().Length)));
+            TokenCollection.Add(new (CurrentLine, kind, value, new (CurrentIndex-value.ToString().Length, CurrentIndex)));
         }
         void AddSpecial(TokenKind kind)
         {
@@ -61,7 +61,7 @@ namespace Mug.Models.Lexer
         bool InsertKeyword(string s)
         {
             bool Add(TokenKind kind) {
-                TokenCollection.Add(new (CurrentLine, kind, null, new(CurrentIndex, CurrentIndex + 1)));
+                TokenCollection.Add(new (CurrentLine, kind, null, new(CurrentIndex-s.ToString().Length, CurrentIndex)));
                 return true;
             }
             return s switch {
@@ -96,13 +96,14 @@ namespace Mug.Models.Lexer
             else if (current == '\n')
                 CurrentLine++;
             if (char.IsControl(current) || char.IsWhiteSpace(current))
-                return;
-            if (char.IsLetterOrDigit(current) || current == '_')
+                InsertCurrentSymbol();
+            else if (char.IsLetterOrDigit(current) || current == '_')
                 CurrentSymbol += current;
             else if (IsDigit(CurrentSymbol) && current == '.')
                 CurrentSymbol += '.';
             else
-                AddSpecial(current switch {
+                AddSpecial(current switch
+                {
                     '(' => TokenKind.OpenPar,
                     ')' => TokenKind.ClosePar,
                     ';' => TokenKind.Semicolon,
@@ -117,7 +118,8 @@ namespace Mug.Models.Lexer
             do
                 ProcessChar(Source[CurrentIndex]);
             while (CurrentIndex++ < Source.Length-1);
-            InsertCurrentSymbol();
+            AddSpecial(TokenKind.EOF);
+            this.Throw(TokenCollection[1], "The 'func' keyword is not allowed here");
             return TokenCollection;
         }
     }

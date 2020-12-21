@@ -19,7 +19,7 @@ namespace Mug
             WriteSourceLine(pos - start - 1, (pos+1) - start - 1, lineAt + 1, Lexer.Source[(start + 1)..end], string.Join("", error));
             Environment.Exit(1);
         }
-        public static void Throw(this MugLexer Lexer, ref Token token, params string[] error)
+        public static void Throw(this MugLexer Lexer, Token token, params string[] error)
         {
             int start = token.Position.Start.Value;
             int end = token.Position.End.Value;
