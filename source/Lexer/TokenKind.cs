@@ -9,6 +9,14 @@ namespace Mug.Models.Lexer
         Identifier,
         ConstantString,
         ConstantDigit,
-        EOF
+        EOF,
+        Unknow,
+        ConstantChar,
+        KeyFunc,
+        KeyVar,
+        KeyConst,
+        OpenPar,
+        ClosePar,
+        Semicolon
     }
 }

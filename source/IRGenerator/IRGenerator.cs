@@ -8,9 +8,9 @@ namespace Mug.Models
     public class IRGenerator
     {
         MugParser Parser;
-        public IRGenerator(string source)
+        public IRGenerator(string moduleName, string source)
         {
-            Parser = new (source);
+            Parser = new (moduleName, source);
         }
         public List<Token> GetTokenCollection() => Parser.GetTokenCollection();
     }

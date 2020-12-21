@@ -8,9 +8,9 @@ namespace Mug.Models
     public class MugParser
     {
         MugLexer Lexer;
-        public MugParser(string source)
+        public MugParser(string moduleName, string source)
         {
-            Lexer = new(source);
+            Lexer = new(moduleName, source);
         }
         public List<Token> GetTokenCollection() => Lexer.Tokenize();
     }

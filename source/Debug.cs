@@ -23,11 +23,11 @@ class debug
             Console.WriteLine(string.Join("", msg));
 #endif
     }
-    public static bool askfast(char expected, params string[] msg)
+    public static bool askfast(params string[] msg)
     {
 #if DEBUG
         Console.Write(string.Join("", msg)+"? [y/..]: ");
-        var x = Console.ReadKey().KeyChar == expected;
+        var x = Console.ReadKey().KeyChar == 'y';
         Console.Write('\n');
         return x;
 #endif

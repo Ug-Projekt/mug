@@ -1,12 +1,5 @@
 ﻿using Mug;
-using Mug.Models.Lexer;
-using System;
-CompilationErrors.Lexer = new MugLexer("riga completa");
-var tok = new Token(0, TokenKind.ConstantString, "...", new(1, 3));
-CompilationErrors.Throw(ref tok, "Error");
 
-const string test = @"
-
-";
-var compUnit = new CompilationUnit("", test);
-//debug.printif(debug.askfast('y', "Show TokenCollection"), "...");
+const string test = @"func(89.1);";
+var compUnit = new CompilationUnit("test.mug", test);
+debug.printif(debug.askfast("Show TokenCollection"), string.Join("\n", compUnit.GetTokenCollection()));
