@@ -8,7 +8,10 @@ if (debug.isDebug())
 {
     var tests = new string[]
     {
-@"x == 90"
+@"var i: u32 = 0;
+i++;
+i--;
+i+=(1+1)-2;"
     };
     for (int i = 0; i < tests.Length; i++)
     {

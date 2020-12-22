@@ -30,6 +30,17 @@ namespace Mug.Models.Lexer
             "func" => AddKeyword(TokenKind.KeyFunc, s.Length),
             "var" => AddKeyword(TokenKind.KeyVar, s.Length),
             "const" => AddKeyword(TokenKind.KeyConst, s.Length),
+            "self" => AddKeyword(TokenKind.KeySelf, s.Length),
+            "str" => AddKeyword(TokenKind.KeyTstr, s.Length),
+            "chr" => AddKeyword(TokenKind.KeyTchr, s.Length),
+            "bit" => AddKeyword(TokenKind.KeyTbool, s.Length),
+            "i8" => AddKeyword(TokenKind.KeyTi8, s.Length),
+            "i32" => AddKeyword(TokenKind.KeyTi32, s.Length),
+            "i64" => AddKeyword(TokenKind.KeyTi64, s.Length),
+            "u8" => AddKeyword(TokenKind.KeyTu8, s.Length),
+            "u32" => AddKeyword(TokenKind.KeyTu32, s.Length),
+            "u64" => AddKeyword(TokenKind.KeyTu64, s.Length),
+            "unknow" => AddKeyword(TokenKind.KeyTunknow, s.Length),
             _ => false
         };
         TokenKind IllegalChar()
@@ -47,7 +58,11 @@ namespace Mug.Models.Lexer
             '{' => TokenKind.OpenBrace,
             '}' => TokenKind.CloseBrace,
             '=' => TokenKind.Equal,
-            '!' => TokenKind.ExclamationMark,
+            '!' => TokenKind.Slash,
+            '+' => TokenKind.Plus,
+            '-' => TokenKind.Minus,
+            '*' => TokenKind.Star,
+            '/' => TokenKind.Slash,
             ',' => TokenKind.Comma,
             ';' => TokenKind.Semicolon,
             ':' => TokenKind.Colon,
@@ -135,20 +150,18 @@ namespace Mug.Models.Lexer
                 switch (current)
                 {
                     case '=':
-                        if (MatchNext('='))
-                        {
-                            AddMultiple(TokenKind.BoolOperatorEQ, 2);
-                            CurrentIndex++;
-                            break;
-                        }
+                        if (MatchNext('=')) { AddMultiple(TokenKind.BoolOperatorEQ, 2); CurrentIndex++; break; }
                         goto default;
                     case '!':
-                        if (MatchNext('='))
-                        {
-                            AddMultiple(TokenKind.BoolOperatorNEQ, 2);
-                            CurrentIndex++;
-                            break;
-                        }
+                        if (MatchNext('=')) { AddMultiple(TokenKind.BoolOperatorNEQ, 2); CurrentIndex++; break; }
+                        goto default;
+                    case '+':
+                        if (MatchNext('+')) { AddMultiple(TokenKind.Increment, 2); CurrentIndex++; break; }
+                        else if (MatchNext('=')) { AddMultiple(TokenKind.IncrementAssign, 2); CurrentIndex++; break; }
+                        goto default;
+                    case '-':
+                        if (MatchNext('-')) { AddMultiple(TokenKind.Decrement, 2); CurrentIndex++; break; }
+                        else if (MatchNext('=')) { AddMultiple(TokenKind.DecrementAssign, 2); CurrentIndex++; break; }
                         goto default;
                     default:
                         AddSpecial(GetSpecial(current));
