@@ -25,6 +25,7 @@ namespace Mug.Models.Lexer
         OpenBracket,
         CloseBracket,
         ConstantFloatDigit,
-        Dot
+        Dot,
+        Comma
     }
 }

@@ -45,11 +45,11 @@ namespace Mug.Models.Lexer
             ']' => TokenKind.CloseBracket,
             '{' => TokenKind.OpenBrace,
             '}' => TokenKind.CloseBrace,
-            ',' => TokenKind.CloseBrace,
+            ',' => TokenKind.Comma,
             ';' => TokenKind.Semicolon,
             ':' => TokenKind.Colon,
-            '?' => TokenKind.KeyVoid,
             '.' => TokenKind.Dot,
+            '?' => TokenKind.KeyVoid,
             _ => IllegalChar()
         };
 
@@ -97,19 +97,21 @@ namespace Mug.Models.Lexer
         {
             if (current == '"')
             {
-                do
+                CurrentSymbol += Source[CurrentIndex];
+                while (CurrentIndex++ < Source.Length && Source[CurrentIndex] != '"')
                     CurrentSymbol += Source[CurrentIndex];
-                while (CurrentIndex++ < Source.Length - 1 && Source[CurrentIndex-1] != '"');
-                AddToken(TokenKind.ConstantString, CurrentSymbol);
+                CurrentIndex++;
+                AddToken(TokenKind.ConstantString, CurrentSymbol+'"');
                 CurrentSymbol = "";
                 return;
             }
             else if (current == '\'')
             {
-                do
+                CurrentSymbol += Source[CurrentIndex];
+                while (CurrentIndex++ < Source.Length && Source[CurrentIndex] != '\'')
                     CurrentSymbol += Source[CurrentIndex];
-                while (CurrentIndex++ < Source.Length - 1 && Source[CurrentIndex-1] != '\'');
-                AddToken(TokenKind.ConstantChar, CurrentSymbol);
+                CurrentIndex++;
+                AddToken(TokenKind.ConstantChar, CurrentSymbol+='\'');
                 if (CurrentSymbol.Length > 3 || CurrentSymbol.Length < 3)
                     this.Throw(TokenCollection[^1], "Invalid characters in ConstantChar: it can only contain a character, not ", (CurrentSymbol.Length-2).ToString());
                 CurrentSymbol = "";
