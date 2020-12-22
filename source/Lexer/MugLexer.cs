@@ -37,6 +37,7 @@ namespace Mug.Models.Lexer
             this.Throw(CurrentIndex, CurrentLine, "Found illegal SpecialSymbol: mug's syntax does not use this character");
             return TokenKind.Unknow;
         }
+        bool MatchNext(char next) => CurrentIndex + 1 < Source.Length && Source[CurrentIndex+1] == next;
         TokenKind GetSpecial(char c) => c switch
         {
             '(' => TokenKind.OpenPar,
@@ -45,6 +46,8 @@ namespace Mug.Models.Lexer
             ']' => TokenKind.CloseBracket,
             '{' => TokenKind.OpenBrace,
             '}' => TokenKind.CloseBrace,
+            '=' => TokenKind.Equal,
+            '!' => TokenKind.ExclamationMark,
             ',' => TokenKind.Comma,
             ';' => TokenKind.Semicolon,
             ':' => TokenKind.Colon,
@@ -64,6 +67,11 @@ namespace Mug.Models.Lexer
         {
             InsertCurrentSymbol();
             TokenCollection.Add(new (CurrentLine, kind, null, new(CurrentIndex, CurrentIndex+1)));
+        }
+        void AddDouble(TokenKind kind)
+        {
+            InsertCurrentSymbol();
+            TokenCollection.Add(new(CurrentLine, kind, null, new(CurrentIndex, CurrentIndex + 2)));
         }
         void InsertCurrentSymbol()
         {
@@ -124,7 +132,28 @@ namespace Mug.Models.Lexer
             else if (char.IsLetterOrDigit(current) || current == '_')
                 CurrentSymbol += current;
             else
-                AddSpecial(GetSpecial(current));
+                switch (current)
+                {
+                    case '=':
+                        if (MatchNext('='))
+                        {
+                            AddDouble(TokenKind.BoolOperatorEQ);
+                            CurrentIndex++;
+                            break;
+                        }
+                        goto default;
+                    case '!':
+                        if (MatchNext('='))
+                        {
+                            AddDouble(TokenKind.BoolOperatorNEQ);
+                            CurrentIndex++;
+                            break;
+                        }
+                        goto default;
+                    default:
+                        AddSpecial(GetSpecial(current));
+                        break;
+                }
         }
         public List<Token> Tokenize()
         {

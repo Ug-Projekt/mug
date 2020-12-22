@@ -8,7 +8,7 @@ if (debug.isDebug())
 {
     var tests = new string[]
     {
-@"12,12"
+@"x == 90"
     };
     for (int i = 0; i < tests.Length; i++)
     {
