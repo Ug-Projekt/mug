@@ -23,6 +23,14 @@ class debug
         Console.WriteLine(string.Join("", msg));
 #endif
     }
+    public static void printc(ConsoleColor color, params string[] msg)
+    {
+#if DEBUG
+        Console.ForegroundColor = color;
+        Console.WriteLine(string.Join("", msg));
+        Console.ResetColor();
+#endif
+    }
     public static void printif(bool condition, params string[] msg)
     {
 #if DEBUG
@@ -37,6 +45,14 @@ class debug
         var x = Console.ReadKey().KeyChar == 'y';
         Console.Write('\n');
         return x;
+#endif
+    }
+    public static void readfast(params string[] msg)
+    {
+#if DEBUG
+        Console.Write(string.Join("", msg));
+        Console.ReadKey();
+        Console.Write('\n');
 #endif
     }
 }

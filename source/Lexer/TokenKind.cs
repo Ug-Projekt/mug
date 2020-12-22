@@ -23,6 +23,8 @@ namespace Mug.Models.Lexer
         OpenBrace,
         CloseBrace,
         OpenBracket,
-        CloseBracket
+        CloseBracket,
+        ConstantFloatDigit,
+        Dot
     }
 }

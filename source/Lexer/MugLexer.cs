@@ -49,12 +49,16 @@ namespace Mug.Models.Lexer
             ';' => TokenKind.Semicolon,
             ':' => TokenKind.Colon,
             '?' => TokenKind.KeyVoid,
+            '.' => TokenKind.Dot,
             _ => IllegalChar()
         };
 
         void AddToken(TokenKind kind, object value)
         {
-            TokenCollection.Add(new(CurrentLine, kind, value, new(CurrentIndex - value.ToString().Length, CurrentIndex)));
+            if (value is not null)
+                TokenCollection.Add(new(CurrentLine, kind, value, new(CurrentIndex - value.ToString().Length, CurrentIndex)));
+            else
+                TokenCollection.Add(new(CurrentLine, kind, null, new(CurrentIndex, CurrentIndex + 1)));
         }
         void AddSpecial(TokenKind kind)
         {
@@ -74,17 +78,8 @@ namespace Mug.Models.Lexer
             if (string.IsNullOrWhiteSpace(s))
                 return false;
             for (int i = 0; i < s.Length; i++)
-                if (!char.IsDigit(s[i]) && s[i] != '.')
+                if (!char.IsDigit(s[i]))
                     return false;
-            return true;
-        }
-        bool IsString(string s) => s[0] == '"' && s[^1] == '"';
-        bool IsChar(string s)
-        {
-            if (s[0] != '\'' || s[^1] != '\'')
-                return false;
-            if (s.Length != 3)
-                this.Throw(CurrentIndex-s.Length, CurrentLine, "Character constant cannot contains more than 1 value");
             return true;
         }
         bool InsertKeyword(string s)
@@ -95,10 +90,6 @@ namespace Mug.Models.Lexer
         {
             if (IsDigit(value))
                 AddToken(TokenKind.ConstantDigit, value);
-            else if (IsString(value))
-                AddToken(TokenKind.ConstantString, value);
-            else if (IsChar(value))
-                AddToken(TokenKind.ConstantChar, value);
             else if (!InsertKeyword(value))
                 AddToken(TokenKind.Identifier, value);
         }
@@ -108,8 +99,19 @@ namespace Mug.Models.Lexer
             {
                 do
                     CurrentSymbol += Source[CurrentIndex];
-                while (CurrentIndex++ < Source.Length - 1 && Source[CurrentIndex] != '"');
-                ProcessSymbol(CurrentSymbol+'"');
+                while (CurrentIndex++ < Source.Length - 1 && Source[CurrentIndex-1] != '"');
+                AddToken(TokenKind.ConstantString, CurrentSymbol);
+                CurrentSymbol = "";
+                return;
+            }
+            else if (current == '\'')
+            {
+                do
+                    CurrentSymbol += Source[CurrentIndex];
+                while (CurrentIndex++ < Source.Length - 1 && Source[CurrentIndex-1] != '\'');
+                AddToken(TokenKind.ConstantChar, CurrentSymbol);
+                if (CurrentSymbol.Length > 3 || CurrentSymbol.Length < 3)
+                    this.Throw(TokenCollection[^1], "Invalid characters in ConstantChar: it can only contain a character, not ", (CurrentSymbol.Length-2).ToString());
                 CurrentSymbol = "";
                 return;
             }
@@ -119,8 +121,6 @@ namespace Mug.Models.Lexer
                 InsertCurrentSymbol();
             else if (char.IsLetterOrDigit(current) || current == '_')
                 CurrentSymbol += current;
-            else if (IsDigit(CurrentSymbol) && current == '.')
-                CurrentSymbol += '.';
             else
                 AddSpecial(GetSpecial(current));
         }
@@ -133,7 +133,6 @@ namespace Mug.Models.Lexer
                 ProcessChar(Source[CurrentIndex]);
             while (CurrentIndex++ < Source.Length-1);
             AddSpecial(TokenKind.EOF);
-            this.Throw(TokenCollection[1], "This is a fake error");
             return TokenCollection;
         }
     }
