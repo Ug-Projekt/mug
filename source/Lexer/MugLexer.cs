@@ -68,10 +68,10 @@ namespace Mug.Models.Lexer
             InsertCurrentSymbol();
             TokenCollection.Add(new (CurrentLine, kind, null, new(CurrentIndex, CurrentIndex+1)));
         }
-        void AddDouble(TokenKind kind)
+        void AddMultiple(TokenKind kind, int count)
         {
             InsertCurrentSymbol();
-            TokenCollection.Add(new(CurrentLine, kind, null, new(CurrentIndex, CurrentIndex + 2)));
+            TokenCollection.Add(new(CurrentLine, kind, null, new(CurrentIndex, CurrentIndex + count)));
         }
         void InsertCurrentSymbol()
         {
@@ -137,7 +137,7 @@ namespace Mug.Models.Lexer
                     case '=':
                         if (MatchNext('='))
                         {
-                            AddDouble(TokenKind.BoolOperatorEQ);
+                            AddMultiple(TokenKind.BoolOperatorEQ, 2);
                             CurrentIndex++;
                             break;
                         }
@@ -145,7 +145,7 @@ namespace Mug.Models.Lexer
                     case '!':
                         if (MatchNext('='))
                         {
-                            AddDouble(TokenKind.BoolOperatorNEQ);
+                            AddMultiple(TokenKind.BoolOperatorNEQ, 2);
                             CurrentIndex++;
                             break;
                         }
