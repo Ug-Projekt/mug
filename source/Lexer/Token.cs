@@ -17,6 +17,6 @@ namespace Mug.Models.Lexer
             Value = value;
             Position = position;
         }
-        public override string ToString() => $"Line({LineAt}, {Position.Start}:{Position.End}) {Kind}: '{Value}'";
+        public override string ToString() => $"Line({LineAt}, {Position.Start}:{Position.End}) {Kind}: '{(Value is null ? "<null>" : Value)}'";
     }
 }

@@ -17,6 +17,12 @@ namespace Mug.Models.Lexer
         KeyConst,
         OpenPar,
         ClosePar,
-        Semicolon
+        Semicolon,
+        KeyVoid,
+        Colon,
+        OpenBrace,
+        CloseBrace,
+        OpenBracket,
+        CloseBracket
     }
 }

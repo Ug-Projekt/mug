@@ -5,6 +5,13 @@
 /// </summary>
 class debug
 {
+    public static bool isDebug() {
+    #if DEBUG
+        return true;
+    #endif
+        return false;
+    }
+
     public static void exit(params string[] msg)
     {
         Console.WriteLine(string.Join("", msg));

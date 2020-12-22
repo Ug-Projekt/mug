@@ -12,27 +12,54 @@ namespace Mug.Models.Lexer
         public string Source;
         public string ModuleName;
         public List<Token> TokenCollection;
-        string CurrentSymbol;
-        int CurrentIndex;
-        int CurrentLine;
+        string CurrentSymbol = "";
+        int CurrentIndex = 0;
+        int CurrentLine = 0;
         public MugLexer(string moduleName, string source)
         {
             ModuleName = moduleName;
             Source = source;
         }
+        bool AddKeyword(TokenKind kind, int len)
+        {
+            TokenCollection.Add(new (CurrentLine, kind, null, new (CurrentIndex-len, CurrentIndex)));
+            return true;
+        }
+        bool GetKeyword(string s) => s switch
+        {
+            "func" => AddKeyword(TokenKind.KeyFunc, s.Length),
+            "var" => AddKeyword(TokenKind.KeyVar, s.Length),
+            "const" => AddKeyword(TokenKind.KeyConst, s.Length),
+            _ => false
+        };
+        TokenKind IllegalChar()
+        {
+            this.Throw(CurrentIndex, CurrentLine, "Found illegal SpecialSymbol: mug's syntax does not use this character");
+            return TokenKind.Unknow;
+        }
+        TokenKind GetSpecial(char c) => c switch
+        {
+            '(' => TokenKind.OpenPar,
+            ')' => TokenKind.ClosePar,
+            '[' => TokenKind.OpenBracket,
+            ']' => TokenKind.CloseBracket,
+            '{' => TokenKind.OpenBrace,
+            '}' => TokenKind.CloseBrace,
+            ',' => TokenKind.CloseBrace,
+            ';' => TokenKind.Semicolon,
+            ':' => TokenKind.Colon,
+            '?' => TokenKind.KeyVoid,
+            _ => IllegalChar()
+        };
+
         void AddToken(TokenKind kind, object value)
         {
-            TokenCollection.Add(new (CurrentLine, kind, value, new (CurrentIndex-value.ToString().Length, CurrentIndex)));
+            TokenCollection.Add(new(CurrentLine, kind, value, new(CurrentIndex - value.ToString().Length, CurrentIndex)));
         }
         void AddSpecial(TokenKind kind)
         {
             InsertCurrentSymbol();
             TokenCollection.Add(new (CurrentLine, kind, null, new(CurrentIndex, CurrentIndex+1)));
-        }
-        TokenKind IllegalChar()
-        {
-            this.Throw(CurrentIndex, CurrentLine, "Found illegal SpecialSymbol: mug's syntax does not use this character");
-            return TokenKind.Unknow;
         }
         void InsertCurrentSymbol()
         {
@@ -44,6 +71,8 @@ namespace Mug.Models.Lexer
         }
         bool IsDigit(string s)
         {
+            if (string.IsNullOrWhiteSpace(s))
+                return false;
             for (int i = 0; i < s.Length; i++)
                 if (!char.IsDigit(s[i]) && s[i] != '.')
                     return false;
@@ -60,16 +89,7 @@ namespace Mug.Models.Lexer
         }
         bool InsertKeyword(string s)
         {
-            bool Add(TokenKind kind) {
-                TokenCollection.Add(new (CurrentLine, kind, null, new(CurrentIndex-s.ToString().Length, CurrentIndex)));
-                return true;
-            }
-            return s switch {
-                "func" => Add(TokenKind.KeyFunc),
-                "var" => Add(TokenKind.KeyVar),
-                "const" => Add(TokenKind.KeyConst),
-                _ => false
-            };
+            return GetKeyword(s);
         }
         void ProcessSymbol(string value)
         {
@@ -102,13 +122,7 @@ namespace Mug.Models.Lexer
             else if (IsDigit(CurrentSymbol) && current == '.')
                 CurrentSymbol += '.';
             else
-                AddSpecial(current switch
-                {
-                    '(' => TokenKind.OpenPar,
-                    ')' => TokenKind.ClosePar,
-                    ';' => TokenKind.Semicolon,
-                    _ => IllegalChar()
-                });
+                AddSpecial(GetSpecial(current));
         }
         public List<Token> Tokenize()
         {
@@ -119,7 +133,7 @@ namespace Mug.Models.Lexer
                 ProcessChar(Source[CurrentIndex]);
             while (CurrentIndex++ < Source.Length-1);
             AddSpecial(TokenKind.EOF);
-            this.Throw(TokenCollection[1], "The 'func' keyword is not allowed here");
+            this.Throw(TokenCollection[1], "This is a fake error");
             return TokenCollection;
         }
     }
