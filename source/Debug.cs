@@ -50,7 +50,7 @@ class debug
     public static void readfast(params string[] msg)
     {
 #if DEBUG
-        Console.Write(string.Join("", msg));
+        printc(ConsoleColor.DarkGreen, msg);
         Console.ReadKey();
         Console.Write('\n');
 #endif

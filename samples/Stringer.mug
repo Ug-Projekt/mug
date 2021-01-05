@@ -1,0 +1,46 @@
+type Stringer {
+	read len: u32,
+	@raw: [chr],    // private
+	@seg: u32       // private
+}
+
+func @reached_base() {
+	panic[BasePanic]("Reached base of Stringer: len was 0");
+}
+
+func Stringer(): Stringer {
+	return -> Stringer {
+		len: 0,
+		raw: -> [chr, 1000],
+		seg: 1000
+	};
+}
+func UnStringer(self: Stringer): null {
+	mem::dealloc(self);
+	return null;
+}
+
+func @push(self: Stringer, char: chr) {  // private
+	self.raw[self.len] = char;
+	self.len++;
+}
+func @pop(self: Stringer) {  // private
+	self.raw[self.len--] = '\0';
+}
+
+func add(self: Stringer, text: str) {
+	for i: u32 to text.len() ^
+		self.push(text[i]);
+}
+func add(self: Stringer, char: chr) {
+	self.push(char);
+}
+func rem(self: Stringer) {
+	if self.len == 0 ^
+		reached_base();
+	self.pop();
+}
+func clear(self: Stringer) {
+	self.len = 0;
+	self.raw = -> [chr, self.seg;
+}

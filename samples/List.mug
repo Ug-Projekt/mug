@@ -1,19 +1,32 @@
+// self is a keyword
+
 type List[type G] {
+	pub read len: u32,
 	raw: [G],
-	len: u32,
 	seg: u32
 }
-func make_list[type G](segmentation: u32): List[G] {
+
+func List[type G](segmentation: u32 = 100): List[G] {
+	if segmentation == 0 {
+		err_segmentation();
+	}
 	return List[G] {
 		[G, segmentation] {},
 		0,
 		segmentation
 	};
 }
-func err_outofrange(len: u32, index: u32) {
-	panic("Index out of range: len "++", index "+index.to_str());
+func UnList(self: List[type G]): null {
+	mem::dealloc(self);
+	return null;
 }
-func err_emptylist() {
+func err_segmentation(): ? {
+	panic("Segmentation must be greater than `0`");
+}
+func err_outofrange(len: u32, index: u32): ? {
+	panic("Index out of range: len "+i32::to_str(len)+", index "+i32::to_str(index));
+}
+func err_emptylist(): ? {
 	panic("Read from an empty list");
 }
 
@@ -70,4 +83,12 @@ func to_str(self: List[type G]): str {
 		res += ", "+self.raw[i].to_str();
 	}
 	return res+"]";
+}
+
+func test(): ? {
+	var list: List[i32] = List[i32](10);
+	list.add(10);
+	list.add(1);
+	io::println(list.to_str());
+	list = list.UnList();
 }

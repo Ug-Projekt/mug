@@ -1,14 +1,14 @@
 type Person {
-	name: str,
-	age: i8,
-	family: [Person]
+	pub name: str,
+	pub age: u8
 }
 
-func main(): ? {
-	var me: Person = Person {
-		"carpal",
-		15,
-		[Person, 0] {}
+func main(args: [str]): ? {
+	const name: str = "someName";
+	const age: u8 = 10;
+	var person: Person = Person {
+		name: name,
+		age: age
 	};
-	println("My name is: ", me.name.tostr(), " and I'm ", me.age.tostr());
+	mem::dealloc(person);
 }

@@ -15,6 +15,13 @@ namespace Mug.Models.Lexer
         string CurrentSymbol = "";
         int CurrentIndex = 0;
         int CurrentLine = 0;
+        public int Length
+        {
+            get
+            {
+                return TokenCollection == null ? TokenCollection.Count : 0;
+            }
+        }
         public MugLexer(string moduleName, string source)
         {
             ModuleName = moduleName;
@@ -67,11 +74,11 @@ namespace Mug.Models.Lexer
             ';' => TokenKind.Semicolon,
             ':' => TokenKind.Colon,
             '.' => TokenKind.Dot,
-            '?' => TokenKind.KeyVoid,
+            '?' => TokenKind.KeyTVoid,
             _ => IllegalChar()
         };
 
-        void AddToken(TokenKind kind, object value)
+        void AddToken(TokenKind kind, string value)
         {
             if (value is not null)
                 TokenCollection.Add(new(CurrentLine, kind, value, new(CurrentIndex - value.ToString().Length, CurrentIndex)));
@@ -102,7 +109,11 @@ namespace Mug.Models.Lexer
                 return false;
             for (int i = 0; i < s.Length; i++)
                 if (!char.IsDigit(s[i]))
+                {
+                    if (char.IsDigit(s[0]))
+                        this.Throw(new Token(CurrentLine, TokenKind.Unknow, s, new(CurrentIndex-s.Length, CurrentIndex)), "Invalid identifier: an identifier cannot start with a digit");
                     return false;
+                }
             return true;
         }
         bool InsertKeyword(string s)

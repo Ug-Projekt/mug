@@ -1,25 +1,20 @@
 ﻿using Mug;
+using Mug.Models.Lexer;
+using Mug.Models.Parser;
 using System;
-
-
 
 
 if (debug.isDebug())
 {
-    var tests = new string[]
-    {
-@"var i: u32 = 0;
-i++;
-i--;
-i+=(1+1)-2;"
-    };
-    for (int i = 0; i < tests.Length; i++)
-    {
-        debug.printc(ConsoleColor.DarkGreen, "Test: ", i.ToString());
-        var compUnit = new CompilationUnit("test"+i+".mug", tests[i]);
-        var tokens = compUnit.GetTokenCollection();
-        debug.print(string.Join("\n", tokens));
-        debug.readfast("Press to next test");
-        Console.Clear();
-    }
+    var test = @"
+func main() {
+    var index: u8;
+    var size: u32;
+}";
+
+    var compUnit = new CompilationUnit("test.mug", test);
+    var tokens = compUnit.GetTokenCollection(out MugLexer lexer);
+    var tree = new MugParser(lexer);
+    debug.print(tree.GetNodeCollection().Stringize());
+    debug.print(string.Join("\n", tokens));
 }

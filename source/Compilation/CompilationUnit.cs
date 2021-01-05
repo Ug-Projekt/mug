@@ -21,5 +21,6 @@ namespace Mug
             IRGenerator = new (path, File.ReadAllText(path));
         }
         public List<Token> GetTokenCollection() => IRGenerator.GetTokenCollection();
+        public List<Token> GetTokenCollection(out MugLexer lexer) => IRGenerator.GetTokenCollection(out lexer);
     }
 }

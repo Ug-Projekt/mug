@@ -18,7 +18,7 @@ namespace Mug.Models.Lexer
         OpenPar,
         ClosePar,
         Semicolon,
-        KeyVoid,
+        KeyTVoid,
         Colon,
         OpenBrace,
         CloseBrace,
