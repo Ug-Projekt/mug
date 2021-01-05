@@ -145,7 +145,8 @@ namespace Mug.Models.Parser
             e = null;
             if (!MatchAdvance(TokenKind.OpenPar))
                 return false;
-            e = ExpectExpression(TokenKind.ClosePar);
+            e = ExpectExpression();
+            CurrentIndex++;
             return true;
         }
         bool MatchValue(out INode e)
@@ -185,7 +186,7 @@ namespace Mug.Models.Parser
             e = new ExpressionNode() { Left = left, Rigth = rigth, Operator = ToOperatorKind(op.Kind), Position = new(left.Position.Start, rigth.Position.End) };
             return true;
         }
-        INode ExpectExpression(TokenKind endWith)
+        INode ExpectExpression()
         {
             INode e = null;
             if (MatchFactor(out INode left))
@@ -198,11 +199,10 @@ namespace Mug.Models.Parser
                 else
                 {
                     var op = Back.Kind;
-                    var rigth = ExpectFactor();
+                    var rigth = ExpectExpression();
                     e = new ExpressionNode() { Operator = ToOperatorKind(op), Left = left, Rigth = rigth, Position = new(left.Position.Start, rigth.Position.End) };
                 }
             }
-            Expect("At end of expression was expected `" + endWith+ "`;", endWith);
             return e;
         }
         bool VariableDeclaration(out IStatement statement)
@@ -219,7 +219,8 @@ namespace Mug.Models.Parser
                 return true;
             }
             Expect("To define the value of a variable must open the body with `=`, or you can only declare a variable putting after type spec the symbol `;`;", TokenKind.Equal);
-            var body = ExpectExpression(TokenKind.Semicolon);
+            var body = ExpectExpression();
+            CurrentIndex++;
             statement = new VariableStatement() { Body = body, IsDefined = true, Name = name.Value, Position = name.Position, Type = type };
             return true;
         }
