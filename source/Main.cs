@@ -93,9 +93,8 @@ if (debug.isDebug())
 {
     var test = @"
 func main() {
-    var index: u8 = 2*(6/3+2);
+    var index: u8 = 2*(10/((2-2)*(2+2)));
 }";
-
     var compUnit = new CompilationUnit("test.mug", test);
     var tokens = compUnit.GetTokenCollection(out MugLexer lexer);
     var tree = new MugParser(lexer).GetNodeCollection();
