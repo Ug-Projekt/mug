@@ -41,6 +41,7 @@ INode getRigthValue(INode expression)
 }
 int sumExpression(INode left, INode rigth)
 {
+    debug.print("sum left: ", getValue(left).ToString(), ", rigth: ", getValue(rigth).ToString());
     return getValue(left)+getValue(rigth);
 }
 int subExpression(INode left, INode rigth)
@@ -53,7 +54,7 @@ int mulExpression(INode left, int rigth)
 }
 int divExpression(INode left, int rigth)
 {
-    debug.print("left: ", getValue(left).ToString(), ", rigth: ", rigth.ToString());
+    debug.print("div left: ", getValue(left).ToString(), ", rigth: ", rigth.ToString());
     return getValue(left) / rigth;
 }
 int evalExpression(ExpressionNode expression)
@@ -91,13 +92,13 @@ if (debug.isDebug())
 {
     var test = @"
 func main() {
-    var index: u8 = 12;
+    var index: u8 = ""string""+ ""second"";
 }";
 
     var compUnit = new CompilationUnit("test.mug", test);
     var tokens = compUnit.GetTokenCollection(out MugLexer lexer);
     var tree = new MugParser(lexer).GetNodeCollection();
-    debug.print("Evaluation: ", eval(((VariableStatement)((FunctionNode)tree.GlobalScope.Nodes[0]).Body.Statements[0]).Body).ToString());
+    //debug.print("Evaluation: ", eval(((VariableStatement)((FunctionNode)tree.GlobalScope.Nodes[0]).Body.Statements[0]).Body).ToString());
     debug.print(tree.Stringize());
     debug.print(string.Join("\n", tokens));
 }

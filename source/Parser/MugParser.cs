@@ -130,7 +130,12 @@ namespace Mug.Models.Parser
         }
         bool MatchConstantAdvance()
         {
-            var constant = Current.Kind.ToString().Length > 8 && Current.Kind.ToString()[..8] == "Constant";
+            var current = Current.Kind;
+            var constant =
+                current == TokenKind.ConstantChar ||
+                current == TokenKind.ConstantDigit ||
+                current == TokenKind.ConstantFloatDigit ||
+                current == TokenKind.ConstantString;//Current.Kind.ToString().Length > 8 && Current.Kind.ToString()[..8] == "Constant";
             if (constant)
                 CurrentIndex++;
             return constant;
@@ -138,7 +143,7 @@ namespace Mug.Models.Parser
         bool MatchInParExpression(out INode e)
         {
             e = null;
-            if (!Match(TokenKind.OpenPar))
+            if (!MatchAdvance(TokenKind.OpenPar))
                 return false;
             e = ExpectExpression(TokenKind.ClosePar);
             return true;
@@ -159,7 +164,8 @@ namespace Mug.Models.Parser
         }
         INode ExpectFactor()
         {
-            if (!MatchFactor(out INode e))
+            if (!MatchFactor(out INode e) &&
+                !MatchInParExpression(out e))
                 ParseError("Expected factor (term times term, or divide, etc..), but found an unknow expression stars with `", Current.Kind.ToString(), "`;");
             return e;
         }
@@ -184,15 +190,16 @@ namespace Mug.Models.Parser
             INode e = null;
             if (MatchFactor(out INode left))
             {
-                if (!Match(TokenKind.Plus) &&
-                    !Match(TokenKind.Minus))
+                if (!MatchAdvance(TokenKind.Plus) &&
+                    !MatchAdvance(TokenKind.Minus))
                 {
                     e = left;
                 }
                 else
                 {
+                    var op = Back.Kind;
                     var rigth = ExpectFactor();
-                    e = new ExpressionNode() { Left = left, Rigth = rigth, Position = new(left.Position.Start, rigth.Position.End) };
+                    e = new ExpressionNode() { Operator = ToOperatorKind(op), Left = left, Rigth = rigth, Position = new(left.Position.Start, rigth.Position.End) };
                 }
             }
             Expect("At end of expression was expected `" + endWith+ "`;", endWith);
