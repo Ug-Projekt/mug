@@ -30,6 +30,9 @@ namespace Mug.Models.Parser.NodeKinds
                 return parameters.ToArray();
             }
         }
+
+        public Range Position { get; set; }
+
         List<Parameter> parameters = new();
         public void Add(Parameter parameter)
         {
@@ -40,7 +43,7 @@ namespace Mug.Models.Parser.NodeKinds
             string nodes = "";
             for (int i = 0; i < parameters.Count; i++)
                 nodes += indent+"   "+parameters[i].ToString()+'\n';
-            return indent+"ParametersNode: "+(parameters.Count > 0 ? $"(Parameters:\n{string.Join(", ", parameters)})" : "(empty)");
+            return indent+"ParametersNode: "+(parameters.Count > 0 ? $"(({Position.Start}:{Position.End}) Parameters:\n{string.Join(", ", parameters)})" : "(empty)");
         }
     }
 }

@@ -16,12 +16,12 @@ namespace Mug.Models.Parser
         {
             if (IsEOF())
                 ParseErrorEOF();
-            Lexer.Throw(Current(), error);
+            Lexer.Throw(Current, error);
         }
         void ParseErrorEOF(params string[] error)
         {
             var errors = string.Join("", error);
-            Lexer.Throw(Back(), errors, errors != "" ? ": " : "", "Unexpected <EOF>");
+            Lexer.Throw(Back, errors, errors != "" ? ": " : "", "Unexpected <EOF>");
         }
         bool IsEOF()
         {
@@ -35,46 +35,54 @@ namespace Mug.Models.Parser
         {
             Lexer = lexer;
         }
-        Token Current()
+        Token Current
         {
-            return Lexer.TokenCollection[CurrentIndex];
+            get
+            {
+                return Lexer.TokenCollection[CurrentIndex];
+            }
         }
-        Token Back()
+        Token Back
         {
-            return Lexer.TokenCollection[CurrentIndex - 1];
+            get
+            {
+                if (CurrentIndex - 1 > 0)
+                    return Lexer.TokenCollection[CurrentIndex - 1];
+                return new Token();
+            }
         }
         Token ExpectMultiple(string error, params TokenKind[] kinds)
         {
             for (int i = 0; i < kinds.Length; i++)
-                if (Current().Kind == kinds[i])
+                if (Current.Kind == kinds[i])
                 {
                     CurrentIndex++;
-                    return Back();
+                    return Back;
                 }
-            ParseError("Expected `", string.Join("`, `", kinds), "`, found ", Current().Kind.ToString(), (error != "" ? "`: " + error : "`"));
+            ParseError("Expected `", string.Join("`, `", kinds), "`, found ", Current.Kind.ToString(), (error != "" ? "`: " + error : "`"));
             return new();
         }
         Token ExpectMultipleMute(string error, params TokenKind[] kinds)
         {
             for (int i = 0; i < kinds.Length; i++)
-                if (Current().Kind == kinds[i])
+                if (Current.Kind == kinds[i])
                 {
                     CurrentIndex++;
-                    return Back();
+                    return Back;
                 }
             ParseError(error);
             return new();
         }
         Token Expect(string error, TokenKind kind)
         {
-            if (Current().Kind != kind)
-                ParseError("Expected `", kind.ToString(), "`, found `", Current().Kind.ToString(), (error != "" ? "`: " + error : "`"));
+            if (Current.Kind != kind)
+                ParseError("Expected `", kind.ToString(), "`, found `", Current.Kind.ToString(), (error != "" ? "`: " + error : "`"));
             CurrentIndex++;
-            return Back();
+            return Back;
         }
         bool Match(TokenKind kind)
         {
-            return Current().Kind == kind;
+            return Current.Kind == kind;
         }
         bool MatchAdvance(TokenKind kind)
         {
@@ -88,7 +96,7 @@ namespace Mug.Models.Parser
         }
         Token ExpectType()
         {
-            ExpectMultipleMute("Expected a type: built in or user defined, but found `" + Current().Kind.ToString() + "`", TokenKind.Identifier,
+            ExpectMultipleMute("Expected a type: built in or user defined, but found `" + Current.Kind.ToString() + "`", TokenKind.Identifier,
                 TokenKind.KeyTi32,
                 TokenKind.KeyTVoid,
                 TokenKind.KeyTbool,
@@ -100,7 +108,7 @@ namespace Mug.Models.Parser
                 TokenKind.KeyTu64,
                 TokenKind.KeyTstr,
                 TokenKind.KeyTunknow);
-            return Back();
+            return Back;
         }
         Parameter ExpectParameter()
         {
@@ -122,12 +130,12 @@ namespace Mug.Models.Parser
         }
         bool MatchConstantAdvance()
         {
-            var constant = Current().Kind.ToString().Length > 8 && Current().Kind.ToString()[..8] == "Constant";
+            var constant = Current.Kind.ToString().Length > 8 && Current.Kind.ToString()[..8] == "Constant";
             if (constant)
                 CurrentIndex++;
             return constant;
         }
-        bool MatchInParExpression(out ExpressionNode e)
+        bool MatchInParExpression(out INode e)
         {
             e = null;
             if (!Match(TokenKind.OpenPar))
@@ -135,55 +143,55 @@ namespace Mug.Models.Parser
             e = ExpectExpression(TokenKind.ClosePar);
             return true;
         }
-        bool MatchValue(out ExpressionNode e)
+        bool MatchValue(out INode e)
         {
             e = null;
             if (!MatchConstantAdvance() &&
                 !MatchAdvance(TokenKind.Identifier))
                 return false;
-            var digit = Back();
-            e = new ExpressionNode() { SingleValue = digit, Position = digit.Position };
+            var digit = Back;
+            e = new ValueNode() { SingleValue = digit };
             return true;
         }
-        bool MatchFactor(out ExpressionNode e)
+        bool MatchTerm(out INode e)
         {
             return MatchValue(out e) || MatchInParExpression(out e);      // add support for call or other
         }
-        ExpressionNode ExpectTerm()
+        INode ExpectFactor()
         {
-            if (!MatchTerm(out ExpressionNode e))
-                ParseError("Expected term (mutiply or divide of factors, factor, etc..), but found an unknow expression stars with `", Current().Kind.ToString(), "`;");
+            if (!MatchFactor(out INode e))
+                ParseError("Expected factor (term times term, or divide, etc..), but found an unknow expression stars with `", Current.Kind.ToString(), "`;");
             return e;
         }
-        bool MatchTerm(out ExpressionNode e)
+        bool MatchFactor(out INode e)
         {
             e = null;
-            if (!MatchFactor(out ExpressionNode left))
+            if (!MatchTerm(out INode left))
                 return false;
             if (!MatchAdvance(TokenKind.Star) &&
                 !MatchAdvance(TokenKind.Slash))
             {
-                e = new ExpressionNode() { SingleValue = left, Operator = ToOperatorKind(Current().Kind), Position = left.Position };
+                e = left;
                 return true;
             }
-            var op = Back();
-            var rigth = ExpectTerm();
+            var op = Back;
+            var rigth = ExpectFactor();
             e = new ExpressionNode() { Left = left, Rigth = rigth, Operator = ToOperatorKind(op.Kind), Position = new(left.Position.Start, rigth.Position.End) };
             return true;
         }
-        ExpressionNode ExpectExpression(TokenKind endWith)
+        INode ExpectExpression(TokenKind endWith)
         {
-            ExpressionNode e = null;
-            if (MatchTerm(out ExpressionNode left))
+            INode e = null;
+            if (MatchFactor(out INode left))
             {
                 if (!Match(TokenKind.Plus) &&
                     !Match(TokenKind.Minus))
                 {
-                    e = new ExpressionNode() { SingleValue = left, Position = left.Position };
+                    e = left;
                 }
                 else
                 {
-                    var rigth = ExpectTerm();
+                    var rigth = ExpectFactor();
                     e = new ExpressionNode() { Left = left, Rigth = rigth, Position = new(left.Position.Start, rigth.Position.End) };
                 }
             }

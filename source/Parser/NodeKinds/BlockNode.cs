@@ -14,6 +14,9 @@ namespace Mug.Models.Parser.NodeKinds
                 return statements.ToArray();
             }
         }
+
+        public Range Position { get; set; }
+
         List<IStatement> statements = new();
         public void Add(IStatement node)
         {
@@ -24,7 +27,7 @@ namespace Mug.Models.Parser.NodeKinds
             string nodes = "";
             for (int i = 0; i < statements.Count; i++)
                 nodes += statements[i].Stringize(indent+"   ")+'\n';
-            return indent+"BlockNode:"+(nodes != "" ? '\n'+nodes : "(empty)\n"+indent.Remove(indent.Length-3));
+            return indent+$"BlockNode: ({Position.Start}:{Position.End})"+(nodes != "" ? '\n'+nodes : "(empty)\n"+indent.Remove(indent.Length-3));
         }
     }
 }

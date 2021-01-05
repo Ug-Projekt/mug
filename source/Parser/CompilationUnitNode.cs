@@ -4,12 +4,14 @@ using System.Text;
 
 namespace Mug.Models.Parser
 {
-    public struct CompilationUnitNode : INode
+    public class CompilationUnitNode : INode
     {
         public NodeBuilder GlobalScope { get; set; }
-        public CompilationUnitNode(NodeBuilder globalScope)
+        public Range Position { get; set; }
+
+        public CompilationUnitNode()
         {
-            GlobalScope = globalScope;
+            GlobalScope = new NodeBuilder();
         }
         public string Stringize(string indent = "")
         {

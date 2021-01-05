@@ -10,7 +10,7 @@ namespace Mug.Models.Parser.NodeKinds.Statements
         public String Name { get; set; }
         public Token Type { get; set; }
         public Boolean IsDefined { get; set; }
-        public ExpressionNode Body { get; set; }
+        public INode Body { get; set; }
         public Range Position { get; set; }
 
         public string Stringize(string indent = "")
