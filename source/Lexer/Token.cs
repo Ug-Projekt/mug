@@ -6,10 +6,10 @@ namespace Mug.Models.Lexer
 {
     public struct Token
     {
-        public readonly Int32 LineAt;
-        public readonly TokenKind Kind;
-        public readonly Object Value;
-        public readonly Range Position;
+        public Int32 LineAt { get; }
+        public TokenKind Kind { get; }
+        public Object Value { get; }
+        public Range Position { get; }
         public Token(int lineAt, TokenKind kind, object value, Range position)
         {
             LineAt = lineAt;

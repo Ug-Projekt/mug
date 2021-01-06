@@ -1,0 +1,16 @@
+func main(args: [str]) {
+   io::println("Sum between read numbers: ",
+      num::to_str(
+         num::add(
+            num::as_i32(readln("First number: ")),
+            num::as_i32(readln("Second number: "))
+         )
+      )
+   );
+}
+func add(a: i32, b: i32): i32 {
+	return num::as_i32(num::add(num::as_f32(a), num::as_f32(b)));
+}
+func add(a: f32, b: f32): f32 {
+   return a+b;
+}

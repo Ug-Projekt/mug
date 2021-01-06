@@ -7,15 +7,12 @@ using System;
 
 if (debug.isDebug())
 {
+    // var testPath = $"C:/Users/{Environment.UserName}/Desktop/Mug/tests/add.mug";
     var test = @"
-
-func main(args: [[str]]) {
-    var x: i32 = add(add(15, 13), 12+4*3*add(5, 6))*9;
+func main(args: [str]) {
+    else {
+    }
 }
-func add(a: i32, b: i32): i32 {
-    return a+b;
-}
-
 ";
     var compUnit = new CompilationUnit("test.mug", test);
     var tokens = compUnit.GetTokenCollection(out MugLexer lexer);

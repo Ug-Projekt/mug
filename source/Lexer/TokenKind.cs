@@ -50,6 +50,15 @@ namespace Mug.Models.Lexer
         Minus,
         Star,
         KeyTarray,
-        KeyReturn
+        KeyReturn,
+        Block,
+        ConstantBoolean,
+        KeyIF,
+        KeyELIF,
+        KeyELSE,
+        BoolOperatorMinor,
+        BoolOperatorMajor,
+        BoolOperatorMinEQ,
+        BoolOperatorMajEQ
     }
 }

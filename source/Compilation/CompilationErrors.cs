@@ -49,11 +49,11 @@ namespace Mug
             Console.ForegroundColor = ConsoleColor.DarkGreen;
             Console.Write(" | ");
             Console.ResetColor();
-            Console.Write(line[..start]);
+            Console.Write(line[..start].Replace("\t", " "));
             Console.ForegroundColor = ConsoleColor.DarkRed;
-            Console.Write(line[start..end]);
+            Console.Write(line[start..end].Replace("\t", " "));
             Console.ResetColor();
-            Console.Write("{0}\n{1} ", line[end..], new string(' ', lineAt.ToString().Length + 3 + line[..start].Length)
+            Console.Write("{0}\n{1} ", line[end..].Replace("\t", " "), new string(' ', lineAt.ToString().Length + 3 + line[..start].Length)
                 + "^" + new string('~', line[start..end].Length-1));
             Console.ForegroundColor = ConsoleColor.DarkYellow;
             Console.WriteLine(error);

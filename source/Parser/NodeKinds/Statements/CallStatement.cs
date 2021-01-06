@@ -19,7 +19,7 @@ namespace Mug.Models.Parser.NodeKinds.Statements
 
         public string Stringize(string indent = "")
         {
-            return indent + $"CallStatement: (({Position.Start}:{Position.End}) Parameters:{(HasParameters ? "\n"+Parameters.Stringize(indent+"   ") : "(empty)")})";
+            return indent + $"CallStatement: (({Position.Start}:{Position.End}) Name: {Name}, Parameters:{(HasParameters ? "\n"+Parameters.Stringize(indent+"   ") : "(empty)")})";
         }
     }
 }

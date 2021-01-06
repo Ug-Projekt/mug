@@ -35,6 +35,9 @@ namespace Mug.Models.Lexer
         bool GetKeyword(string s) => s switch
         {
             "return" => AddKeyword(TokenKind.KeyReturn, s.Length),
+            "if" => AddKeyword(TokenKind.KeyIF, s.Length),
+            "elif" => AddKeyword(TokenKind.KeyELIF, s.Length),
+            "else" => AddKeyword(TokenKind.KeyELSE, s.Length),
             "func" => AddKeyword(TokenKind.KeyFunc, s.Length),
             "var" => AddKeyword(TokenKind.KeyVar, s.Length),
             "const" => AddKeyword(TokenKind.KeyConst, s.Length),
@@ -65,6 +68,8 @@ namespace Mug.Models.Lexer
             ']' => TokenKind.CloseBracket,
             '{' => TokenKind.OpenBrace,
             '}' => TokenKind.CloseBrace,
+            '<' => TokenKind.BoolOperatorMinor,
+            '>' => TokenKind.BoolOperatorMajor,
             '=' => TokenKind.Equal,
             '!' => TokenKind.Slash,
             '+' => TokenKind.Plus,
@@ -81,8 +86,8 @@ namespace Mug.Models.Lexer
 
         void AddToken(TokenKind kind, string value)
         {
-            if (value.Contains('.') && kind == TokenKind.Identifier)
-                this.Throw(new Token(CurrentLine, kind, value, new(CurrentIndex - value.Length, CurrentIndex)), "Invalid identifier, its first letter cannot be a number");
+            if (kind == TokenKind.Identifier)
+                CheckValidIdentifier(value);
             if (value is not null)
                 TokenCollection.Add(new(CurrentLine, kind, value, new(CurrentIndex - value.ToString().Length, CurrentIndex)));
             else
@@ -124,14 +129,31 @@ namespace Mug.Models.Lexer
         {
             return GetKeyword(s);
         }
+        void CheckValidIdentifier(string identifier)
+        {
+            var bad = new Token(CurrentLine, TokenKind.Bad, null, new(CurrentIndex - identifier.Length, CurrentIndex));
+            if (!char.IsLetter(identifier[0]) && identifier[0] != '_')
+                this.Throw(bad, "Invalid identifier, following the mug's syntax rules, an ident cannot start with `", identifier[0].ToString(), "`;");
+            if (identifier.Contains('.'))
+                this.Throw(bad, "Invalid identifier, following the mug's syntax rules, an ident cannot contain `.`;");
+        }
+        bool IsBoolean(string value)
+        {
+            return value == "true" || value == "false";
+        }
         void ProcessSymbol(string value)
         {
             if (IsDigit(value))
                 AddToken(TokenKind.ConstantDigit, value);
             else if (IsFloatDigit(ref value))
                 AddToken(TokenKind.ConstantFloatDigit, value);
+            else if (IsBoolean(value))
+                AddToken(TokenKind.ConstantBoolean, value);
             else if (!InsertKeyword(value))
+            {
+                CheckValidIdentifier(value);
                 AddToken(TokenKind.Identifier, value);
+            }
         }
         bool NextIsDigit()
         {
@@ -187,9 +209,32 @@ namespace Mug.Models.Lexer
                         if (MatchNext('-')) { AddMultiple(TokenKind.Decrement, 2); CurrentIndex++; break; }
                         else if (MatchNext('=')) { AddMultiple(TokenKind.DecrementAssign, 2); CurrentIndex++; break; }
                         goto default;
+                    case ':':
+                        if (MatchNext(':')) { AddMultiple(TokenKind.Block, 2); CurrentIndex++; break; }
+                        goto default;
+                    case '<':
+                        if (MatchNext('=')) { AddMultiple(TokenKind.BoolOperatorMinEQ, 2); CurrentIndex++; break; }
+                        goto default;
+                    case '>':
+                        if (MatchNext('=')) { AddMultiple(TokenKind.BoolOperatorMajEQ, 2); CurrentIndex++; break; }
+                        goto default;
                     default:
                         AddSpecial(GetSpecial(current));
                         break;
+                }
+        }
+        void FixCollection()
+        {
+            // collecting <ident> <::> <ident> in one token
+            for (int i = 0; i < TokenCollection.Count; i++)
+                if (TokenCollection[i].Kind == TokenKind.Block &&
+                    TokenCollection[i - 1].Kind == TokenKind.Identifier &&
+                    TokenCollection[i + 1].Kind == TokenKind.Identifier)
+                {
+                    TokenCollection.RemoveAt(i);
+                    var token = TokenCollection[i - 1];
+                    TokenCollection[i - 1] = new Token(token.LineAt, token.Kind, token.Value+"::"+ TokenCollection[i].Value, token.Position);
+                    TokenCollection.RemoveAt(i);
                 }
         }
         public List<Token> Tokenize()
@@ -201,6 +246,7 @@ namespace Mug.Models.Lexer
                 ProcessChar(Source[CurrentIndex]);
             while (CurrentIndex++ < Source.Length-1);
             AddSpecial(TokenKind.EOF);
+            FixCollection();
             return TokenCollection;
         }
     }

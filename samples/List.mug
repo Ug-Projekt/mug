@@ -24,7 +24,7 @@ func err_segmentation(): ? {
 	panic("Segmentation must be greater than `0`");
 }
 func err_outofrange(len: u32, index: u32): ? {
-	panic("Index out of range: len "+i32::to_str(len)+", index "+i32::to_str(index));
+	panic("Index out of range: len "+num::to_str(len)+", index "+num::to_str(index));
 }
 func err_emptylist(): ? {
 	panic("Read from an empty list");

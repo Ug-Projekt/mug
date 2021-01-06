@@ -10,5 +10,5 @@ func main(args: [str]): ? {
 		name: name,
 		age: age
 	};
-	mem::dealloc(person);
+	// person destroied here
 }
