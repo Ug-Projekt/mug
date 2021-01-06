@@ -126,6 +126,16 @@ namespace Mug.Models.Parser
             }
             return false;
         }
+        bool Match(TokenKind kind, out Token token)
+        {
+            token = new();
+            if (Match(kind))
+            {
+                token = Back;
+                return true;
+            }
+            return false;
+        }
         Parameter ExpectParameter(bool isFirst)
         {
             if (!isFirst)
@@ -176,9 +186,31 @@ namespace Mug.Models.Parser
             e = new ValueNode() { SingleValue = digit };
             return true;
         }
+        bool MatchCallStatement(out INode e)
+        {
+            e = null;
+            if (!MatchAdvance(TokenKind.Identifier, out Token name))
+                return false;
+            if (!MatchAdvance(TokenKind.OpenPar))
+            {
+                CurrentIndex--;
+                return false;
+            }
+            if (Current.Kind == TokenKind.ClosePar)
+            {
+                e = new CallStatement() { Name = name.Value.ToString(), Parameters = null, Position = name.Position };
+                CurrentIndex++;
+                return true;
+            }
+            NodeBuilder parameters = new();
+            while (Back.Kind != TokenKind.ClosePar)
+                parameters.Add(ExpectExpression(TokenKind.Comma, TokenKind.ClosePar));
+            e = new CallStatement() { Name = name.Value.ToString(), Parameters = parameters, Position = name.Position };
+            return true;
+        }
         bool MatchTerm(out INode e)
         {
-            return MatchValue(out e) || MatchInParExpression(out e);      // add support for call or other
+            return MatchCallStatement(out e) || MatchInParExpression(out e) || MatchValue(out e);      // add support for call or other
         }
         INode ExpectFactor()
         {
@@ -203,7 +235,7 @@ namespace Mug.Models.Parser
             e = new ExpressionNode() { Left = left, Rigth = rigth, Operator = ToOperatorKind(op.Kind), Position = new(left.Position.Start, rigth.Position.End) };
             return true;
         }
-        INode ExpectExpression(TokenKind end)
+        INode ExpectExpression(params TokenKind[] end)
         {
             INode e = null;
             if (MatchFactor(out INode left))
@@ -223,16 +255,16 @@ namespace Mug.Models.Parser
             }
             if (e is null)
                 ParseError("Missing expression: `", Current.Kind.ToString(), "` is not a valid symbol in expression;");
-            Expect("In the current context, the expression scope should finish with `" + end.ToString() + "`;", end);
+            ExpectMultiple("In the current context, the expression scope should end with the precedent printed expected symbols;", end);
             return e;
         }
-        bool VariableDeclaration(out IStatement statement)
+        bool VariableDefinition(out IStatement statement)
         {
             statement = null;
             if (!MatchAdvance(TokenKind.KeyVar))
                 return false;
             var name = Expect("Expected the variable id;", TokenKind.Identifier);
-            Expect("Expected a type, in variable declaration, implicit type are not supported yet;", TokenKind.Colon);
+            Expect("Expected a type, in variable definition, implicit type are not supported yet;", TokenKind.Colon);
             var type = ExpectType();
             if (MatchAdvance(TokenKind.Semicolon))
             {
@@ -242,6 +274,21 @@ namespace Mug.Models.Parser
             Expect("To define the value of a variable must open the body with `=`, or you can only declare a variable putting after type spec the symbol `;`;", TokenKind.Equal);
             var body = ExpectExpression(TokenKind.Semicolon);
             statement = new VariableStatement() { Body = body, IsDefined = true, Name = name.Value.ToString(), Position = name.Position, Type = type };
+            return true;
+        }
+        bool ConstantDefinition(out IStatement statement)
+        {
+            statement = null;
+            if (!MatchAdvance(TokenKind.KeyConst))
+                return false;
+            var name = Expect("Expected the constant id;", TokenKind.Identifier);
+            Expect("Expected a type, in constant definition, implicit type are not supported yet;", TokenKind.Colon);
+            var type = ExpectType();
+            if (Match(TokenKind.Semicolon))
+                ParseError("A constant cannot be declared without a body;");
+            Expect("To define the value of a constant must open the body with `=`;", TokenKind.Equal);
+            var body = ExpectExpression(TokenKind.Semicolon);
+            statement = new ConstantStatement() { Body = body, Name = name.Value.ToString(), Position = name.Position, Type = type };
             return true;
         }
         bool ReturnDeclaration(out IStatement statement)
@@ -262,23 +309,30 @@ namespace Mug.Models.Parser
         IStatement ExpectStatement()
         {
             IStatement statement;
-            if (!VariableDeclaration(out statement))
+            if (!VariableDefinition(out statement))
                 if (!ReturnDeclaration(out statement))
-                    ParseError("Unknow local statement");
-            return statement;
+                    if (!ConstantDefinition(out statement))
+                        if (MatchCallStatement(out INode node))
+                        {
+                            statement = (IStatement)node;
+                            CurrentIndex++;
+                        }
+                        else
+                            ParseError("In the current local context, this is not a valid imperative statement;");
+            return (IStatement)statement;
         }
         BlockNode ExpectBlock()
         {
-            Expect("A block statement must start with `{` token", TokenKind.OpenBrace);
+            Expect("A block statement must start with `{` token;", TokenKind.OpenBrace);
             var block = new BlockNode();
             while (!Match(TokenKind.CloseBrace))
                 block.Add(ExpectStatement());
-            Expect("A block statement must end with `}` token", TokenKind.CloseBrace);
+            Expect("A block statement must end with `}` token;", TokenKind.CloseBrace);
             return block;
         }
         ParametersNode ExpectParametersDeclaration()
         {
-            Expect("", TokenKind.OpenPar);
+            Expect("In function definition you must open a parenthesis to declare parameters, or if the function does not accept parameters just open and close par: `()`", TokenKind.OpenPar);
             var parameters = new ParametersNode();
             while (!MatchAdvance(TokenKind.ClosePar))
             {
@@ -317,7 +371,7 @@ namespace Mug.Models.Parser
             {
                 INode node;
                 if (!FunctionDefinition(out node))
-                    ParseError("Unknow global statement");
+                    ParseError("In the current global context, this is not a valid global statement;");
                 nodes.Add(node);
             }
             return nodes;

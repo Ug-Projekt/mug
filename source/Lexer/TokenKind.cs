@@ -6,6 +6,7 @@ namespace Mug.Models.Lexer
 {
     public enum TokenKind
     {
+        Bad,
         Identifier,
         ConstantString,
         ConstantDigit,
