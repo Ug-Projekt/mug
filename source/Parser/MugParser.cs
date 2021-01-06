@@ -113,7 +113,7 @@ namespace Mug.Models.Parser
                 TokenKind.KeyTu8,
                 TokenKind.KeyTu64,
                 TokenKind.KeyTstr,
-                TokenKind.KeyTunknow);
+                TokenKind.KeyTunknown);
             return Back;
         }
         bool MatchAdvance(TokenKind kind, out Token token)
@@ -216,7 +216,7 @@ namespace Mug.Models.Parser
         {
             if (!MatchFactor(out INode e) &&
                 !MatchInParExpression(out e))
-                ParseError("Expected factor (term times term, or divide, etc..), but found an unknow expression stars with `", Current.Kind.ToString(), "`;");
+                ParseError("Expected factor (term times term, or divide, etc..), but found an unknown expression stars with `", Current.Kind.ToString(), "`;");
             return e;
         }
         bool MatchFactor(out INode e)

@@ -48,13 +48,13 @@ namespace Mug.Models.Lexer
             "u8" => AddKeyword(TokenKind.KeyTu8, s.Length),
             "u32" => AddKeyword(TokenKind.KeyTu32, s.Length),
             "u64" => AddKeyword(TokenKind.KeyTu64, s.Length),
-            "unknow" => AddKeyword(TokenKind.KeyTunknow, s.Length),
+            "unknown" => AddKeyword(TokenKind.KeyTunknown, s.Length),
             _ => false
         };
         TokenKind IllegalChar()
         {
             this.Throw(CurrentIndex, CurrentLine, "Found illegal SpecialSymbol: mug's syntax does not use this character");
-            return TokenKind.Unknow;
+            return TokenKind.Bad;
         }
         bool MatchNext(char next) => CurrentIndex + 1 < Source.Length && Source[CurrentIndex+1] == next;
         TokenKind GetSpecial(char c) => c switch
