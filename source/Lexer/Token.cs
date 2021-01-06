@@ -8,9 +8,9 @@ namespace Mug.Models.Lexer
     {
         public readonly Int32 LineAt;
         public readonly TokenKind Kind;
-        public readonly String Value;
+        public readonly Object Value;
         public readonly Range Position;
-        public Token(int lineAt, TokenKind kind, string value, Range position)
+        public Token(int lineAt, TokenKind kind, object value, Range position)
         {
             LineAt = lineAt;
             Kind = kind;

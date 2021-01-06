@@ -48,6 +48,7 @@ namespace Mug.Models.Lexer
         DecrementAssign,
         Plus,
         Minus,
-        Star
+        Star,
+        KeyTarray
     }
 }

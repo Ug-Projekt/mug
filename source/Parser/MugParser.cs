@@ -96,6 +96,12 @@ namespace Mug.Models.Parser
         }
         Token ExpectType()
         {
+            if (MatchAdvance(TokenKind.OpenBracket, out Token open))
+            {
+                var type = ExpectType();
+                var close = Expect("An array type definition must end with `CloseBracket`;", TokenKind.CloseBracket);
+                return new Token(type.LineAt, TokenKind.KeyTarray, type, new(open.Position.Start, close.Position.End));
+            }
             ExpectMultipleMute("Expected a type: built in or user defined, but found `" + Current.Kind.ToString() + "`", TokenKind.Identifier,
                 TokenKind.KeyTi32,
                 TokenKind.KeyTVoid,
@@ -110,14 +116,26 @@ namespace Mug.Models.Parser
                 TokenKind.KeyTunknow);
             return Back;
         }
-        Parameter ExpectParameter()
+        bool MatchAdvance(TokenKind kind, out Token token)
         {
-            var name = Expect("In parameter declartion must specify the param name;", TokenKind.Identifier).Value;
+            token = new();
+            if (MatchAdvance(kind))
+            {
+                token = Back;
+                return true;
+            }
+            return false;
+        }
+        Parameter ExpectParameter(bool isFirst)
+        {
+            if (!isFirst)
+                Expect("Parameters must separed by a comma;", TokenKind.Comma);
+            var name = Expect("In parameter declaration must specify the param name;", TokenKind.Identifier).Value;
             Expect("In parameter declaration must specify the param type;", TokenKind.Colon);
             var type = ExpectType();
             ExpectMultiple("", TokenKind.Comma, TokenKind.ClosePar);
             CurrentIndex--;
-            return new Parameter(type, name, new());          // add support for optional parameter
+            return new Parameter(type, name.ToString(), new());          // add support for optional parameter
         }
         OperatorKind ToOperatorKind(TokenKind op)
         {
@@ -218,12 +236,12 @@ namespace Mug.Models.Parser
             var type = ExpectType();
             if (MatchAdvance(TokenKind.Semicolon))
             {
-                statement = new VariableStatement() { Body = null, IsDefined = false, Name = name.Value, Position = name.Position, Type = type };
+                statement = new VariableStatement() { Body = null, IsDefined = false, Name = name.Value.ToString(), Position = name.Position, Type = type };
                 return true;
             }
             Expect("To define the value of a variable must open the body with `=`, or you can only declare a variable putting after type spec the symbol `;`;", TokenKind.Equal);
             var body = ExpectExpression(TokenKind.Semicolon);
-            statement = new VariableStatement() { Body = body, IsDefined = true, Name = name.Value, Position = name.Position, Type = type };
+            statement = new VariableStatement() { Body = body, IsDefined = true, Name = name.Value.ToString(), Position = name.Position, Type = type };
             return true;
         }
         IStatement ExpectStatement()
@@ -247,7 +265,9 @@ namespace Mug.Models.Parser
             Expect("", TokenKind.OpenPar);
             var parameters = new ParametersNode();
             while (!MatchAdvance(TokenKind.ClosePar))
-                parameters.Add(ExpectParameter());
+            {
+                parameters.Add(ExpectParameter(parameters.Parameters.Length == 0));
+            }
             return parameters;
         }
         bool FunctionDefinition(out INode node)
@@ -266,7 +286,7 @@ namespace Mug.Models.Parser
                 type = ExpectType();
             }
             var body = ExpectBlock();
-            node = new FunctionNode() { Body = body, Modifier = Modifier.Public, Name = name.Value, Parameters = parameters, Type = type, Position = name.Position };
+            node = new FunctionNode() { Body = body, Modifier = Modifier.Public, Name = name.Value.ToString(), Parameters = parameters, Type = type, Position = name.Position };
             return true;
         }
         NodeBuilder ProcessToken(Token token)
