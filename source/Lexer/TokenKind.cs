@@ -49,6 +49,7 @@ namespace Mug.Models.Lexer
         Plus,
         Minus,
         Star,
-        KeyTarray
+        KeyTarray,
+        KeyReturn
     }
 }

@@ -244,11 +244,27 @@ namespace Mug.Models.Parser
             statement = new VariableStatement() { Body = body, IsDefined = true, Name = name.Value.ToString(), Position = name.Position, Type = type };
             return true;
         }
+        bool ReturnDeclaration(out IStatement statement)
+        {
+            statement = null;
+            if (!MatchAdvance(TokenKind.KeyReturn))
+                return false;
+            var pos = Back.Position;
+            if (MatchAdvance(TokenKind.Semicolon))
+            {
+                statement = new ReturnStatement() { Position = pos, IsDefined = false };
+                return true;
+            }
+            var body = ExpectExpression(TokenKind.Semicolon);
+            statement = new ReturnStatement() { Position = pos, Body = body };
+            return true;
+        }
         IStatement ExpectStatement()
         {
             IStatement statement;
             if (!VariableDeclaration(out statement))
-                ParseError("Unknow local statement");
+                if (!ReturnDeclaration(out statement))
+                    ParseError("Unknow local statement");
             return statement;
         }
         BlockNode ExpectBlock()

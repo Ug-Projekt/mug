@@ -34,6 +34,7 @@ namespace Mug.Models.Lexer
         }
         bool GetKeyword(string s) => s switch
         {
+            "return" => AddKeyword(TokenKind.KeyReturn, s.Length),
             "func" => AddKeyword(TokenKind.KeyFunc, s.Length),
             "var" => AddKeyword(TokenKind.KeyVar, s.Length),
             "const" => AddKeyword(TokenKind.KeyConst, s.Length),
