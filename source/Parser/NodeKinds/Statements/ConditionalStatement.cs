@@ -5,7 +5,7 @@ using System.Text;
 
 namespace Mug.Models.Parser.NodeKinds.Statements
 {
-    public struct ConditionStatement : IStatement 
+    public struct ConditionalStatement : IStatement 
     {
         public TokenKind Kind { get; set; }
         public INode Expression { get; set; }
@@ -14,7 +14,7 @@ namespace Mug.Models.Parser.NodeKinds.Statements
 
         public string Stringize(string indent = "")
         {
-            return indent+ "ConditionStatement: " + $"(({Position.Start}:{Position.End}) Kind: {Kind}, Expression:\n{(Kind != TokenKind.KeyELSE ? Expression.Stringize(indent+"   ") : "(empty)")},\n{indent}Body:\n{Body.Stringize(indent+"   ")})";
+            return indent + $"ConditionalStatement: {{\n{indent}   Kind: {Kind},\n{indent}   Expression: {{\n{(Kind != TokenKind.KeyELSE ? Expression.Stringize(indent+"      ") : "")}\n{indent}   }},\n{indent}   Body: {{\n{Body.Stringize(indent+"      ")}\n{indent}   }}\n{indent}}}";
         }
     }
 }

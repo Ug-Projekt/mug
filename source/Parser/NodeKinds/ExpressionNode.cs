@@ -14,7 +14,7 @@ namespace Mug.Models.Parser.NodeKinds
         public Range Position { get; set; }
         public string Stringize(string indent = "")
         {
-            return indent+"ExpressionNode: "+$"(({Position.Start}:{Position.End}) Operator: {Operator},\n{indent}   Left:\n{Left.Stringize(indent+"      ")},\n{indent}   Rigth:\n{Rigth.Stringize(indent+"       ")})";
+            return indent+$"ExpressionNode: {{\n{indent}   Operator: {Operator},\n{indent}   Left: {{\n{Left.Stringize(indent+"      ")}\n{indent}   }},\n{indent}   Rigth: {{\n{Rigth.Stringize(indent+"       ")}\n{indent}   }}\n{indent}}}";
         }
     }
 }

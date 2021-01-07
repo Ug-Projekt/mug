@@ -24,8 +24,8 @@ namespace Mug.Models.Parser
         {
             string nodes = "";
             for (int i = 0; i < this.nodes.Count; i++)
-                nodes += this.nodes[i].Stringize(indent + "   ")+'\n';
-            return indent + $"NodeBuilder: ({Position.Start}:{Position.End}),\n" + nodes;
+                nodes += this.nodes[i].Stringize(indent + "   ")+",\n";
+            return indent + $"NodeBuilder: {{\n{nodes}{indent}}}";
         }
     }
 }

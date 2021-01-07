@@ -14,7 +14,7 @@ namespace Mug.Models.Parser.NodeKinds.Statements
 
         public string Stringize(string indent = "")
         {
-            return indent+"ConstantStatement: "+$"(({Position.Start}:{Position.End}) Type:\n{indent+Type},\n{indent}Name: {Name}, Body:\n{Body.Stringize(indent+"   ")})";
+            return indent+$"ConstantStatement: {{\n{indent}   Type: {{\n{indent}      {Type}\n{indent}   }},\n{indent}   Name: {Name},\n{indent}   Body: {{\n{Body.Stringize(indent+"      ")}\n{indent}   }}\n{indent}}}";
         }
     }
 }

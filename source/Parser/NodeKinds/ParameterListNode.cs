@@ -16,12 +16,12 @@ namespace Mug.Models.Parser.NodeKinds
             Name = name;
             DefaultConstantValue = defaultConstValue;
         }
-        public override string ToString()
+        public string Stringize(string indent)
         {
-            return $"(Type: {Type}, Name: {Name}, DefaultConstantValue: {DefaultConstantValue})";
+            return indent+$"Type: {{\n{indent}   {Type}\n{indent}}},\n{indent}Name: {Name},\n{indent}DefaultConstantValue: {{\n{indent}   {DefaultConstantValue}\n{indent}}}";
         }
     }
-    public class ParametersNode : INode
+    public class ParameterListNode : INode
     {
         public Parameter[] Parameters
         {
@@ -42,8 +42,8 @@ namespace Mug.Models.Parser.NodeKinds
         {
             string nodes = "";
             for (int i = 0; i < parameters.Count; i++)
-                nodes += indent+"   "+parameters[i].ToString()+'\n';
-            return indent+"ParametersNode: "+(parameters.Count > 0 ? $"(({Position.Start}:{Position.End}) Parameters:\n{string.Join(", ", parameters)})" : "(empty)");
+                nodes += indent+"   "+"Parameter["+i+"] {\n"+parameters[i].Stringize(indent+"      ")+'\n'+indent+"   },\n";
+            return indent+$"ParameterListNode: {{\n{nodes}{indent}}}";
         }
     }
 }

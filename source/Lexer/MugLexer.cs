@@ -84,11 +84,13 @@ namespace Mug.Models.Lexer
             _ => IllegalChar()
         };
 
-        void AddToken(TokenKind kind, string value)
+        void AddToken(TokenKind kind, string value, bool isString = false)
         {
             if (kind == TokenKind.Identifier)
                 CheckValidIdentifier(value);
-            if (value is not null)
+            if (isString)
+                TokenCollection.Add(new(CurrentLine, kind, value, new(CurrentIndex - value.ToString().Length+1, CurrentIndex+1)));
+            else if (value is not null)
                 TokenCollection.Add(new(CurrentLine, kind, value, new(CurrentIndex - value.ToString().Length, CurrentIndex)));
             else
                 TokenCollection.Add(new(CurrentLine, kind, null, new(CurrentIndex, CurrentIndex + 1)));
@@ -171,7 +173,7 @@ namespace Mug.Models.Lexer
                 CurrentSymbol += Source[CurrentIndex];
                 while (CurrentIndex++ < Source.Length && Source[CurrentIndex] != '"')
                     CurrentSymbol += Source[CurrentIndex];
-                AddToken(TokenKind.ConstantString, CurrentSymbol+'"');
+                AddToken(TokenKind.ConstantString, CurrentSymbol+'"', true);
                 CurrentSymbol = "";
                 return;
             }
@@ -180,7 +182,7 @@ namespace Mug.Models.Lexer
                 CurrentSymbol += Source[CurrentIndex];
                 while (CurrentIndex++ < Source.Length && Source[CurrentIndex] != '\'')
                     CurrentSymbol += Source[CurrentIndex];
-                AddToken(TokenKind.ConstantChar, CurrentSymbol+='\'');
+                AddToken(TokenKind.ConstantChar, CurrentSymbol+='\'', true);
                 if (CurrentSymbol.Length > 3 || CurrentSymbol.Length < 3)
                     this.Throw(TokenCollection[^1], "Invalid characters in ConstantChar: it can only contain a character, not ", (CurrentSymbol.Length-2).ToString());
                 CurrentSymbol = "";

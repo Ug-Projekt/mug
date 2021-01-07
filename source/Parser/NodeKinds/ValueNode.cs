@@ -12,7 +12,7 @@ namespace Mug.Models.Parser.NodeKinds
 
         public string Stringize(string indent = "")
         {
-            return indent+$"ValueNode: (({Position.Start}:{Position.End}){SingleValue})";
+            return indent+$"ValueNode: {SingleValue}";
         }
     }
 }

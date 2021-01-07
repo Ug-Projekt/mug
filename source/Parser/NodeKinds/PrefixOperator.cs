@@ -12,7 +12,7 @@ namespace Mug.Models.Parser.NodeKinds
         public Range Position { get; set; }
         public string Stringize(string indent = "")
         {
-            return indent + $"PrefixOperator: (({Position.Start}:{Position.End}) Prefix: {Prefix}, Expression:\n{Expression.Stringize(indent+"   ")})";
+            return indent + $"PrefixOperator: {{\n{indent}   Prefix: {Prefix},\n{indent}   Expression: {{\n{Expression.Stringize(indent+"      ")}\n{indent}   }}\n{indent}}}";
         }
     }
 }

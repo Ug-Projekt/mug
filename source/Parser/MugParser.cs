@@ -10,7 +10,7 @@ namespace Mug.Models.Parser
 {
     public class MugParser
     {
-        public CompilationUnitNode NodeCollection;
+        public GlobalMembersNode NodeCollection;
         public MugLexer Lexer;
         int CurrentIndex = 0;
         void ParseError(params string[] error)
@@ -127,6 +127,14 @@ namespace Mug.Models.Parser
             }
             return false;
         }
+        Token ExpectConstantMute(params string[] error)
+        {
+            var match = MatchConstantAdvance();
+            if (match)
+                return Back;
+            ParseError(error);
+            return new ();
+        }
         Parameter ExpectParameter(bool isFirst)
         {
             if (!isFirst)
@@ -134,9 +142,12 @@ namespace Mug.Models.Parser
             var name = Expect("In parameter declaration must specify the param name;", TokenKind.Identifier).Value;
             Expect("In parameter declaration must specify the param type;", TokenKind.Colon);
             var type = ExpectType();
-            ExpectMultiple("", TokenKind.Comma, TokenKind.ClosePar);
+            var defaultvalue = new Token();
+            if (MatchAdvance(TokenKind.Equal))
+                 defaultvalue = ExpectConstantMute("A default parameter value must be evaluable at compilation-time, so a constant;");
+            ExpectMultiple("In the current context is only allowed to close the parameter list or add a parameter to it;", TokenKind.Comma, TokenKind.ClosePar);
             CurrentIndex--;
-            return new Parameter(type, name.ToString(), new());          // add support for optional parameter
+            return new Parameter(type, name.ToString(), defaultvalue);
         }
         OperatorKind ToOperatorKind(TokenKind op)
         {
@@ -352,7 +363,7 @@ namespace Mug.Models.Parser
             var expression = ExpectExpression(true, TokenKind.OpenBrace);
             CurrentIndex--;
             var body = ExpectBlock();
-            statement = new ConditionStatement() { Position = pos, Expression = expression, Kind = key.Kind, Body = body };
+            statement = new ConditionalStatement() { Position = pos, Expression = expression, Kind = key.Kind, Body = body };
             return true;
         }
         bool OtherwiseConditionDefinition(out IStatement statement)
@@ -362,7 +373,7 @@ namespace Mug.Models.Parser
                 return false;
             var pos = Back.Position;
             var body = ExpectBlock();
-            statement = new ConditionStatement() { Position = pos, Kind = TokenKind.KeyELSE, Body = body };
+            statement = new ConditionalStatement() { Position = pos, Kind = TokenKind.KeyELSE, Body = body };
             return true;
         }
         IStatement ExpectStatement()
@@ -392,14 +403,12 @@ namespace Mug.Models.Parser
             Expect("A block statement must end with `}` token;", TokenKind.CloseBrace);
             return block;
         }
-        ParametersNode ExpectParametersDeclaration()
+        ParameterListNode ExpectParameterListDeclaration()
         {
             Expect("In function definition you must open a parenthesis to declare parameters, or if the function does not accept parameters just open and close par: `()`", TokenKind.OpenPar);
-            var parameters = new ParametersNode();
+            var parameters = new ParameterListNode();
             while (!MatchAdvance(TokenKind.ClosePar))
-            {
                 parameters.Add(ExpectParameter(parameters.Parameters.Length == 0));
-            }
             return parameters;
         }
         bool FunctionDefinition(out INode node)
@@ -408,7 +417,7 @@ namespace Mug.Models.Parser
             if (!MatchAdvance(TokenKind.KeyFunc))
                 return false;
             var name = Expect("In function definition must specify the name;", TokenKind.Identifier);
-            var parameters = ExpectParametersDeclaration();
+            var parameters = ExpectParameterListDeclaration();
             var type = new Token();
             if (Match(TokenKind.OpenBrace))
                 type = new Token(name.LineAt, TokenKind.KeyTVoid, null, name.Position);
@@ -418,7 +427,7 @@ namespace Mug.Models.Parser
                 type = ExpectType();
             }
             var body = ExpectBlock();
-            node = new FunctionNode() { Body = body, Modifier = Modifier.Public, Name = name.Value.ToString(), Parameters = parameters, Type = type, Position = name.Position };
+            node = new FunctionNode() { Body = body, Modifier = Modifier.Public, Name = name.Value.ToString(), ParameterList = parameters, Type = type, Position = name.Position };
             return true;
         }
         NodeBuilder Process()
@@ -446,10 +455,10 @@ namespace Mug.Models.Parser
             }
             return nodes;
         }
-        public CompilationUnitNode GetNodeCollection()
+        public GlobalMembersNode GetNodeCollection()
         {
             var firstToken = Lexer.TokenCollection[CurrentIndex];
-            var compilationUnit = new CompilationUnitNode();
+            var compilationUnit = new GlobalMembersNode();
             if (firstToken.Kind == TokenKind.EOF)
                 return compilationUnit;
             compilationUnit.GlobalScope = Process();

@@ -13,7 +13,7 @@ namespace Mug.Models.Parser.NodeKinds.Statements
 
         public string Stringize(string indent = "")
         {
-            return indent+ "AssignStatement: " + $"(({Position.Start}:{Position.End}) Name: {Name}, Body:\n{Body.Stringize(indent+"   ")})";
+            return indent+ $"AssignStatement: {{\n{indent}   Name: {Name},\n{indent}   Body: {{\n{Body.Stringize(indent+"      ")}\n{indent}   }}\n{indent}}}";
         }
     }
 }
