@@ -138,7 +138,23 @@ namespace Mug.Models.Parser
         Parameter ExpectParameter(bool isFirst)
         {
             if (!isFirst)
-                Expect("Parameters must separed by a comma;", TokenKind.Comma);
+                Expect("Parameters must be separed by a comma;", TokenKind.Comma);
+            if (MatchAdvance(TokenKind.KeySelf))
+            {
+                if (!isFirst)
+                {
+                    CurrentIndex--;
+                    ParseError("The `self` keyword must be placed as first parameter;");
+                }
+                else
+                {
+                    Expect("In the current context must specify the type of the instance to extend;", TokenKind.Colon);
+                    var t = ExpectType();
+                    if (Match(TokenKind.Equal))
+                        ParseError("A self parameter cannot be an optional parameter;");
+                    return new Parameter(t, "self", new(), true);
+                }
+            }
             var name = Expect("In parameter declaration must specify the param name;", TokenKind.Identifier).Value;
             Expect("In parameter declaration must specify the param type;", TokenKind.Colon);
             var type = ExpectType();
@@ -183,7 +199,8 @@ namespace Mug.Models.Parser
         {
             e = null;
             if (!MatchConstantAdvance() &&
-                !MatchAdvance(TokenKind.Identifier))
+                !MatchAdvance(TokenKind.Identifier) &&
+                !MatchAdvance(TokenKind.KeySelf))
                 return false;
             var digit = Back;
             e = new ValueNode() { SingleValue = digit };
@@ -234,8 +251,8 @@ namespace Mug.Models.Parser
                 return true;
             }
             var op = Back;
-            var rigth = ExpectFactor();
-            e = new ExpressionNode() { Left = left, Rigth = rigth, Operator = ToOperatorKind(op.Kind), Position = new(left.Position.Start, rigth.Position.End) };
+            var right = ExpectFactor();
+            e = new ExpressionNode() { Left = left, Right = right, Operator = ToOperatorKind(op.Kind), Position = new(left.Position.Start, right.Position.End) };
             return true;
         }
         bool MatchBooleanOperator(out Token op)
@@ -263,9 +280,9 @@ namespace Mug.Models.Parser
                 else
                 {
                     var op = Back.Kind;
-                    var rigth = ExpectExpression(false, end);
+                    var right = ExpectExpression(false, end);
                     CurrentIndex--;
-                    e = new ExpressionNode() { Operator = ToOperatorKind(op), Left = left, Rigth = rigth, Position = new(left.Position.Start, rigth.Position.End) };
+                    e = new ExpressionNode() { Operator = ToOperatorKind(op), Left = left, Right = right, Position = new(left.Position.Start, right.Position.End) };
                 }
             }
             if (e is null)
@@ -276,8 +293,8 @@ namespace Mug.Models.Parser
             {
                 if (!isFirst)
                     return e;
-                var rigth = ExpectExpression(false, end);
-                e = new BooleanExpressionNode() { Operator = boolOP.Kind, Position = boolOP.Position, Left = e, Rigth = rigth };
+                var right = ExpectExpression(false, end);
+                e = new BooleanExpressionNode() { Operator = boolOP.Kind, Position = boolOP.Position, Left = e, Right = right };
                 CurrentIndex--;
                 if (MatchBooleanOperator(out _))
                 {
@@ -405,10 +422,14 @@ namespace Mug.Models.Parser
         }
         ParameterListNode ExpectParameterListDeclaration()
         {
-            Expect("In function definition you must open a parenthesis to declare parameters, or if the function does not accept parameters just open and close par: `()`", TokenKind.OpenPar);
+            Expect("In function definition you must open a parenthesis to declare parameters, or if the function does not accept parameters just open and close pars: `()`", TokenKind.OpenPar);
             var parameters = new ParameterListNode();
+            var count = 0;
             while (!MatchAdvance(TokenKind.ClosePar))
-                parameters.Add(ExpectParameter(parameters.Parameters.Length == 0));
+            {
+                parameters.Add(ExpectParameter(count == 0));
+                count++;
+            }
             return parameters;
         }
         bool FunctionDefinition(out INode node)

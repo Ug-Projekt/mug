@@ -161,69 +161,123 @@ namespace Mug.Models.Lexer
         {
             return char.IsDigit(Source[CurrentIndex+1]);
         }
+        bool MatchInlineComment()
+        {
+            return Source[CurrentIndex] == '#';
+        }
+        bool MatchEolEof()
+        {
+            return CurrentIndex == Source.Length || Source[CurrentIndex] == '\n';
+        }
+        bool MatchStartMultiLineComment()
+        {
+            return CurrentIndex + 1 < Source.Length && Source[CurrentIndex] == '#' && Source[CurrentIndex+1] == '[';
+        }
+        bool MatchEndMultiLineComment()
+        {
+            return CurrentIndex + 1 < Source.Length && Source[CurrentIndex] == ']' && Source[CurrentIndex+1] == '#';
+        }
+        bool ConsumeComments()
+        {
+            if (MatchStartMultiLineComment())
+                while (!MatchEndMultiLineComment())
+                    CurrentIndex++;
+            else if (MatchInlineComment())
+                while (!MatchEolEof())
+                    CurrentIndex++;
+            else
+                return false;
+            return true;
+        }
+        void CollectChar()
+        {
+            CurrentSymbol += Source[CurrentIndex];
+            while (CurrentIndex++ < Source.Length && Source[CurrentIndex] != '\'')
+                CurrentSymbol += Source[CurrentIndex];
+            AddToken(TokenKind.ConstantChar, CurrentSymbol += '\'', true);
+            if (CurrentSymbol.Length > 3 || CurrentSymbol.Length < 3)
+                this.Throw(TokenCollection[^1], "Invalid characters in ConstantChar: it can only contain a character, not ", (CurrentSymbol.Length - 2).ToString());
+            CurrentSymbol = "";
+        }
+        void CollectString()
+        {
+            CurrentSymbol += Source[CurrentIndex];
+            while (CurrentIndex++ < Source.Length && Source[CurrentIndex] != '"')
+                CurrentSymbol += Source[CurrentIndex];
+            AddToken(TokenKind.ConstantString, CurrentSymbol + '"', true);
+            CurrentSymbol = "";
+        }
+        bool IsValidIdentifier(char current)
+        {
+            return char.IsLetterOrDigit(current) || current == '_';
+        }
+        bool IsControl(char current)
+        {
+            return char.IsControl(current) || char.IsWhiteSpace(current);
+        }
+        bool MatchEol()
+        {
+            return Source[CurrentIndex] == '\n' || Source[CurrentIndex] == '\r';
+        }
+        void AddSpecial(char current)
+        {
+            switch (current)
+            {
+                case '=':
+                    if (MatchNext('=')) { AddMultiple(TokenKind.BoolOperatorEQ, 2); CurrentIndex++; break; }
+                    goto default;
+                case '!':
+                    if (MatchNext('=')) { AddMultiple(TokenKind.BoolOperatorNEQ, 2); CurrentIndex++; break; }
+                    goto default;
+                case '+':
+                    if (MatchNext('+')) { AddMultiple(TokenKind.Increment, 2); CurrentIndex++; break; }
+                    else if (MatchNext('=')) { AddMultiple(TokenKind.IncrementAssign, 2); CurrentIndex++; break; }
+                    goto default;
+                case '-':
+                    if (MatchNext('-')) { AddMultiple(TokenKind.Decrement, 2); CurrentIndex++; break; }
+                    else if (MatchNext('=')) { AddMultiple(TokenKind.DecrementAssign, 2); CurrentIndex++; break; }
+                    goto default;
+                case ':':
+                    if (MatchNext(':')) { AddMultiple(TokenKind.Block, 2); CurrentIndex++; break; }
+                    goto default;
+                case '<':
+                    if (MatchNext('=')) { AddMultiple(TokenKind.BoolOperatorMinEQ, 2); CurrentIndex++; break; }
+                    goto default;
+                case '>':
+                    if (MatchNext('=')) { AddMultiple(TokenKind.BoolOperatorMajEQ, 2); CurrentIndex++; break; }
+                    goto default;
+                default:
+                    AddSpecial(GetSpecial(current));
+                    break;
+            }
+        }
         void ProcessChar(char current)
         {
-            if (current == '.' && NextIsDigit())
-            {
-                CurrentSymbol += '.';
+            if (ConsumeComments())
                 return;
-            }
+            if (current == '.' && NextIsDigit())
+                CurrentSymbol += '.';
             if (current == '"')
             {
-                CurrentSymbol += Source[CurrentIndex];
-                while (CurrentIndex++ < Source.Length && Source[CurrentIndex] != '"')
-                    CurrentSymbol += Source[CurrentIndex];
-                AddToken(TokenKind.ConstantString, CurrentSymbol+'"', true);
-                CurrentSymbol = "";
+                CollectString();
                 return;
             }
             else if (current == '\'')
             {
-                CurrentSymbol += Source[CurrentIndex];
-                while (CurrentIndex++ < Source.Length && Source[CurrentIndex] != '\'')
-                    CurrentSymbol += Source[CurrentIndex];
-                AddToken(TokenKind.ConstantChar, CurrentSymbol+='\'', true);
-                if (CurrentSymbol.Length > 3 || CurrentSymbol.Length < 3)
-                    this.Throw(TokenCollection[^1], "Invalid characters in ConstantChar: it can only contain a character, not ", (CurrentSymbol.Length-2).ToString());
-                CurrentSymbol = "";
+                CollectChar();
                 return;
             }
-            else if (current == '\n')
+            else if (MatchEol())
+            {
                 CurrentLine++;
-            if (char.IsControl(current) || char.IsWhiteSpace(current))
+                return;
+            }
+            if (IsControl(current))
                 InsertCurrentSymbol();
-            else if (char.IsLetterOrDigit(current) || current == '_')
+            else if (IsValidIdentifier(current))
                 CurrentSymbol += current;
             else
-                switch (current)
-                {
-                    case '=':
-                        if (MatchNext('=')) { AddMultiple(TokenKind.BoolOperatorEQ, 2); CurrentIndex++; break; }
-                        goto default;
-                    case '!':
-                        if (MatchNext('=')) { AddMultiple(TokenKind.BoolOperatorNEQ, 2); CurrentIndex++; break; }
-                        goto default;
-                    case '+':
-                        if (MatchNext('+')) { AddMultiple(TokenKind.Increment, 2); CurrentIndex++; break; }
-                        else if (MatchNext('=')) { AddMultiple(TokenKind.IncrementAssign, 2); CurrentIndex++; break; }
-                        goto default;
-                    case '-':
-                        if (MatchNext('-')) { AddMultiple(TokenKind.Decrement, 2); CurrentIndex++; break; }
-                        else if (MatchNext('=')) { AddMultiple(TokenKind.DecrementAssign, 2); CurrentIndex++; break; }
-                        goto default;
-                    case ':':
-                        if (MatchNext(':')) { AddMultiple(TokenKind.Block, 2); CurrentIndex++; break; }
-                        goto default;
-                    case '<':
-                        if (MatchNext('=')) { AddMultiple(TokenKind.BoolOperatorMinEQ, 2); CurrentIndex++; break; }
-                        goto default;
-                    case '>':
-                        if (MatchNext('=')) { AddMultiple(TokenKind.BoolOperatorMajEQ, 2); CurrentIndex++; break; }
-                        goto default;
-                    default:
-                        AddSpecial(GetSpecial(current));
-                        break;
-                }
+                AddSpecial(current);
         }
         void FixCollection()
         {

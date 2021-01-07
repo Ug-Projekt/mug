@@ -4,32 +4,18 @@ using Mug.Models.Parser;
 using Mug.Models.Parser.NodeKinds;
 using Mug.Models.Parser.NodeKinds.Statements;
 using System;
-
-string buildTest()
-{
-    string code = "";
-    string lastInput = "";
-    do
-    {
-        Console.Write(".. ");
-        lastInput = Console.ReadLine();
-        code += lastInput+"\n";
-    } while (lastInput != "");
-    return code;
-}
+using System.IO;
 
 if (debug.isDebug())
 {
-    // var testPath = $"C:/Users/{Environment.UserName}/Desktop/Mug/tests/add.mug";
+    var testPath = $"C:/Users/{Environment.UserName}/Desktop/Mug/tests/ifelse.mug";
     var test = @"
-func main(a: str = ) {
-}
+var x: i32 = 90;
 ";
-    //test = buildTest();
-    var compUnit = new CompilationUnit("test.mug", test);
+    var compUnit = new CompilationUnit(testPath);
     var tokens = compUnit.GetTokenCollection(out MugLexer lexer);
     var tree = new MugParser(lexer).GetNodeCollection();
 
-    debug.print(tree.Stringize());
-    //debug.print("TokenTree:\n", string.Join("\n", tokens));
+    File.WriteAllText(Path.ChangeExtension(testPath, "mast"), tree.Stringize());
+    //debug.print("TokenTree:\n", string.Join("\n", tokens));rig
 }

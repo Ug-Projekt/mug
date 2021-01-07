@@ -7,18 +7,20 @@ namespace Mug.Models.Parser.NodeKinds
 {
     public struct Parameter
     {
-        public readonly Token Type;
-        public readonly String Name;
-        public readonly Token DefaultConstantValue;
-        public Parameter(Token type, string name, Token defaultConstValue)
+        public Token Type { get; }
+        public String Name { get; }
+        public Boolean IsSelf { get; }
+        public Token DefaultConstantValue { get; }
+        public Parameter(Token type, string name, Token defaultConstValue, bool isSelf = false)
         {
+            IsSelf = isSelf;
             Type = type;
             Name = name;
             DefaultConstantValue = defaultConstValue;
         }
         public string Stringize(string indent)
         {
-            return indent+$"Type: {{\n{indent}   {Type}\n{indent}}},\n{indent}Name: {Name},\n{indent}DefaultConstantValue: {{\n{indent}   {DefaultConstantValue}\n{indent}}}";
+            return indent+$"Type: {{\n{indent}   {Type}\n{indent}}},\n{indent}Name: {Name},\n{indent}IsSelf: {IsSelf},\n{indent}DefaultConstantValue: {{\n{indent}   {DefaultConstantValue}\n{indent}}}";
         }
     }
     public class ParameterListNode : INode
@@ -34,6 +36,13 @@ namespace Mug.Models.Parser.NodeKinds
         public Range Position { get; set; }
 
         List<Parameter> parameters = new();
+        public bool HasInstanceParam
+        {
+            get
+            {
+                return parameters.Count > 0 && parameters[0].IsSelf;
+            }
+        }
         public void Add(Parameter parameter)
         {
             parameters.Add(parameter);

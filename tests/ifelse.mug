@@ -1,0 +1,32 @@
+#[
+    [MultiLine Comment]
+    Test: IF ELSE IF Statements, functions definition, use of namespaces, other statements ...
+]#
+
+# [Inline Comment]
+
+func main()
+{
+    var left: i32 = num::as_i32(io::readln("Left: "));
+    var right: i32 = num::as_i32(io::readln("Right: "));
+
+    if num::eq(left, right)
+    {
+        io::println("nums are equals!");
+    }
+    elif (left < right) # `()` are optionals
+    {
+        # In this moment `{}` are not optionals
+        io::println("left less than right!");
+    }
+    else
+    {
+        io::println("left greater than right!");
+    }
+}
+
+# Namespace definition, boolean function
+func num :: eq(left: i32, right: i32): bit
+{
+    return left == right;
+}
