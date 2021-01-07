@@ -10,6 +10,10 @@ if (debug.isDebug())
     // var testPath = $"C:/Users/{Environment.UserName}/Desktop/Mug/tests/add.mug";
     var test = @"
 func main(args: [str]) {
+    if (true) {
+    }
+    elif (!((2+2)*(92-2) == len(args))) {
+    }
     else {
     }
 }

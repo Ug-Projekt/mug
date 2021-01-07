@@ -59,6 +59,7 @@ namespace Mug.Models.Lexer
         BoolOperatorMinor,
         BoolOperatorMajor,
         BoolOperatorMinEQ,
-        BoolOperatorMajEQ
+        BoolOperatorMajEQ,
+        Negation
     }
 }

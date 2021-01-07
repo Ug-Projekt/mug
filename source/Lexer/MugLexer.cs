@@ -71,7 +71,7 @@ namespace Mug.Models.Lexer
             '<' => TokenKind.BoolOperatorMinor,
             '>' => TokenKind.BoolOperatorMajor,
             '=' => TokenKind.Equal,
-            '!' => TokenKind.Slash,
+            '!' => TokenKind.Negation,
             '+' => TokenKind.Plus,
             '-' => TokenKind.Minus,
             '*' => TokenKind.Star,

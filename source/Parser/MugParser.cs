@@ -165,7 +165,7 @@ namespace Mug.Models.Parser
             e = null;
             if (!MatchAdvance(TokenKind.OpenPar))
                 return false;
-            e = ExpectExpression(false, TokenKind.ClosePar);
+            e = ExpectExpression(true, TokenKind.ClosePar);
             return true;
         }
         bool MatchValue(out INode e)
@@ -241,7 +241,8 @@ namespace Mug.Models.Parser
             INode e = null;
             Token preOP = new();
             if (MatchAdvance(TokenKind.Minus) ||
-                MatchAdvance(TokenKind.Plus))
+                MatchAdvance(TokenKind.Plus) ||
+                MatchAdvance(TokenKind.Negation))
                 preOP = Back;
             if (MatchFactor(out INode left))
             {
@@ -266,9 +267,16 @@ namespace Mug.Models.Parser
                     return e;
                 var rigth = ExpectExpression(false, end);
                 e = new BooleanExpressionNode() { Operator = boolOP.Kind, Position = boolOP.Position, Left = e, Rigth = rigth };
+                CurrentIndex--;
+                if (MatchBooleanOperator(out _))
+                {
+                    CurrentIndex--;
+                    ParseError("Double boolean operator not allowed, to compare two boolean expressions please put the first operand into `()`;");
+                }
+                CurrentIndex++;
                 return e;
             }
-            CurrentIndex++;
+            ExpectMultipleMute("`"+Current.Kind+"` is not a valid token in the current context;", end);
             return e;
         }
         bool VariableDefinition(out IStatement statement)
@@ -341,7 +349,7 @@ namespace Mug.Models.Parser
                 !MatchAdvance(TokenKind.KeyELIF, out key))
                 return false;
             var pos = Back.Position;
-            var expression = ExpectExpression(true, TokenKind.CloseBrace);
+            var expression = ExpectExpression(true, TokenKind.OpenBrace);
             CurrentIndex--;
             var body = ExpectBlock();
             statement = new ConditionStatement() { Position = pos, Expression = expression, Kind = key.Kind, Body = body };
