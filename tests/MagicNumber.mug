@@ -1,4 +1,67 @@
-func main(args: [str]): ?
+@import std
+
+use Err for std.err.Err;
+
+var io: std.IO;
+var rand: std.Rand;
+
+func main(args: [str])
 {
-   # wip
+   io = std.IO();
+   rand = std.Rand();
+
+   magic.init();
+}
+
+magic {
+   var num: u32;
+   var name: str;
+
+   func init()
+   {
+      num = rand.next_u32(0, 100);
+      name = io.readln("Name: ");
+      io.println("Hi $0, guess the number I thought, it's between 0 and 100", name);
+      magic.main_loop();
+   }
+   
+   func main_loop()
+   {
+      var input: Err[u32];
+      while true
+      {
+         input = std.conv.parse_i32(io.readln("Number: ").discard());
+         if input.is_err()
+            { continue; }
+         var try: u32 = input.discard();
+         if guessed(try)
+            { win(try); break; }
+         lose(try);
+      }
+   }
+
+   func err()
+   {
+      io.println("Invalid number, try again ...");
+   }
+
+   func guessed(guess: u32): bit
+   {
+      return guess == num;
+   }
+
+   func win(guesses: u32)
+   {
+      io.println("$0 won after $1 guesses", name, guesses.to_str());
+   }
+
+   func lose(guess: u32)
+   {
+      io.println("$0 try again, this number is too $1", name,
+         if guess > num
+            "high"
+         else
+            "low"
+      );
+   }
 }

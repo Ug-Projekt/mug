@@ -6,14 +6,14 @@ using System.IO;
 
 if (debug.isDebug())
 {
-    var testPath = $"C:/Users/{Environment.UserName}/Desktop/Mug/tests/ForStatement.mug";
+    var testPath = $"C:/Users/{Environment.UserName}/Desktop/Mug/tests/Instances.mug";
     var test = @"
-var x: i32 = 90;
 ";
-    var lexer = new MugLexer("MagicNumber.mug", File.ReadAllText(testPath));
-    lexer.Tokenize();
+    var lexer = new MugLexer(testPath, File.ReadAllText(testPath));//"namespaces.mug", test);
+    var tokens = lexer.Tokenize();
     var parser = new MugParser(lexer);
     var tree = parser.Parse();
-    
+
+    //debug.print(tree.Stringize());
     File.WriteAllText(Path.ChangeExtension(testPath, "mast"), tree.Stringize());
 }

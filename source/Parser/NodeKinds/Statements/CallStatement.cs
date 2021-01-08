@@ -6,7 +6,7 @@ namespace Mug.Models.Parser.NodeKinds.Statements
 {
     public class CallStatement : IStatement
     {
-        public String Name { get; set; }
+        public MemberAccessNode Name { get; set; }
         public NodeBuilder Parameters { get; set; }
         public Boolean HasParameters
         {
@@ -19,7 +19,7 @@ namespace Mug.Models.Parser.NodeKinds.Statements
 
         public string Stringize(string indent = "")
         {
-            return indent + $"CallStatement: {{\n{indent}   Name: {Name},\n{indent}   Parameters: {{\n{(HasParameters ? Parameters.Stringize(indent+"      ") : "")}\n{indent}   }}\n{indent}}}";
+            return indent + $"CallStatement: {{\n{indent}   Name: {{\n{Name.Stringize(indent + "      ")}\n{indent}   }},\n{indent}   Parameters: {{\n{(HasParameters ? Parameters.Stringize(indent+"      ") : "")}\n{indent}   }}\n{indent}}}";
         }
     }
 }

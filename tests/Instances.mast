@@ -1,0 +1,67 @@
+NamespaceNode: {
+   Name: {
+     MemberAccessNode: {
+        Members: {
+           Identifier: 'global'
+        }
+     }
+   },
+   FunctionNode: {
+      IsMethod: False,
+      Type: {
+         KeyTVoid: '<null>'
+      },
+      Name: main,
+      Modifier: Public,
+      ParameterList: {
+         ParameterListNode: {
+         }
+      },
+      Body: {
+         BlockNode: {
+            Statement[0] {
+               VariableStatement: {
+                  Type: {
+                     KeyTi32: '<null>'
+                  },
+                  Name: x,
+                  IsAssigned: True,
+                  Body: {
+                     CallInstanceMemberAccessNode: {
+                        Instance: {
+                           CallStatement: {
+                              Name: {
+                                 MemberAccessNode: {
+                                    Members: {
+                                       Identifier: 'call'
+                                    }
+                                 }
+                              },
+                              Parameters: {
+
+                              }
+                           }
+                        }
+                        Call: {
+                           CallStatement: {
+                              Name: {
+                                 MemberAccessNode: {
+                                    Members: {
+                                       Identifier: 'peek'
+                                    }
+                                 }
+                              },
+                              Parameters: {
+
+                              }
+                           }
+                        }
+                     }
+                  }
+               }
+            },
+         }
+      }
+   },
+
+}

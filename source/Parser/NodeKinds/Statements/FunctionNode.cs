@@ -3,7 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace Mug.Models.Parser.NodeKinds
+namespace Mug.Models.Parser.NodeKinds.Statements
 {
     public enum Modifier
     {
@@ -11,7 +11,7 @@ namespace Mug.Models.Parser.NodeKinds
         Public,
         Instance
     }
-    public class FunctionNode : INode
+    public class FunctionNode : IStatement
     {
         public String Name { get; set; }
         public Token Type { get; set; }
@@ -28,7 +28,7 @@ namespace Mug.Models.Parser.NodeKinds
         public Range Position { get; set; }
         public string Stringize(string indent = "")
         {
-            return indent+$"FunctionNode: {{\n{indent}   IsMethod: {IsMethod},\n{indent}   Type: {{\n{indent}      {Type}\n{indent}   }},\n{indent}   Name: {Name},\n{indent}   Modifier: {Modifier},\n{indent}   ParameterList: {{\n{ParameterList.Stringize(indent+"      ")}\n{indent}   }},\n{indent}   Body: {{\n{Body.Stringize(indent+"      ")}\n{indent}   }}\n{indent}}}";
+            return indent+$"FunctionNode: {{\n{indent}   IsMethod: {IsMethod},\n{indent}   Type: {{\n{indent}      {Type.Stringize(indent + "      ")}\n{indent}   }},\n{indent}   Name: {Name},\n{indent}   Modifier: {Modifier},\n{indent}   ParameterList: {{\n{ParameterList.Stringize(indent+"      ")}\n{indent}   }},\n{indent}   Body: {{\n{Body.Stringize(indent+"      ")}\n{indent}   }}\n{indent}}}";
         }
     }
 }

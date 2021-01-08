@@ -27,7 +27,7 @@ namespace Mug.Models.Parser.NodeKinds
         }
         public string Stringize(string indent)
         {
-            return indent+$"Type: {{\n{indent}   {Type}\n{indent}}},\n{indent}Name: {Name},\n{indent}IsSelf: {IsSelf},\n{indent}DefaultConstantValue: {{\n{indent}   {DefaultConstantValue}\n{indent}}}";
+            return indent+$"Type: {{\n{indent}   {Type.Stringize(indent+"      ")}\n{indent}}},\n{indent}Name: {Name},\n{indent}IsSelf: {IsSelf},\n{indent}DefaultConstantValue: {{\n{indent}   {DefaultConstantValue}\n{indent}}}";
         }
     }
     public class ParameterListNode : INode

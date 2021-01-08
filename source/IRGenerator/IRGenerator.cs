@@ -12,7 +12,7 @@ namespace Mug.Models.Generator
 {
     public class IRGenerator
     {
-        public GlobalMembersNode Module;
+        public NamespaceNode Module;
         MugParser Parser;
         MugEmitter Emitter;
         LLVMBool Success = new LLVMBool(0);
@@ -60,8 +60,8 @@ namespace Mug.Models.Generator
         }
         public List<Token> GetTokenCollection() => Parser.GetTokenCollection();
         public List<Token> GetTokenCollection(out MugLexer lexer) => Parser.GetTokenCollection(out lexer);
-        public GlobalMembersNode GetNodeCollection() => Parser.Parse();
-        public GlobalMembersNode GetNodeCollection(out MugParser parser)
+        public NamespaceNode GetNodeCollection() => Parser.Parse();
+        public NamespaceNode GetNodeCollection(out MugParser parser)
         {
             var nodes = Parser.Parse();
             parser = Parser;

@@ -54,7 +54,7 @@ namespace Mug.Compilation
         }
         public List<Token> GetTokenCollection() => IRGenerator.GetTokenCollection();
         public List<Token> GetTokenCollection(out MugLexer lexer) => IRGenerator.GetTokenCollection(out lexer);
-        public GlobalMembersNode GetNodeCollection() => IRGenerator.GetNodeCollection();
-        public GlobalMembersNode GetNodeCollection(out MugParser parser) => IRGenerator.GetNodeCollection(out parser);
+        public NamespaceNode GetNodeCollection() => IRGenerator.GetNodeCollection();
+        public NamespaceNode GetNodeCollection(out MugParser parser) => IRGenerator.GetNodeCollection(out parser);
     }
 }
