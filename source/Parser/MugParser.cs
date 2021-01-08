@@ -1,4 +1,5 @@
-﻿using Mug.Models.Lexer;
+﻿using Mug.Compilation;
+using Mug.Models.Lexer;
 using Mug.Models.Parser.NodeKinds;
 using Mug.Models.Parser.NodeKinds.Statements;
 using System;
@@ -10,7 +11,6 @@ namespace Mug.Models.Parser
 {
     public class MugParser
     {
-        public GlobalMembersNode NodeCollection;
         public MugLexer Lexer;
         int CurrentIndex = 0;
         void ParseError(params string[] error)
@@ -24,6 +24,7 @@ namespace Mug.Models.Parser
             var errors = string.Join("", error);
             Lexer.Throw(Back, errors, errors != "" ? ": " : "", "Unexpected <EOF>");
         }
+
         bool IsEOF()
         {
             return Lexer.TokenCollection[CurrentIndex].Kind == TokenKind.EOF;
@@ -31,10 +32,12 @@ namespace Mug.Models.Parser
         public MugParser(string moduleName, string source)
         {
             Lexer = new(moduleName, source);
+            Lexer.Tokenize();
         }
         public MugParser(MugLexer lexer)
         {
             Lexer = lexer;
+            Lexer.Tokenize();
         }
         Token Current
         {
@@ -171,7 +174,8 @@ namespace Mug.Models.Parser
                 TokenKind.Plus => OperatorKind.Sum,
                 TokenKind.Minus=> OperatorKind.Subtract,
                 TokenKind.Star => OperatorKind.Multiply,
-                TokenKind.Slash=> OperatorKind.Divide
+                TokenKind.Slash=> OperatorKind.Divide,
+                TokenKind.RangeDots => OperatorKind.Range,
             };
         }
         bool MatchConstantAdvance()
@@ -230,6 +234,24 @@ namespace Mug.Models.Parser
         }
         bool MatchTerm(out INode e)
         {
+            if (MatchAdvance(TokenKind.Minus) ||
+                MatchAdvance(TokenKind.Plus) ||
+                MatchAdvance(TokenKind.Negation))
+            {
+                if (Match(TokenKind.Minus) ||
+                Match(TokenKind.Plus) ||
+                Match(TokenKind.Negation))
+                    ParseError("Unexpected double prefix operator;");
+                if (!MatchTerm(out e))
+                {
+                    CurrentIndex--;
+                    ParseError("Unexpected prefix operator;");
+                }
+                CurrentIndex--;
+                e = new PrefixOperator() { Expression = e, Position = Back.Position, Prefix = Back.Kind };
+                CurrentIndex++;
+                return true;
+            }
             return MatchCallStatement(out e) || MatchInParExpression(out e) || MatchValue(out e);
         }
         INode ExpectFactor()
@@ -245,7 +267,8 @@ namespace Mug.Models.Parser
             if (!MatchTerm(out INode left))
                 return false;
             if (!MatchAdvance(TokenKind.Star) &&
-                !MatchAdvance(TokenKind.Slash))
+                !MatchAdvance(TokenKind.Slash) &&
+                !MatchAdvance(TokenKind.RangeDots))
             {
                 e = left;
                 return true;
@@ -262,16 +285,12 @@ namespace Mug.Models.Parser
                 MatchAdvance(TokenKind.BoolOperatorMajor, out op) ||
                 MatchAdvance(TokenKind.BoolOperatorMinor, out op) ||
                 MatchAdvance(TokenKind.BoolOperatorMajEQ, out op) ||
-                MatchAdvance(TokenKind.BoolOperatorMinEQ, out op);
+                MatchAdvance(TokenKind.BoolOperatorMinEQ, out op) ||
+                MatchAdvance(TokenKind.KeyIn, out op);
         }
         INode ExpectExpression(bool isFirst, params TokenKind[] end)
         {
             INode e = null;
-            Token preOP = new();
-            if (MatchAdvance(TokenKind.Minus) ||
-                MatchAdvance(TokenKind.Plus) ||
-                MatchAdvance(TokenKind.Negation))
-                preOP = Back;
             if (MatchFactor(out INode left))
             {
                 if (!MatchAdvance(TokenKind.Plus) &&
@@ -287,8 +306,6 @@ namespace Mug.Models.Parser
             }
             if (e is null)
                 ParseError("Missing expression: `", Current.Kind.ToString(), "` is not a valid symbol in expression;");
-            if (preOP.Kind != TokenKind.Bad)
-                e = new PrefixOperator() { Prefix = preOP.Kind, Position = preOP.Position, Expression = e };
             if (MatchBooleanOperator(out Token boolOP))
             {
                 if (!isFirst)
@@ -317,12 +334,12 @@ namespace Mug.Models.Parser
             var type = ExpectType();
             if (MatchAdvance(TokenKind.Semicolon))
             {
-                statement = new VariableStatement() { Body = null, IsDefined = false, Name = name.Value.ToString(), Position = name.Position, Type = type };
+                statement = new VariableStatement() { Body = null, IsAssigned = false, Name = name.Value.ToString(), Position = name.Position, Type = type };
                 return true;
             }
             Expect("To define the value of a variable must open the body with `=`, or you can only declare a variable putting after type spec the symbol `;`;", TokenKind.Equal);
             var body = ExpectExpression(true, TokenKind.Semicolon);
-            statement = new VariableStatement() { Body = body, IsDefined = true, Name = name.Value.ToString(), Position = name.Position, Type = type };
+            statement = new VariableStatement() { Body = body, IsAssigned = true, Name = name.Value.ToString(), Position = name.Position, Type = type };
             return true;
         }
         bool ConstantDefinition(out IStatement statement)
@@ -373,24 +390,48 @@ namespace Mug.Models.Parser
         bool ConditionDefinition(out IStatement statement)
         {
             statement = null;
-            if (!MatchAdvance(TokenKind.KeyIF, out Token key) &&
-                !MatchAdvance(TokenKind.KeyELIF, out key))
+            if (!MatchAdvance(TokenKind.KeyIf, out Token key) &&
+                !MatchAdvance(TokenKind.KeyElif, out key) &&
+                !MatchAdvance(TokenKind.KeyWhile, out key))
                 return false;
-            var pos = Back.Position;
             var expression = ExpectExpression(true, TokenKind.OpenBrace);
             CurrentIndex--;
             var body = ExpectBlock();
-            statement = new ConditionalStatement() { Position = pos, Expression = expression, Kind = key.Kind, Body = body };
+            statement = new ConditionalStatement() { Position = key.Position, Expression = expression, Kind = key.Kind, Body = body };
+            return true;
+        }
+        bool ForLoopDefinition(out IStatement statement)
+        {
+            statement = null;
+            if (!MatchAdvance(TokenKind.KeyFor, out Token key))
+                return false;
+            var name = Expect("A for loop requires a reference to the counter or a var declaration;", TokenKind.Identifier);
+            INode counter = new ForCounterReference() { Position = name.Position, ReferenceName = name.Value.ToString() };
+            var pos = name.Position;
+            if (MatchAdvance(TokenKind.Colon))
+            {
+                INode varBody = null;
+                var type = ExpectType();
+                if (MatchAdvance(TokenKind.Equal))
+                    varBody = ExpectFactor();
+                counter = new VariableStatement() { Position = pos, Body = varBody, IsAssigned = varBody != null, Name = name.Value.ToString(), Type = type };
+            }
+            else if (MatchAdvance(TokenKind.Equal))
+                counter = new AssignStatement() { Position = pos, Body = ExpectFactor(), Name = name.Value.ToString() };
+            var op = ExpectMultiple("Expected an operator for the for statement, allowed: `in`, `to`;", TokenKind.KeyIn, TokenKind.KeyTo).Kind;
+            var expression = ExpectFactor();
+            var body = ExpectBlock();
+            statement = new ForLoopStatement() { Counter = counter, Position = key.Position, RightExpression = expression, Operator = op, Body = body };
             return true;
         }
         bool OtherwiseConditionDefinition(out IStatement statement)
         {
             statement = null;
-            if (!MatchAdvance(TokenKind.KeyELSE))
+            if (!MatchAdvance(TokenKind.KeyElse))
                 return false;
             var pos = Back.Position;
             var body = ExpectBlock();
-            statement = new ConditionalStatement() { Position = pos, Kind = TokenKind.KeyELSE, Body = body };
+            statement = new ConditionalStatement() { Position = pos, Kind = TokenKind.KeyElse, Body = body };
             return true;
         }
         IStatement ExpectStatement()
@@ -400,15 +441,16 @@ namespace Mug.Models.Parser
                 if (!ReturnDeclaration(out statement))
                     if (!ConstantDefinition(out statement))
                         if (!ConditionDefinition(out statement))
-                            if (!OtherwiseConditionDefinition(out statement))
-                                if (!AssignValue(out statement))
-                                    if (MatchCallStatement(out INode node))
-                                    {
-                                        statement = (IStatement)node;
-                                        CurrentIndex++;
-                                    }
-                                    else
-                                        ParseError("In the current local context, this is not a valid imperative statement;");
+                            if (!ForLoopDefinition(out statement))
+                                if (!OtherwiseConditionDefinition(out statement))
+                                    if (!AssignValue(out statement))
+                                        if (MatchCallStatement(out INode node))
+                                        {
+                                            statement = (IStatement)node;
+                                            CurrentIndex++;
+                                        }
+                                        else
+                                            ParseError("In the current local context, this is not a valid imperative statement;");
             return statement;
         }
         BlockNode ExpectBlock()
@@ -476,7 +518,7 @@ namespace Mug.Models.Parser
             }
             return nodes;
         }
-        public GlobalMembersNode GetNodeCollection()
+        public GlobalMembersNode Parse()
         {
             var firstToken = Lexer.TokenCollection[CurrentIndex];
             var compilationUnit = new GlobalMembersNode();

@@ -4,10 +4,18 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 
-namespace Mug
+namespace Mug.Compilation
 {
     public static class CompilationErrors
     {
+        public static void Throw(params string[] error)
+        {
+            Console.ForegroundColor = ConsoleColor.DarkRed;
+            Console.Write("Internal Error: ");
+            Console.ResetColor();
+            Console.WriteLine(string.Join("", error));
+            throw new CompilationException(null, new(), string.Join("", error));
+        }
         public static void Throw(this MugLexer Lexer, int pos, int lineAt, params string[] error)
         {
             int start = pos;
@@ -18,7 +26,7 @@ namespace Mug
                 end++;
             WriteModule(Lexer.ModuleName);
             WriteSourceLine(pos - start - 1, (pos+1) - start - 1, lineAt + 1, Lexer.Source[(start + 1)..end], string.Join("", error));
-            Environment.Exit(1);
+            throw new CompilationException(null, new(lineAt, TokenKind.Bad, null, new(pos, pos)), string.Join("", error));
         }
         public static void Throw(this MugLexer Lexer, Token token, params string[] error)
         {
@@ -30,7 +38,7 @@ namespace Mug
                 end++;
             WriteModule(Lexer.ModuleName);
             WriteSourceLine(token.Position.Start.Value - start - 1, token.Position.End.Value - start - 1, token.LineAt+1, Lexer.Source[(start+1)..end], string.Join("", error));
-            Environment.Exit(1);
+            throw new CompilationException(null, token, string.Join("", error));
         }
         static void WriteModule(string moduleName)
         {

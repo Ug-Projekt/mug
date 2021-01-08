@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Mug.Compilation;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
@@ -35,9 +36,13 @@ namespace Mug.Models.Lexer
         bool GetKeyword(string s) => s switch
         {
             "return" => AddKeyword(TokenKind.KeyReturn, s.Length),
-            "if" => AddKeyword(TokenKind.KeyIF, s.Length),
-            "elif" => AddKeyword(TokenKind.KeyELIF, s.Length),
-            "else" => AddKeyword(TokenKind.KeyELSE, s.Length),
+            "while" => AddKeyword(TokenKind.KeyWhile, s.Length),
+            "for" => AddKeyword(TokenKind.KeyFor, s.Length),
+            "in" => AddKeyword(TokenKind.KeyIn, s.Length),
+            "to" => AddKeyword(TokenKind.KeyTo, s.Length),
+            "if" => AddKeyword(TokenKind.KeyIf, s.Length),
+            "elif" => AddKeyword(TokenKind.KeyElif, s.Length),
+            "else" => AddKeyword(TokenKind.KeyElse, s.Length),
             "func" => AddKeyword(TokenKind.KeyFunc, s.Length),
             "var" => AddKeyword(TokenKind.KeyVar, s.Length),
             "const" => AddKeyword(TokenKind.KeyConst, s.Length),
@@ -59,7 +64,13 @@ namespace Mug.Models.Lexer
             this.Throw(CurrentIndex, CurrentLine, "Found illegal SpecialSymbol: mug's syntax does not use this character");
             return TokenKind.Bad;
         }
-        bool MatchNext(char next) => CurrentIndex + 1 < Source.Length && Source[CurrentIndex+1] == next;
+        bool MatchNext(char next)
+        {
+            var match = CurrentIndex + 1 < Source.Length && Source[CurrentIndex + 1] == next;
+            if (match)
+                CurrentIndex++;
+            return match;
+        }
         TokenKind GetSpecial(char c) => c switch
         {
             '(' => TokenKind.OpenPar,
@@ -103,7 +114,7 @@ namespace Mug.Models.Lexer
         void AddMultiple(TokenKind kind, int count)
         {
             InsertCurrentSymbol();
-            TokenCollection.Add(new(CurrentLine, kind, null, new(CurrentIndex, CurrentIndex + count)));
+            TokenCollection.Add(new(CurrentLine, kind, null, new(CurrentIndex-1, CurrentIndex + count)));
         }
         void InsertCurrentSymbol()
         {
@@ -159,7 +170,7 @@ namespace Mug.Models.Lexer
         }
         bool NextIsDigit()
         {
-            return char.IsDigit(Source[CurrentIndex+1]);
+            return CurrentIndex+1 < Source.Length && char.IsDigit(Source[CurrentIndex+1]);
         }
         bool MatchInlineComment()
         {
@@ -219,32 +230,35 @@ namespace Mug.Models.Lexer
         {
             return Source[CurrentIndex] == '\n' || Source[CurrentIndex] == '\r';
         }
-        void AddSpecial(char current)
+        void ProcessSpecial(char current)
         {
             switch (current)
             {
                 case '=':
-                    if (MatchNext('=')) { AddMultiple(TokenKind.BoolOperatorEQ, 2); CurrentIndex++; break; }
+                    if (MatchNext('=')) { AddMultiple(TokenKind.BoolOperatorEQ, 2); break; }
                     goto default;
                 case '!':
-                    if (MatchNext('=')) { AddMultiple(TokenKind.BoolOperatorNEQ, 2); CurrentIndex++; break; }
+                    if (MatchNext('=')) { AddMultiple(TokenKind.BoolOperatorNEQ, 2); break; }
                     goto default;
                 case '+':
-                    if (MatchNext('+')) { AddMultiple(TokenKind.Increment, 2); CurrentIndex++; break; }
-                    else if (MatchNext('=')) { AddMultiple(TokenKind.IncrementAssign, 2); CurrentIndex++; break; }
+                    if (MatchNext('+')) { AddMultiple(TokenKind.Increment, 2); break; }
+                    else if (MatchNext('=')) { AddMultiple(TokenKind.IncrementAssign, 2); break; }
                     goto default;
                 case '-':
-                    if (MatchNext('-')) { AddMultiple(TokenKind.Decrement, 2); CurrentIndex++; break; }
-                    else if (MatchNext('=')) { AddMultiple(TokenKind.DecrementAssign, 2); CurrentIndex++; break; }
+                    if (MatchNext('-')) { AddMultiple(TokenKind.Decrement, 2); break; }
+                    else if (MatchNext('=')) { AddMultiple(TokenKind.DecrementAssign, 2); break; }
                     goto default;
                 case ':':
-                    if (MatchNext(':')) { AddMultiple(TokenKind.Block, 2); CurrentIndex++; break; }
+                    if (MatchNext(':')) { AddMultiple(TokenKind.Block, 2); break; }
                     goto default;
                 case '<':
-                    if (MatchNext('=')) { AddMultiple(TokenKind.BoolOperatorMinEQ, 2); CurrentIndex++; break; }
+                    if (MatchNext('=')) { AddMultiple(TokenKind.BoolOperatorMinEQ, 2); break; }
                     goto default;
                 case '>':
-                    if (MatchNext('=')) { AddMultiple(TokenKind.BoolOperatorMajEQ, 2); CurrentIndex++; break; }
+                    if (MatchNext('=')) { AddMultiple(TokenKind.BoolOperatorMajEQ, 2); break; }
+                    goto default;
+                case '.':
+                    if (MatchNext('.')) { AddMultiple(TokenKind.RangeDots, 2); break; }
                     goto default;
                 default:
                     AddSpecial(GetSpecial(current));
@@ -277,7 +291,7 @@ namespace Mug.Models.Lexer
             else if (IsValidIdentifier(current))
                 CurrentSymbol += current;
             else
-                AddSpecial(current);
+                ProcessSpecial(current);
         }
         void FixCollection()
         {

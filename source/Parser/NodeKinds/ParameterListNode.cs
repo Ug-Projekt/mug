@@ -11,6 +11,13 @@ namespace Mug.Models.Parser.NodeKinds
         public String Name { get; }
         public Boolean IsSelf { get; }
         public Token DefaultConstantValue { get; }
+        public Boolean IsOptional
+        {
+            get
+            {
+                return DefaultConstantValue.Kind != TokenKind.Bad;
+            }
+        }
         public Parameter(Token type, string name, Token defaultConstValue, bool isSelf = false)
         {
             IsSelf = isSelf;

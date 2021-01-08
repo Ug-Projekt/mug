@@ -6,6 +6,7 @@ namespace Mug.Models.Parser.NodeKinds
         Sum,
         Subtract,
         Multiply,
-        Divide
+        Divide,
+        Range
     }
 }

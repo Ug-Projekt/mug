@@ -1,0 +1,192 @@
+GlobalMembersNode: {
+   FunctionNode: {
+      IsMethod: False,
+      Type: {
+         KeyTVoid: '<null>'
+      },
+      Name: main,
+      Modifier: Public,
+      ParameterList: {
+         ParameterListNode: {
+            Parameter[0] {
+               Type: {
+                  KeyTarray: 'KeyTstr: '<null>''
+               },
+               Name: args,
+               IsSelf: False,
+               DefaultConstantValue: {
+                  Bad: '<null>'
+               }
+            },
+         }
+      },
+      Body: {
+         BlockNode: {
+            Statement[0] {
+               ForLoopStatement: {
+                  Operator: KeyIn,
+                  Counter {
+                     VariableStatement: {
+                        Type: {
+                           KeyTstr: '<null>'
+                        },
+                        Name: arg,
+                        IsAssigned: False
+                     }
+                  },
+                  RightExpression {
+                     ValueNode: Identifier: 'args'
+                  },
+                  Body {
+                     BlockNode: {
+                     }
+                  }
+               }
+            },
+            Statement[1] {
+               ForLoopStatement: {
+                  Operator: KeyTo,
+                  Counter {
+                     VariableStatement: {
+                        Type: {
+                           KeyTi32: '<null>'
+                        },
+                        Name: i,
+                        IsAssigned: False
+                     }
+                  },
+                  RightExpression {
+                     ValueNode: ConstantDigit: '10'
+                  },
+                  Body {
+                     BlockNode: {
+                     }
+                  }
+               }
+            },
+            Statement[2] {
+               ForLoopStatement: {
+                  Operator: KeyIn,
+                  Counter {
+                     VariableStatement: {
+                        Type: {
+                           KeyTi32: '<null>'
+                        },
+                        Name: i,
+                        IsAssigned: False
+                     }
+                  },
+                  RightExpression {
+                     ExpressionNode: {
+                        Operator: Range,
+                        Left: {
+                           ValueNode: ConstantDigit: '0'
+                        },
+                        Right: {
+                            ValueNode: ConstantDigit: '10'
+                        }
+                     }
+                  },
+                  Body {
+                     BlockNode: {
+                     }
+                  }
+               }
+            },
+            Statement[3] {
+               ForLoopStatement: {
+                  Operator: KeyTo,
+                  Counter {
+                     VariableStatement: {
+                        Type: {
+                           KeyTi32: '<null>'
+                        },
+                        Name: i,
+                        IsAssigned: False
+                     }
+                  },
+                  RightExpression {
+                     ValueNode: ConstantDigit: '5'
+                  },
+                  Body {
+                     BlockNode: {
+                     }
+                  }
+               }
+            },
+            Statement[4] {
+               VariableStatement: {
+                  Type: {
+                     KeyTi32: '<null>'
+                  },
+                  Name: i,
+                  IsAssigned: True,
+                  Body: {
+                     ValueNode: ConstantDigit: '0'
+                  }
+               }
+            },
+            Statement[5] {
+               ForLoopStatement: {
+                  Operator: KeyTo,
+                  Counter {
+                     ForCounterReference: i
+                  },
+                  RightExpression {
+                     ValueNode: ConstantDigit: '5'
+                  },
+                  Body {
+                     BlockNode: {
+                     }
+                  }
+               }
+            },
+            Statement[6] {
+               ForLoopStatement: {
+                  Operator: KeyTo,
+                  Counter {
+                     AssignStatement: {
+                        Name: i,
+                        Body: {
+                           ExpressionNode: {
+                              Operator: Subtract,
+                              Left: {
+                                 ValueNode: ConstantDigit: '90'
+                              },
+                              Right: {
+                                  ExpressionNode: {
+                                     Operator: Sum,
+                                     Left: {
+                                        ExpressionNode: {
+                                           Operator: Multiply,
+                                           Left: {
+                                              ValueNode: ConstantDigit: '9'
+                                           },
+                                           Right: {
+                                               ValueNode: ConstantDigit: '10'
+                                           }
+                                        }
+                                     },
+                                     Right: {
+                                         ValueNode: ConstantDigit: '1'
+                                     }
+                                  }
+                              }
+                           }
+                        }
+                     }
+                  },
+                  RightExpression {
+                     ValueNode: ConstantDigit: '4'
+                  },
+                  Body {
+                     BlockNode: {
+                     }
+                  }
+               }
+            },
+         }
+      }
+   },
+
+}

@@ -14,7 +14,7 @@ namespace Mug.Models.Parser.NodeKinds.Statements
 
         public string Stringize(string indent = "")
         {
-            return indent + $"ConditionalStatement: {{\n{indent}   Kind: {Kind},\n{indent}   Expression: {{\n{(Kind != TokenKind.KeyELSE ? Expression.Stringize(indent+"      ") : "")}\n{indent}   }},\n{indent}   Body: {{\n{Body.Stringize(indent+"      ")}\n{indent}   }}\n{indent}}}";
+            return indent + $"ConditionalStatement: {{\n{indent}   Kind: {Kind},\n{indent}   Expression: {{\n{(Kind != TokenKind.KeyElse ? Expression.Stringize(indent+"      ") : "")}\n{indent}   }},\n{indent}   Body: {{\n{Body.Stringize(indent+"      ")}\n{indent}   }}\n{indent}}}";
         }
     }
 }

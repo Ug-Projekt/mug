@@ -1,0 +1,47 @@
+#[
+   Test: For Statement -> 4 variants:
+     [1]: for i: i32     ..., # to declare a new variable, supported by `to` or `in` keywords
+     [2]: for i          ..., # for previously declared variables, only with `to`
+     [3]: for i = 0      ..., # for previously declared variables + its assign, only with `to`
+     [4]: for i: i32 = 0 ...  # to declare a new variable with specific value, onyl with `to`
+   
+   Details:
+     For inline `for` statement assignments, put expressions in `()`, while with only factors you can omit them
+     Example:
+       for i: i32 = 2*2*2   ... # only factors
+       for i: i32 = (2*2+2) ... # expression containing a factor and a term: it requires parentheses
+]#
+func main(args: [str]): ?
+{
+   # [1]
+   for arg: str in args
+   {
+      # iterating array
+   }
+   # [1]
+   for i: i32 to 10
+   {
+      # 0 1 2 3 4 5 6 7 8 9
+   }
+   # [1]
+   for i: i32 in 0..10
+   {
+      # 0 1 2 3 4 5 6 7 8 9 10
+   }
+   # [4]
+   for i: i32 to 5
+   {
+      # 2 3 4
+   }
+   var i: i32 = 0;
+   # [2]
+   for i to 5
+   {
+      # 0 1 2 3 4
+   }
+   # [3]
+   for i = (90-9*10+1) to 4
+   {
+      # 1 2 3
+   }
+}

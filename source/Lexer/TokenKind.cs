@@ -53,13 +53,18 @@ namespace Mug.Models.Lexer
         KeyReturn,
         Block,
         ConstantBoolean,
-        KeyIF,
-        KeyELIF,
-        KeyELSE,
+        KeyIf,
+        KeyElif,
+        KeyElse,
         BoolOperatorMinor,
         BoolOperatorMajor,
         BoolOperatorMinEQ,
         BoolOperatorMajEQ,
-        Negation
+        Negation,
+        KeyWhile,
+        KeyTo,
+        KeyIn,
+        KeyFor,
+        RangeDots
     }
 }
