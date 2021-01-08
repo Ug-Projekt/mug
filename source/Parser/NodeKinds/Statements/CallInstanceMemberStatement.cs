@@ -4,16 +4,16 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace Mug.Models.Parser.NodeKinds
+namespace Mug.Models.Parser.NodeKinds.Statements
 {
-    public class CallInstanceMemberAccessNode : INode
+    public class CallInstanceMemberStatement : IStatement
     {
-        public CallStatement Call { get; set; }
+        public INode Call { get; set; }
         public INode Instance { get; set; }
         public Range Position { get; set; }
         public string Stringize(string indent = "")
         {
-            return indent+$"CallInstanceMemberAccessNode: {{\n{indent}   Instance: {{\n{Instance.Stringize(indent + "      ")}\n{indent}   }}\n{indent}   Call: {{\n{Call.Stringize(indent+"      ")}\n{indent}   }}\n{indent}}}";
+            return indent+$"CallInstanceMemberStatement: {{\n{indent}   Instance: {{\n{Instance.Stringize(indent + "      ")}\n{indent}   }}\n{indent}   Call: {{\n{Call.Stringize(indent+"      ")}\n{indent}   }}\n{indent}}}";
         }
         public override string ToString()
         {

@@ -20,20 +20,29 @@ NamespaceNode: {
       Body: {
          BlockNode: {
             Statement[0] {
-               VariableStatement: {
-                  Type: {
-                     KeyTi32: '<null>'
-                  },
-                  Name: x,
-                  IsAssigned: True,
-                  Body: {
-                     CallInstanceMemberAccessNode: {
+               CallInstanceMemberStatement: {
+                  Instance: {
+                     CallStatement: {
+                        Name: {
+                           MemberAccessNode: {
+                              Members: {
+                                 Identifier: 'call'
+                              }
+                           }
+                        },
+                        Parameters: {
+
+                        }
+                     }
+                  }
+                  Call: {
+                     CallInstanceMemberStatement: {
                         Instance: {
                            CallStatement: {
                               Name: {
                                  MemberAccessNode: {
                                     Members: {
-                                       Identifier: 'call'
+                                       Identifier: 'add'
                                     }
                                  }
                               },
@@ -47,7 +56,7 @@ NamespaceNode: {
                               Name: {
                                  MemberAccessNode: {
                                     Members: {
-                                       Identifier: 'peek'
+                                       Identifier: 'd'
                                     }
                                  }
                               },

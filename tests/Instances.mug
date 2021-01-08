@@ -1,6 +1,4 @@
 func main()
 {
-   # call(); # expected ok
-   var x: i32 = call().peek().peek2(); # expected ok
-   # var crash: std.Err = add(90, 0).err*2;
+   call().add().d();
 }

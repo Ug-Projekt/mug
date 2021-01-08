@@ -9,7 +9,8 @@ if (debug.isDebug())
     var testPath = $"C:/Users/{Environment.UserName}/Desktop/Mug/tests/Instances.mug";
     var test = @"
 ";
-    var lexer = new MugLexer(testPath, File.ReadAllText(testPath));//"namespaces.mug", test);
+
+    var lexer = new MugLexer(testPath, File.ReadAllText(testPath));
     var tokens = lexer.Tokenize();
     var parser = new MugParser(lexer);
     var tree = parser.Parse();

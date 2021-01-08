@@ -222,8 +222,19 @@ namespace Mug.Models.Parser
             e = new ValueNode() { SingleValue = value };
             return true;
         }
+        bool MatchInstancePeek(ref INode instancePeek, bool hasToBeDiscarded = false)
+        {
+            if (MatchAdvance(TokenKind.Dot))
+            {
+                if (MatchCallStatement(out INode member, hasToBeDiscarded))
+                    instancePeek = new CallInstanceMemberStatement() { Call = member, Instance = instancePeek };
+                else
+                    return false;
+            }
+            return true;
+        }
         MemberAccessNode _lastName;
-        bool MatchCallStatement(out INode e)
+        bool MatchCallStatement(out INode e, bool hasToBeDiscarded = false)
         {
             e = null;
             if (!MatchIdentifierAdvance(out MemberAccessNode name))
@@ -238,11 +249,17 @@ namespace Mug.Models.Parser
             {
                 e = new CallStatement() { Name = name, Parameters = null, Position = name.Position };
                 CurrentIndex++;
+                if (hasToBeDiscarded)
+                    MatchInstancePeek(ref e, true);
                 return true;
             }
             NodeBuilder parameters = new();
             while (Back.Kind != TokenKind.ClosePar)
                 parameters.Add(ExpectExpression(true, TokenKind.Comma, TokenKind.ClosePar));
+            if (hasToBeDiscarded) {
+                MatchInstancePeek(ref e, true);
+                return true;
+            } 
             e = new CallStatement() { Name = name, Parameters = parameters, Position = name.Position };
             return true;
         }
@@ -294,10 +311,10 @@ namespace Mug.Models.Parser
                 return true;
             }
             var op = Back;
-            if (op.Kind == TokenKind.Dot)
+            while (op.Kind == TokenKind.Dot)
             {
                 if (MatchCallStatement(out INode statement))
-                    left = new CallInstanceMemberAccessNode() { Instance = left, Call = (CallStatement)statement };
+                    left = new CallInstanceMemberStatement() { Instance = left, Call = (CallStatement)statement };
                 else
                 {
                     left = new InstanceMemberAccessNode() { Instance = left, Members = _lastName };
@@ -490,7 +507,7 @@ namespace Mug.Models.Parser
                             if (!ForLoopDefinition(out statement))
                                 if (!OtherwiseConditionDefinition(out statement))
                                     if (!AssignValue(out statement))
-                                        if (MatchCallStatement(out INode node))
+                                        if (MatchCallStatement(out INode node, true))
                                         {
                                             statement = (IStatement)node;
                                             CurrentIndex++;
