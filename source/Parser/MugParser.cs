@@ -217,7 +217,7 @@ namespace Mug.Models.Parser
         bool MatchValue(out INode e)
         {
             e = null;
-            if (MatchAdvance(TokenKind.Identifier, out Token id))
+            if (MatchAdvance(TokenKind.Identifier))
             {
                 e = _lastName;
                 return true;
@@ -307,6 +307,16 @@ namespace Mug.Models.Parser
                 MatchAdvance(TokenKind.RangeDots) ||
                 MatchAdvance(TokenKind.Dot);
         }
+        FieldAssignNode ExpectFieldAssign()
+        {
+            if (!MatchAdvance(TokenKind.Identifier))
+                ParseError("Expected field assign;");
+            var name = Back;
+            Expect("Required `:` after field name;", TokenKind.Colon);
+            var expression = ExpectExpression(true, TokenKind.Comma, TokenKind.CloseBrace);
+            CurrentIndex--;
+            return new FieldAssignNode() { Name = name.Value.ToString(), Body = expression, Position = name.Position };
+        }
         bool MatchFactor(out INode e)
         {
             e = null;
@@ -358,6 +368,19 @@ namespace Mug.Models.Parser
                 var elseBody = ExpectFactor();
                 CurrentIndex++;
                 return new InlineConditionalExpression() { Expression = expression, IFBody = ifBody, ElseBody = elseBody };
+            }
+            if (MatchAdvance(TokenKind.KeyNew))
+            {
+                var name = ExpectIdentifier();
+                var allocation = new TypeAllocationNode() { Name = name };
+                Expect("Type allocation requires `{}`;", TokenKind.OpenBrace);
+                if (Match(TokenKind.Identifier))
+                    do
+                        allocation.AddFieldAssign(ExpectFieldAssign());
+                    while (MatchAdvance(TokenKind.Comma));
+                Expect("", TokenKind.CloseBrace);
+                CurrentIndex++;
+                return allocation;
             }
             INode e = null;
             if (MatchFactor(out INode left))

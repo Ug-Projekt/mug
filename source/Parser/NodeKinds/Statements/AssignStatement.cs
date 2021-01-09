@@ -5,7 +5,7 @@ using System.Text;
 
 namespace Mug.Models.Parser.NodeKinds.Statements
 {
-    public struct AssignStatement : IStatement 
+    public class AssignStatement : IStatement 
     {
         public MemberAccessNode Name { get; set; }
         public INode Body { get; set; }

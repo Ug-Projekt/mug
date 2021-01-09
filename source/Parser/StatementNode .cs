@@ -2,9 +2,9 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Mug.Models.Parser.NodeKinds
+namespace Mug.Models.Parser
 {
-    public interface IStatement: INode
+    public interface IStatement : INode
     {
     }
 }

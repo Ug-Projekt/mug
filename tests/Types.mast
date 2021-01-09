@@ -1,0 +1,378 @@
+NamespaceNode: {
+   Name: {
+     MemberAccessNode: {
+        Members: {
+           Identifier: 'global'
+        }
+     }
+   },
+   NamespaceNode: {
+      Name: {
+        MemberAccessNode: {
+           Members: {
+              Identifier: 'Tests',
+              Identifier: 'Types'
+           }
+        }
+      },
+      ImportDirective: {
+         Mode: FromPackages,
+         Member: {
+            MemberAccessNode: {
+               Members: {
+                  Identifier: 'std'
+               }
+            }
+         }
+      },
+      UseDirective: {
+         Mode: UsingNamespace,
+         Alias: Identifier: 'IO',
+         Member: {
+            MemberAccessNode: {
+               Members: {
+                  Identifier: 'std',
+                  Identifier: 'io',
+                  Identifier: 'IO'
+               }
+            }
+         }
+      },
+      VariableStatement: {
+         Type: {
+            Identifier: {
+               MemberAccessNode: {
+                  Members: {
+                     Identifier: 'IO'
+                  }
+               }
+            }
+         },
+         Name: io,
+         IsAssigned: True,
+         Body: {
+            CallStatement: {
+               Name: {
+                  MemberAccessNode: {
+                     Members: {
+                        Identifier: 'std',
+                        Identifier: 'io',
+                        Identifier: 'IO'
+                     }
+                  }
+               },
+               Parameters: {
+
+               }
+            }
+         }
+      },
+      TypeStatement: {
+         Name: Person,
+         Body: {
+            FieldNode: {
+               Name: name,
+               Modifier: Public,
+               Type: {
+                  KeyTstr: '<null>'
+               }
+            
+            },
+            FieldNode: {
+               Name: age,
+               Modifier: Public,
+               Type: {
+                  KeyTu8: '<null>'
+               }
+            
+            },
+
+         },
+         IsGeneric: False
+      },
+      FunctionNode: {
+         IsMethod: False,
+         Type: {
+            {
+            Identifier: {
+               MemberAccessNode: {
+                  Members: {
+                     Identifier: 'Person'
+                  }
+               }
+            }
+         }
+         },
+         Name: Person,
+         Modifier: Public,
+         ParameterList: {
+            ParameterListNode: {
+               Parameter[0] {
+                  Type: {
+                     KeyTstr: '<null>'
+                  },
+                  Name: name,
+                  IsSelf: False,
+                  DefaultConstantValue: {
+                     Bad: '<null>'
+                  }
+               },
+               Parameter[1] {
+                  Type: {
+                     KeyTu8: '<null>'
+                  },
+                  Name: age,
+                  IsSelf: False,
+                  DefaultConstantValue: {
+                     Bad: '<null>'
+                  }
+               },
+            }
+         },
+         Body: {
+            BlockNode: {
+               Statement[0] {
+                  ReturnStatement: {
+                     Body: {
+                        TypeAllocationNode: {
+                           Name: {
+                              MemberAccessNode: {
+                                 Members: {
+                                    Identifier: 'Person'
+                                 }
+                              }
+                           },
+                           Body: {
+                              FieldAssign[0] {
+                                 FieldAssignNode: {
+                                    Name: name,
+                                    Body: {
+                                       MemberAccessNode: {
+                                          Members: {
+                                             Identifier: 'name'
+                                          }
+                                       }
+                                    }
+                                 }
+                              },
+                              FieldAssign[1] {
+                                 FieldAssignNode: {
+                                    Name: age,
+                                    Body: {
+                                       MemberAccessNode: {
+                                          Members: {
+                                             Identifier: 'age'
+                                          }
+                                       }
+                                    }
+                                 }
+                              },
+
+                           }
+                        }
+                     }
+                  }
+               },
+            }
+         }
+      },
+      FunctionNode: {
+         IsMethod: True,
+         Type: {
+            KeyTstr: '<null>'
+         },
+         Name: about,
+         Modifier: Public,
+         ParameterList: {
+            ParameterListNode: {
+               Parameter[0] {
+                  Type: {
+                     {
+                        Identifier: {
+                           MemberAccessNode: {
+                              Members: {
+                                 Identifier: 'Person'
+                              }
+                           }
+                        }
+                     }
+                  },
+                  Name: self,
+                  IsSelf: True,
+                  DefaultConstantValue: {
+                     Bad: '<null>'
+                  }
+               },
+            }
+         },
+         Body: {
+            BlockNode: {
+               Statement[0] {
+                  ReturnStatement: {
+                     Body: {
+                        ExpressionNode: {
+                           Operator: Sum,
+                           Left: {
+                              ValueNode: ConstantString: '"My name is "'
+                           },
+                           Right: {
+                               ExpressionNode: {
+                                  Operator: Sum,
+                                  Left: {
+                                     IstanceMemberAccessNode: {
+                                        Instance: {
+                                           ValueNode: KeySelf: '<null>'
+                                        }
+                                        Members: {
+                                           MemberAccessNode: {
+                                              Members: {
+                                                 Identifier: 'name'
+                                              }
+                                           }
+                                        }
+                                     }
+                                  },
+                                  Right: {
+                                      ExpressionNode: {
+                                         Operator: Sum,
+                                         Left: {
+                                            ValueNode: ConstantString: '", and i'm "'
+                                         },
+                                         Right: {
+                                             CallInstanceMemberStatement: {
+                                                Instance: {
+                                                   ValueNode: KeySelf: '<null>'
+                                                }
+                                                Call: {
+                                                   CallStatement: {
+                                                      Name: {
+                                                         MemberAccessNode: {
+                                                            Members: {
+                                                               Identifier: 'age',
+                                                               Identifier: 'to_str'
+                                                            }
+                                                         }
+                                                      },
+                                                      Parameters: {
+
+                                                      }
+                                                   }
+                                                }
+                                             }
+                                         }
+                                      }
+                                  }
+                               }
+                           }
+                        }
+                     }
+                  }
+               },
+            }
+         }
+      },
+      FunctionNode: {
+         IsMethod: False,
+         Type: {
+            KeyTVoid: '<null>'
+         },
+         Name: main,
+         Modifier: Public,
+         ParameterList: {
+            ParameterListNode: {
+            }
+         },
+         Body: {
+            BlockNode: {
+               Statement[0] {
+                  VariableStatement: {
+                     Type: {
+                        Identifier: {
+                           MemberAccessNode: {
+                              Members: {
+                                 Identifier: 'Person'
+                              }
+                           }
+                        }
+                     },
+                     Name: me,
+                     IsAssigned: True,
+                     Body: {
+                        CallStatement: {
+                           Name: {
+                              MemberAccessNode: {
+                                 Members: {
+                                    Identifier: 'Person'
+                                 }
+                              }
+                           },
+                           Parameters: {
+                              CallStatement: {
+                                 Name: {
+                                    MemberAccessNode: {
+                                       Members: {
+                                          Identifier: 'io',
+                                          Identifier: 'readln'
+                                       }
+                                    }
+                                 },
+                                 Parameters: {
+                                    ValueNode: ConstantString: '"Name: "',
+
+                                 }
+                              },
+                              CallStatement: {
+                                 Name: {
+                                    MemberAccessNode: {
+                                       Members: {
+                                          Identifier: 'io',
+                                          Identifier: 'readln'
+                                       }
+                                    }
+                                 },
+                                 Parameters: {
+                                    ValueNode: ConstantString: '"Age: "',
+
+                                 }
+                              },
+
+                           }
+                        }
+                     }
+                  }
+               },
+               Statement[1] {
+                  CallStatement: {
+                     Name: {
+                        MemberAccessNode: {
+                           Members: {
+                              Identifier: 'io',
+                              Identifier: 'println'
+                           }
+                        }
+                     },
+                     Parameters: {
+                        CallStatement: {
+                           Name: {
+                              MemberAccessNode: {
+                                 Members: {
+                                    Identifier: 'me',
+                                    Identifier: 'about'
+                                 }
+                              }
+                           },
+                           Parameters: {
+
+                           }
+                        },
+
+                     }
+                  }
+               },
+            }
+         }
+      },
+
+   },
+
+}

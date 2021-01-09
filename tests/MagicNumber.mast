@@ -31,7 +31,6 @@ NamespaceNode: {
    },
    VariableStatement: {
       Type: {
-         {
          Identifier: {
             MemberAccessNode: {
                Members: {
@@ -40,14 +39,12 @@ NamespaceNode: {
                }
             }
          }
-      }
       },
       Name: io,
       IsAssigned: False
    },
    VariableStatement: {
       Type: {
-         {
          Identifier: {
             MemberAccessNode: {
                Members: {
@@ -56,7 +53,6 @@ NamespaceNode: {
                }
             }
          }
-      }
       },
       Name: rand,
       IsAssigned: False
@@ -163,16 +159,12 @@ NamespaceNode: {
         }
       },
       VariableStatement: {
-         Type: {
-            KeyTu32: '<null>'
-         },
+         Type: KeyTu32: '<null>',
          Name: num,
          IsAssigned: False
       },
       VariableStatement: {
-         Type: {
-            KeyTstr: '<null>'
-         },
+         Type: KeyTstr: '<null>',
          Name: name,
          IsAssigned: False
       },
@@ -298,9 +290,7 @@ NamespaceNode: {
             BlockNode: {
                Statement[0] {
                   VariableStatement: {
-                     Type: {
-                        KeyTgeneric: 'KeyTu32: '<null>''
-                     },
+                     Type: KeyTgeneric: 'KeyTu32: '<null>'',
                      Name: input,
                      IsAssigned: False
                   }
@@ -403,9 +393,7 @@ NamespaceNode: {
                            },
                            Statement[2] {
                               VariableStatement: {
-                                 Type: {
-                                    KeyTu32: '<null>'
-                                 },
+                                 Type: KeyTu32: '<null>',
                                  Name: try,
                                  IsAssigned: True,
                                  Body: {
