@@ -1,5 +1,0 @@
-Mug: Toy compiler to learn more about parsers, code generators, assembly/ir, etc...
-[x] 0. Prepare all folders
-[ ] 1. Write the lexer
-[ ] 2. Write the parser
-[ ] 3. Write the code generator and start to implement the type checking
