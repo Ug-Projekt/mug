@@ -70,6 +70,8 @@ namespace Mug.Models.Lexer
         KeyAs,
         KeyTgeneric,
         KeyContinue,
-        KeyBreak
+        KeyBreak,
+        KeyType,
+        KeyPub
     }
 }

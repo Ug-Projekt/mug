@@ -639,6 +639,56 @@ namespace Mug.Models.Parser
             directive.Position = dir.Position;
             return true;
         }
+        Token ExpectGenericType(bool isFirst = true)
+        {
+            if (!isFirst)
+                Expect("Generic types must be separated by a `,`;", TokenKind.Comma);
+            if (!MatchAdvance(TokenKind.KeyType))
+                ParseError("`", Current.Kind.ToString(), "` invalid token in generic type definition;");
+            return Expect("In generic type definition, expected ident after `type` keyword;", TokenKind.Identifier);
+        }
+        Modifier FindModifiers()
+        {
+            var modifier = Modifier.Private;
+            if (MatchAdvance(TokenKind.KeyPub))
+                modifier = Modifier.Public;
+            return modifier;
+        }
+        FieldNode ExpectFieldDefinition()
+        {
+            var modifier = FindModifiers();
+            var name = Expect("Expected field name;", TokenKind.Identifier);
+            Expect("Expected `:` after field name, then the field type;", TokenKind.Colon);
+            var type = ExpectType();
+            return new FieldNode() { Name = name.Value.ToString(), Type = type, Modifier = modifier };
+        }
+        bool TypeDefinition(out IStatement node)
+        {
+            node = null;
+            if (!MatchAdvance(TokenKind.KeyType))
+                return false;
+            var name = Expect("Expected the type name after `type` keyword;", TokenKind.Identifier);
+            var statement = new TypeStatement() { Name = name.Value.ToString(), Position = name.Position };
+            statement.Init();
+            var count = 0;
+            if (MatchAdvance(TokenKind.OpenBracket))
+            {
+                if (Match(TokenKind.CloseBracket))
+                    ParseError("Invalid generic definition content;");
+                while (!MatchAdvance(TokenKind.CloseBracket))
+                {
+                    statement.AddGenericType(ExpectGenericType(count == 0));
+                    count++;
+                }
+            }
+            Expect("", TokenKind.OpenBrace);
+            statement.AddField(ExpectFieldDefinition());
+            while (MatchAdvance(TokenKind.Comma))
+                statement.AddField(ExpectFieldDefinition());
+            Expect("", TokenKind.CloseBrace);
+            node = statement;
+            return true;
+        }
         NodeBuilder ExpectNamespaceMembers(TokenKind end = TokenKind.EOF)
         {
             NodeBuilder nodes = new();
@@ -651,9 +701,10 @@ namespace Mug.Models.Parser
                 if (!FunctionDefinition(out statement))
                     if (!VariableDefinition(out statement))
                         if (!ConstantDefinition(out statement))
-                            if (!DirectiveDefinition(out statement))
-                                if (!NamespaceDefinition(out statement))
-                                    ParseError("In the current global context, this is not a valid global statement;");
+                            if (!TypeDefinition(out statement))
+                                if (!DirectiveDefinition(out statement))
+                                    if (!NamespaceDefinition(out statement))
+                                        ParseError("In the current global context, this is not a valid global statement;");
                 nodes.Add(statement);
             }
             return nodes;
