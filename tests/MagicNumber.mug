@@ -1,6 +1,6 @@
-@import std
+@import std;
 
-use Err for std.err.Err;
+@use std.err.Err as Err;
 
 var io: std.IO;
 var rand: std.Rand;
@@ -58,7 +58,7 @@ magic {
    func lose(guess: u32)
    {
       io.println("$0 try again, this number is too $1", name,
-         if guess > num
+         if guess > num ?
             "high"
          else
             "low"

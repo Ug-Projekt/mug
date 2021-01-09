@@ -1,0 +1,723 @@
+NamespaceNode: {
+   Name: {
+     MemberAccessNode: {
+        Members: {
+           Identifier: 'global'
+        }
+     }
+   },
+   ImportDirective: {
+      Mode: FromPackages,
+      Member: {
+         MemberAccessNode: {
+            Members: {
+               Identifier: 'std'
+            }
+         }
+      }
+   },
+   UseDirective: {
+      Mode: UsingNamespace,
+      Alias: Identifier: 'Err',
+      Member: {
+         MemberAccessNode: {
+            Members: {
+               Identifier: 'std',
+               Identifier: 'err',
+               Identifier: 'Err'
+            }
+         }
+      }
+   },
+   VariableStatement: {
+      Type: {
+         {
+         Identifier: {
+            MemberAccessNode: {
+               Members: {
+                  Identifier: 'std',
+                  Identifier: 'IO'
+               }
+            }
+         }
+      }
+      },
+      Name: io,
+      IsAssigned: False
+   },
+   VariableStatement: {
+      Type: {
+         {
+         Identifier: {
+            MemberAccessNode: {
+               Members: {
+                  Identifier: 'std',
+                  Identifier: 'Rand'
+               }
+            }
+         }
+      }
+      },
+      Name: rand,
+      IsAssigned: False
+   },
+   FunctionNode: {
+      IsMethod: False,
+      Type: {
+         KeyTVoid: '<null>'
+      },
+      Name: main,
+      Modifier: Public,
+      ParameterList: {
+         ParameterListNode: {
+            Parameter[0] {
+               Type: {
+                  KeyTarray: 'KeyTstr: '<null>''
+               },
+               Name: args,
+               IsSelf: False,
+               DefaultConstantValue: {
+                  Bad: '<null>'
+               }
+            },
+         }
+      },
+      Body: {
+         BlockNode: {
+            Statement[0] {
+               AssignStatement: {
+                  Name: {
+                     MemberAccessNode: {
+                        Members: {
+                           Identifier: 'io'
+                        }
+                     }
+                  },
+                  Body: {
+                     CallStatement: {
+                        Name: {
+                           MemberAccessNode: {
+                              Members: {
+                                 Identifier: 'std',
+                                 Identifier: 'IO'
+                              }
+                           }
+                        },
+                        Parameters: {
+
+                        }
+                     }
+                  }
+               }
+            },
+            Statement[1] {
+               AssignStatement: {
+                  Name: {
+                     MemberAccessNode: {
+                        Members: {
+                           Identifier: 'rand'
+                        }
+                     }
+                  },
+                  Body: {
+                     CallStatement: {
+                        Name: {
+                           MemberAccessNode: {
+                              Members: {
+                                 Identifier: 'std',
+                                 Identifier: 'Rand'
+                              }
+                           }
+                        },
+                        Parameters: {
+
+                        }
+                     }
+                  }
+               }
+            },
+            Statement[2] {
+               CallStatement: {
+                  Name: {
+                     MemberAccessNode: {
+                        Members: {
+                           Identifier: 'magic',
+                           Identifier: 'init'
+                        }
+                     }
+                  },
+                  Parameters: {
+
+                  }
+               }
+            },
+         }
+      }
+   },
+   NamespaceNode: {
+      Name: {
+        MemberAccessNode: {
+           Members: {
+              Identifier: 'magic'
+           }
+        }
+      },
+      VariableStatement: {
+         Type: {
+            KeyTu32: '<null>'
+         },
+         Name: num,
+         IsAssigned: False
+      },
+      VariableStatement: {
+         Type: {
+            KeyTstr: '<null>'
+         },
+         Name: name,
+         IsAssigned: False
+      },
+      FunctionNode: {
+         IsMethod: False,
+         Type: {
+            KeyTVoid: '<null>'
+         },
+         Name: init,
+         Modifier: Public,
+         ParameterList: {
+            ParameterListNode: {
+            }
+         },
+         Body: {
+            BlockNode: {
+               Statement[0] {
+                  AssignStatement: {
+                     Name: {
+                        MemberAccessNode: {
+                           Members: {
+                              Identifier: 'num'
+                           }
+                        }
+                     },
+                     Body: {
+                        CallStatement: {
+                           Name: {
+                              MemberAccessNode: {
+                                 Members: {
+                                    Identifier: 'rand',
+                                    Identifier: 'next_u32'
+                                 }
+                              }
+                           },
+                           Parameters: {
+                              ValueNode: ConstantDigit: '0',
+                              ValueNode: ConstantDigit: '100',
+
+                           }
+                        }
+                     }
+                  }
+               },
+               Statement[1] {
+                  AssignStatement: {
+                     Name: {
+                        MemberAccessNode: {
+                           Members: {
+                              Identifier: 'name'
+                           }
+                        }
+                     },
+                     Body: {
+                        CallStatement: {
+                           Name: {
+                              MemberAccessNode: {
+                                 Members: {
+                                    Identifier: 'io',
+                                    Identifier: 'readln'
+                                 }
+                              }
+                           },
+                           Parameters: {
+                              ValueNode: ConstantString: '"Name: "',
+
+                           }
+                        }
+                     }
+                  }
+               },
+               Statement[2] {
+                  CallStatement: {
+                     Name: {
+                        MemberAccessNode: {
+                           Members: {
+                              Identifier: 'io',
+                              Identifier: 'println'
+                           }
+                        }
+                     },
+                     Parameters: {
+                        ValueNode: ConstantString: '"Hi $0, guess the number I thought, it's between 0 and 100"',
+                        MemberAccessNode: {
+                           Members: {
+                              Identifier: 'name'
+                           }
+                        },
+
+                     }
+                  }
+               },
+               Statement[3] {
+                  CallStatement: {
+                     Name: {
+                        MemberAccessNode: {
+                           Members: {
+                              Identifier: 'magic',
+                              Identifier: 'main_loop'
+                           }
+                        }
+                     },
+                     Parameters: {
+
+                     }
+                  }
+               },
+            }
+         }
+      },
+      FunctionNode: {
+         IsMethod: False,
+         Type: {
+            KeyTVoid: '<null>'
+         },
+         Name: main_loop,
+         Modifier: Public,
+         ParameterList: {
+            ParameterListNode: {
+            }
+         },
+         Body: {
+            BlockNode: {
+               Statement[0] {
+                  VariableStatement: {
+                     Type: {
+                        KeyTgeneric: 'KeyTu32: '<null>''
+                     },
+                     Name: input,
+                     IsAssigned: False
+                  }
+               },
+               Statement[1] {
+                  ConditionalStatement: {
+                     Kind: KeyWhile,
+                     Expression: {
+                        ValueNode: ConstantBoolean: 'true'
+                     },
+                     Body: {
+                        BlockNode: {
+                           Statement[0] {
+                              AssignStatement: {
+                                 Name: {
+                                    MemberAccessNode: {
+                                       Members: {
+                                          Identifier: 'input'
+                                       }
+                                    }
+                                 },
+                                 Body: {
+                                    CallStatement: {
+                                       Name: {
+                                          MemberAccessNode: {
+                                             Members: {
+                                                Identifier: 'std',
+                                                Identifier: 'conv',
+                                                Identifier: 'parse_i32'
+                                             }
+                                          }
+                                       },
+                                       Parameters: {
+                                          CallInstanceMemberStatement: {
+                                             Instance: {
+                                                CallStatement: {
+                                                   Name: {
+                                                      MemberAccessNode: {
+                                                         Members: {
+                                                            Identifier: 'io',
+                                                            Identifier: 'readln'
+                                                         }
+                                                      }
+                                                   },
+                                                   Parameters: {
+                                                      ValueNode: ConstantString: '"Number: "',
+
+                                                   }
+                                                }
+                                             }
+                                             Call: {
+                                                CallStatement: {
+                                                   Name: {
+                                                      MemberAccessNode: {
+                                                         Members: {
+                                                            Identifier: 'discard'
+                                                         }
+                                                      }
+                                                   },
+                                                   Parameters: {
+
+                                                   }
+                                                }
+                                             }
+                                          },
+
+                                       }
+                                    }
+                                 }
+                              }
+                           },
+                           Statement[1] {
+                              ConditionalStatement: {
+                                 Kind: KeyIf,
+                                 Expression: {
+                                    CallStatement: {
+                                       Name: {
+                                          MemberAccessNode: {
+                                             Members: {
+                                                Identifier: 'input',
+                                                Identifier: 'is_err'
+                                             }
+                                          }
+                                       },
+                                       Parameters: {
+
+                                       }
+                                    }
+                                 },
+                                 Body: {
+                                    BlockNode: {
+                                       Statement[0] {
+                                          LoopManagmentStatement: {
+                                             KeyContinue: '<null>'
+                                             }
+                                       },
+                                    }
+                                 }
+                              }
+                           },
+                           Statement[2] {
+                              VariableStatement: {
+                                 Type: {
+                                    KeyTu32: '<null>'
+                                 },
+                                 Name: try,
+                                 IsAssigned: True,
+                                 Body: {
+                                    CallStatement: {
+                                       Name: {
+                                          MemberAccessNode: {
+                                             Members: {
+                                                Identifier: 'input',
+                                                Identifier: 'discard'
+                                             }
+                                          }
+                                       },
+                                       Parameters: {
+
+                                       }
+                                    }
+                                 }
+                              }
+                           },
+                           Statement[3] {
+                              ConditionalStatement: {
+                                 Kind: KeyIf,
+                                 Expression: {
+                                    CallStatement: {
+                                       Name: {
+                                          MemberAccessNode: {
+                                             Members: {
+                                                Identifier: 'guessed'
+                                             }
+                                          }
+                                       },
+                                       Parameters: {
+                                          MemberAccessNode: {
+                                             Members: {
+                                                Identifier: 'try'
+                                             }
+                                          },
+
+                                       }
+                                    }
+                                 },
+                                 Body: {
+                                    BlockNode: {
+                                       Statement[0] {
+                                          CallStatement: {
+                                             Name: {
+                                                MemberAccessNode: {
+                                                   Members: {
+                                                      Identifier: 'win'
+                                                   }
+                                                }
+                                             },
+                                             Parameters: {
+                                                MemberAccessNode: {
+                                                   Members: {
+                                                      Identifier: 'try'
+                                                   }
+                                                },
+
+                                             }
+                                          }
+                                       },
+                                       Statement[1] {
+                                          LoopManagmentStatement: {
+                                             KeyBreak: '<null>'
+                                             }
+                                       },
+                                    }
+                                 }
+                              }
+                           },
+                           Statement[4] {
+                              CallStatement: {
+                                 Name: {
+                                    MemberAccessNode: {
+                                       Members: {
+                                          Identifier: 'lose'
+                                       }
+                                    }
+                                 },
+                                 Parameters: {
+                                    MemberAccessNode: {
+                                       Members: {
+                                          Identifier: 'try'
+                                       }
+                                    },
+
+                                 }
+                              }
+                           },
+                        }
+                     }
+                  }
+               },
+            }
+         }
+      },
+      FunctionNode: {
+         IsMethod: False,
+         Type: {
+            KeyTVoid: '<null>'
+         },
+         Name: err,
+         Modifier: Public,
+         ParameterList: {
+            ParameterListNode: {
+            }
+         },
+         Body: {
+            BlockNode: {
+               Statement[0] {
+                  CallStatement: {
+                     Name: {
+                        MemberAccessNode: {
+                           Members: {
+                              Identifier: 'io',
+                              Identifier: 'println'
+                           }
+                        }
+                     },
+                     Parameters: {
+                        ValueNode: ConstantString: '"Invalid number, try again ..."',
+
+                     }
+                  }
+               },
+            }
+         }
+      },
+      FunctionNode: {
+         IsMethod: False,
+         Type: {
+            KeyTbool: '<null>'
+         },
+         Name: guessed,
+         Modifier: Public,
+         ParameterList: {
+            ParameterListNode: {
+               Parameter[0] {
+                  Type: {
+                     KeyTu32: '<null>'
+                  },
+                  Name: guess,
+                  IsSelf: False,
+                  DefaultConstantValue: {
+                     Bad: '<null>'
+                  }
+               },
+            }
+         },
+         Body: {
+            BlockNode: {
+               Statement[0] {
+                  ReturnStatement: {
+                     Body: {
+                        BooleanExpressionNode: {
+                           Operator: BoolOperatorEQ,
+                           Left: {
+                              MemberAccessNode: {
+                                 Members: {
+                                    Identifier: 'guess'
+                                 }
+                              }
+                           },
+                           Right: {
+                              MemberAccessNode: {
+                                 Members: {
+                                    Identifier: 'num'
+                                 }
+                              }
+                           }
+                        }
+                     }
+                  }
+               },
+            }
+         }
+      },
+      FunctionNode: {
+         IsMethod: False,
+         Type: {
+            KeyTVoid: '<null>'
+         },
+         Name: win,
+         Modifier: Public,
+         ParameterList: {
+            ParameterListNode: {
+               Parameter[0] {
+                  Type: {
+                     KeyTu32: '<null>'
+                  },
+                  Name: guesses,
+                  IsSelf: False,
+                  DefaultConstantValue: {
+                     Bad: '<null>'
+                  }
+               },
+            }
+         },
+         Body: {
+            BlockNode: {
+               Statement[0] {
+                  CallStatement: {
+                     Name: {
+                        MemberAccessNode: {
+                           Members: {
+                              Identifier: 'io',
+                              Identifier: 'println'
+                           }
+                        }
+                     },
+                     Parameters: {
+                        ValueNode: ConstantString: '"$0 won after $1 guesses"',
+                        MemberAccessNode: {
+                           Members: {
+                              Identifier: 'name'
+                           }
+                        },
+                        CallStatement: {
+                           Name: {
+                              MemberAccessNode: {
+                                 Members: {
+                                    Identifier: 'guesses',
+                                    Identifier: 'to_str'
+                                 }
+                              }
+                           },
+                           Parameters: {
+
+                           }
+                        },
+
+                     }
+                  }
+               },
+            }
+         }
+      },
+      FunctionNode: {
+         IsMethod: False,
+         Type: {
+            KeyTVoid: '<null>'
+         },
+         Name: lose,
+         Modifier: Public,
+         ParameterList: {
+            ParameterListNode: {
+               Parameter[0] {
+                  Type: {
+                     KeyTu32: '<null>'
+                  },
+                  Name: guess,
+                  IsSelf: False,
+                  DefaultConstantValue: {
+                     Bad: '<null>'
+                  }
+               },
+            }
+         },
+         Body: {
+            BlockNode: {
+               Statement[0] {
+                  CallStatement: {
+                     Name: {
+                        MemberAccessNode: {
+                           Members: {
+                              Identifier: 'io',
+                              Identifier: 'println'
+                           }
+                        }
+                     },
+                     Parameters: {
+                        ValueNode: ConstantString: '"$0 try again, this number is too $1"',
+                        MemberAccessNode: {
+                           Members: {
+                              Identifier: 'name'
+                           }
+                        },
+                        InlineConditionalExpression: {
+                           Expression: {
+                              BooleanExpressionNode: {
+                                 Operator: BoolOperatorMajor,
+                                 Left: {
+                                    MemberAccessNode: {
+                                       Members: {
+                                          Identifier: 'guess'
+                                       }
+                                    }
+                                 },
+                                 Right: {
+                                    MemberAccessNode: {
+                                       Members: {
+                                          Identifier: 'num'
+                                       }
+                                    }
+                                 }
+                              }
+                           },
+                           IfBody: {
+                              ValueNode: ConstantString: '"high"'
+                           }, ElseBody: {
+                              ValueNode: ConstantString: '"low"'
+                           }
+                        },
+
+                     }
+                  }
+               },
+            }
+         }
+      },
+
+   },
+
+}

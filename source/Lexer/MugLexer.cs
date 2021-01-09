@@ -36,8 +36,11 @@ namespace Mug.Models.Lexer
         bool GetKeyword(string s) => s switch
         {
             "return" => AddKeyword(TokenKind.KeyReturn, s.Length),
+            "continue" => AddKeyword(TokenKind.KeyContinue, s.Length),
+            "break" => AddKeyword(TokenKind.KeyBreak, s.Length),
             "while" => AddKeyword(TokenKind.KeyWhile, s.Length),
             "for" => AddKeyword(TokenKind.KeyFor, s.Length),
+            "as" => AddKeyword(TokenKind.KeyAs, s.Length),
             "in" => AddKeyword(TokenKind.KeyIn, s.Length),
             "to" => AddKeyword(TokenKind.KeyTo, s.Length),
             "if" => AddKeyword(TokenKind.KeyIf, s.Length),
@@ -91,6 +94,7 @@ namespace Mug.Models.Lexer
             ';' => TokenKind.Semicolon,
             ':' => TokenKind.Colon,
             '.' => TokenKind.Dot,
+            '@' => TokenKind.DirectiveSymbol,
             '?' => TokenKind.KeyTVoid,
             _ => IllegalChar()
         };

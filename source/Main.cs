@@ -6,11 +6,12 @@ using System.IO;
 
 if (debug.isDebug())
 {
-    var testPath = $"C:/Users/{Environment.UserName}/Desktop/Mug/tests/Instances.mug";
+    var testPath = $"C:/Users/{Environment.UserName}/Desktop/Mug/tests/MagicNumber.mug";
     var test = @"
 ";
 
     var lexer = new MugLexer(testPath, File.ReadAllText(testPath));
+    //var lexer = new MugLexer("test.mug", test);
     var tokens = lexer.Tokenize();
     var parser = new MugParser(lexer);
     var tree = parser.Parse();

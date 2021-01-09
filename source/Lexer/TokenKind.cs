@@ -65,6 +65,11 @@ namespace Mug.Models.Lexer
         KeyTo,
         KeyIn,
         KeyFor,
-        RangeDots
+        RangeDots,
+        DirectiveSymbol,
+        KeyAs,
+        KeyTgeneric,
+        KeyContinue,
+        KeyBreak
     }
 }

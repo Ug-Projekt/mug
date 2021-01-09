@@ -26,7 +26,7 @@ namespace Mug.Models.Parser.NodeKinds
         {
             string nodes = "";
             for (int i = 0; i < statements.Count; i++)
-                nodes += indent+"   "+"Statement["+i+"] {\n"+statements[i].Stringize(indent+"      ")+"\n"+indent+"   },\n";
+                nodes += indent + "   " + "Statement[" + i + "] {\n" + statements[i].Stringize(indent + "      ") + "\n" + indent + "   },\n";
             return indent+$"BlockNode: {{\n{nodes}{indent}}}";
         }
     }

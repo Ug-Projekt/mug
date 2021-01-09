@@ -1,6 +1,7 @@
 ﻿using Mug.Compilation;
 using Mug.Models.Lexer;
 using Mug.Models.Parser.NodeKinds;
+using Mug.Models.Parser.NodeKinds.Directives;
 using Mug.Models.Parser.NodeKinds.Statements;
 using System;
 using System.Collections.Generic;
@@ -114,7 +115,7 @@ namespace Mug.Models.Parser
             if (MatchIdentifierAdvance(out MemberAccessNode members))
                 find = new Token(members.Members[0].LineAt, TokenKind.Identifier, members, members.Position);
             else
-                find = ExpectMultipleMute("Expected a type: built in or user defined, but found `" + Current.Kind.ToString() + "`",
+                find = ExpectMultipleMute("Expected a type: built in or user defined, but found `" + Current.Kind.ToString() + "`;",
                     TokenKind.KeyTi32,
                     TokenKind.KeyTVoid,
                     TokenKind.KeyTbool,
@@ -126,6 +127,12 @@ namespace Mug.Models.Parser
                     TokenKind.KeyTu64,
                     TokenKind.KeyTstr,
                     TokenKind.KeyTunknown);
+            if (MatchAdvance(TokenKind.OpenBracket))
+            {
+                var type = ExpectType();
+                find = new Token(find.LineAt, TokenKind.KeyTgeneric, type, new(find.Position.Start, type.Position.End));
+                Expect("Generic type specification must wrote between `[]`;", TokenKind.CloseBracket);
+            }
             return find;
         }
         bool MatchAdvance(TokenKind kind, out Token token)
@@ -256,11 +263,11 @@ namespace Mug.Models.Parser
             NodeBuilder parameters = new();
             while (Back.Kind != TokenKind.ClosePar)
                 parameters.Add(ExpectExpression(true, TokenKind.Comma, TokenKind.ClosePar));
+            e = new CallStatement() { Name = name, Parameters = parameters, Position = name.Position };
             if (hasToBeDiscarded) {
                 MatchInstancePeek(ref e, true);
                 return true;
-            } 
-            e = new CallStatement() { Name = name, Parameters = parameters, Position = name.Position };
+            }
             return true;
         }
         bool MatchTerm(out INode e)
@@ -344,6 +351,14 @@ namespace Mug.Models.Parser
         }
         INode ExpectExpression(bool isFirst, params TokenKind[] end)
         {
+            if (MatchAdvance(TokenKind.KeyIf)) {
+                var expression = ExpectExpression(true, TokenKind.KeyTVoid);
+                var ifBody = ExpectFactor();
+                Expect("In inline conditions there must be the else body: place it here;", TokenKind.KeyElse);
+                var elseBody = ExpectFactor();
+                CurrentIndex++;
+                return new InlineConditionalExpression() { Expression = expression, IFBody = ifBody, ElseBody = elseBody };
+            }
             INode e = null;
             if (MatchFactor(out INode left))
             {
@@ -497,6 +512,16 @@ namespace Mug.Models.Parser
             statement = new ConditionalStatement() { Position = pos, Kind = TokenKind.KeyElse, Body = body };
             return true;
         }
+        bool LoopManagerDefintion(out IStatement statement)
+        {
+            statement = null;
+            if (!MatchAdvance(TokenKind.KeyContinue) &&
+                !MatchAdvance(TokenKind.KeyBreak))
+                return false;
+            statement = new LoopManagmentStatement() { Managment = Back };
+            Expect("", TokenKind.Semicolon);
+            return true;
+        }
         IStatement ExpectStatement()
         {
             IStatement statement;
@@ -506,14 +531,17 @@ namespace Mug.Models.Parser
                         if (!ConditionDefinition(out statement))
                             if (!ForLoopDefinition(out statement))
                                 if (!OtherwiseConditionDefinition(out statement))
-                                    if (!AssignValue(out statement))
+                                    if (!LoopManagerDefintion(out statement))
                                         if (MatchCallStatement(out INode node, true))
                                         {
                                             statement = (IStatement)node;
                                             CurrentIndex++;
                                         }
                                         else
-                                            ParseError("In the current local context, this is not a valid imperative statement;");
+                                        {
+                                            if (!AssignValue(out statement))
+                                                ParseError("In the current local context, this is not a valid imperative statement;");
+                                        }
             return statement;
         }
         BlockNode ExpectBlock()
@@ -567,6 +595,50 @@ namespace Mug.Models.Parser
             node = new NamespaceNode() { GlobalScope = body, Position = name.Position, Name = name };
             return true;
         }
+        ImportDirective ExpectImportDirective()
+        {
+            MemberAccessNode body = new MemberAccessNode();
+            ImportMode mode = ImportMode.FromPackages;
+            if (MatchAdvance(TokenKind.ConstantString))
+            {
+                mode = ImportMode.FromLocal;
+                body.Add(Back);
+            }
+            else
+                body = ExpectIdentifier();
+            Expect("Expected `;`, at the end of an import directive;", TokenKind.Semicolon);
+            return new ImportDirective() { Mode = mode, Member = body };
+        }
+        UseDirective ExpectUseDirective()
+        {
+            UseMode mode = UseMode.UsingNamespace;
+            MemberAccessNode body = ExpectIdentifier();
+            Token alias = new();
+            if (MatchAdvance(TokenKind.KeyAs))
+                alias = Expect("Expected the import path alias, after `as` in an import directive;", TokenKind.Identifier);
+            Expect("Expected `;`, at the end of an import directive;", TokenKind.Semicolon);
+            return new UseDirective() { Mode = mode, Member = body, Alias = alias };
+        }
+        IDirective IllegalDirective()
+        {
+            ParseError("Illegal directive: expected valid directive, after `@`;");
+            return null;
+        }
+        bool DirectiveDefinition(out IStatement directive)
+        {
+            directive = null;
+            if (!MatchAdvance(TokenKind.DirectiveSymbol))
+                return false;
+            var dir = Expect("Expected directive, after `@`;", TokenKind.Identifier);
+            directive = dir.Value switch
+            {
+                "import" => ExpectImportDirective(),
+                "use" => ExpectUseDirective(),
+                _ => IllegalDirective()
+            };
+            directive.Position = dir.Position;
+            return true;
+        }
         NodeBuilder ExpectNamespaceMembers(TokenKind end = TokenKind.EOF)
         {
             NodeBuilder nodes = new();
@@ -579,8 +651,9 @@ namespace Mug.Models.Parser
                 if (!FunctionDefinition(out statement))
                     if (!VariableDefinition(out statement))
                         if (!ConstantDefinition(out statement))
-                            if (!NamespaceDefinition(out statement))
-                                ParseError("In the current global context, this is not a valid global statement;");
+                            if (!DirectiveDefinition(out statement))
+                                if (!NamespaceDefinition(out statement))
+                                    ParseError("In the current global context, this is not a valid global statement;");
                 nodes.Add(statement);
             }
             return nodes;
