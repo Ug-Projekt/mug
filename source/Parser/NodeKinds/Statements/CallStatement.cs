@@ -35,10 +35,6 @@ namespace Mug.Models.Parser.NodeKinds.Statements
         {
             _genericTypes = types;
         }
-        public void AddGenericType(Token type)
-        {
-            _genericTypes.Add(type);
-        }
         public Range Position { get; set; }
         public string Stringize(string indent = "")
         {

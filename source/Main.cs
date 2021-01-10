@@ -11,7 +11,6 @@ if (debug.isDebug())
     var test = @"
 func main()
 {
-    var x: i32 = call();
 }
 ";
 

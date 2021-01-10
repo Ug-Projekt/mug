@@ -626,10 +626,22 @@ namespace Mug.Models.Parser
         }
         bool FunctionDefinition(out IStatement node)
         {
-            node = new FunctionNode();
+            node = null;
             if (!MatchAdvance(TokenKind.KeyFunc))
                 return false;
+            List<Token> generics = new();
             var name = Expect("In function definition must specify the name;", TokenKind.Identifier);
+            if (MatchAdvance(TokenKind.OpenBracket))
+            {
+                if (Match(TokenKind.CloseBracket))
+                    ParseError("Invalid generic definition content;");
+                var count = 0;
+                while (!MatchAdvance(TokenKind.CloseBracket))
+                {
+                    generics.Add(ExpectGenericType(count == 0));
+                    count++;
+                }
+            }
             var parameters = ExpectParameterListDeclaration();
             var type = new Token();
             if (Match(TokenKind.OpenBrace))
@@ -640,7 +652,9 @@ namespace Mug.Models.Parser
                 type = ExpectType();
             }
             var body = ExpectBlock();
-            node = new FunctionNode() { Body = body, Modifier = Modifier.Public, Name = name.Value.ToString(), ParameterList = parameters, Type = type, Position = name.Position };
+            var f = new FunctionNode() { Body = body, Modifier = Modifier.Public, Name = name.Value.ToString(), ParameterList = parameters, Type = type, Position = name.Position };
+            f.SetGenericTypes(generics);
+            node = f;
             return true;
         }
         bool NamespaceDefinition(out IStatement node)
