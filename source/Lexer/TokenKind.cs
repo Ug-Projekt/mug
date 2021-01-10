@@ -73,6 +73,8 @@ namespace Mug.Models.Lexer
         KeyBreak,
         KeyType,
         KeyPub,
-        KeyNew
+        KeyNew,
+        KeyUse,
+        KeyImport
     }
 }

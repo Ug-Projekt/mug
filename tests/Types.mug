@@ -1,6 +1,6 @@
 Tests.Types {
-	@import std;
-	@use std.io.IO as IO;
+	import std;
+	use std.io.IO as IO;
 
 	var io: IO = std.io.IO();
 

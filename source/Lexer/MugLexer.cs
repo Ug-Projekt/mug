@@ -40,6 +40,8 @@ namespace Mug.Models.Lexer
             "break" => AddKeyword(TokenKind.KeyBreak, s.Length),
             "while" => AddKeyword(TokenKind.KeyWhile, s.Length),
             "pub" => AddKeyword(TokenKind.KeyPub, s.Length),
+            "use" => AddKeyword(TokenKind.KeyUse, s.Length),
+            "import" => AddKeyword(TokenKind.KeyImport, s.Length),
             "new" => AddKeyword(TokenKind.KeyNew, s.Length),
             "for" => AddKeyword(TokenKind.KeyFor, s.Length),
             "type" => AddKeyword(TokenKind.KeyType, s.Length),

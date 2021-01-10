@@ -1,0 +1,9 @@
+std.err
+{
+	type Err[type ResultType]
+	{
+		err: bit,
+		except: unknown,
+		result: Result
+	}
+}

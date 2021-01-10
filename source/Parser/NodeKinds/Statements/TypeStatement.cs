@@ -5,10 +5,10 @@ using System.Text;
 
 namespace Mug.Models.Parser.NodeKinds.Statements
 {
-    public struct TypeStatement : IStatement 
+    public class TypeStatement : IStatement 
     {
         public String Name { get; set; }
-        List<Token> _genericTypes { get; set; }
+        List<Token> _genericTypes { get; set; } = new();
         public Token[] GenericTypes
         {
             get
@@ -23,7 +23,7 @@ namespace Mug.Models.Parser.NodeKinds.Statements
                 return GenericTypes.Length > 0;
             }
         }
-        List<FieldNode> _body { get; set; }
+        List<FieldNode> _body { get; set; } = new();
         public FieldNode[] Body
         {
             get
@@ -40,11 +40,6 @@ namespace Mug.Models.Parser.NodeKinds.Statements
         {
             _body.Add(field);
         }
-        public void Init()
-        {
-            _body = new();
-            _genericTypes = new();
-        }
         public string Stringize(string indent = "")
         {
             string nodes = "";
@@ -52,8 +47,8 @@ namespace Mug.Models.Parser.NodeKinds.Statements
                 nodes += _body[i].Stringize(indent + "      ") + ",\n";
             string types = "";
             for (int i = 0; i < _genericTypes.Count; i++)
-                nodes += indent + "   " + _genericTypes[i].Stringize(indent + "      ") + ",\n";
-            return indent+ $"TypeStatement: {{\n{indent}   Name: {Name},\n{indent}   Body: {{\n{nodes}\n{indent}   }},\n{indent}   IsGeneric: {IsGeneric}{(IsGeneric ? $",\n{indent}   GenericType: {{\n{indent}   {types}\n{indent}   }}" : "")}\n{indent}}}";
+                types += indent + "      " + _genericTypes[i].Stringize(indent + "      ") + ",\n";
+            return indent+ $"TypeStatement: {{\n{indent}   Name: {Name},\n{indent}   Body: {{\n{nodes}\n{indent}   }},\n{indent}   IsGeneric: {IsGeneric}{(IsGeneric ? $",\n{indent}   GenericType: {{\n{types}{indent}   }}" : "")}\n{indent}}}";
         }
     }
 }

@@ -247,6 +247,16 @@ namespace Mug.Models.Parser
             if (!MatchIdentifierAdvance(out MemberAccessNode name))
                 return false;
             _lastName = name;
+            List<Token> generics = new();
+            if (MatchAdvance(TokenKind.OpenBracket))
+            {
+                if (Match(TokenKind.CloseBracket))
+                    ParseError("Invalid generic type passing content;");
+                do
+                    generics.Add(ExpectType());
+                while (MatchAdvance(TokenKind.Comma));
+                Expect("", TokenKind.CloseBracket);
+            }
             if (!MatchAdvance(TokenKind.OpenPar))
             {
                 CurrentIndex--;
@@ -254,7 +264,9 @@ namespace Mug.Models.Parser
             }
             if (Current.Kind == TokenKind.ClosePar)
             {
-                e = new CallStatement() { Name = name, Parameters = null, Position = name.Position };
+                var c1 = new CallStatement() { Name = name, Parameters = null, Position = name.Position };
+                c1.SetGenericTypes(generics);
+                e = c1;
                 CurrentIndex++;
                 if (hasToBeDiscarded)
                     MatchInstancePeek(ref e, true);
@@ -263,7 +275,9 @@ namespace Mug.Models.Parser
             NodeBuilder parameters = new();
             while (Back.Kind != TokenKind.ClosePar)
                 parameters.Add(ExpectExpression(true, TokenKind.Comma, TokenKind.ClosePar));
-            e = new CallStatement() { Name = name, Parameters = parameters, Position = name.Position };
+            var c = new CallStatement() { Name = name, Parameters = parameters, Position = name.Position };
+            c.SetGenericTypes(generics);
+            e = c;
             if (hasToBeDiscarded) {
                 MatchInstancePeek(ref e, true);
                 return true;
@@ -369,10 +383,32 @@ namespace Mug.Models.Parser
                 CurrentIndex++;
                 return new InlineConditionalExpression() { Expression = expression, IFBody = ifBody, ElseBody = elseBody };
             }
-            if (MatchAdvance(TokenKind.KeyNew))
+            if (MatchAdvance(TokenKind.KeyNew, out var token))
             {
+                if (MatchAdvance(TokenKind.OpenBracket))
+                {
+                    var type = ExpectType();
+                    Expect("Expected array size after its type;", TokenKind.Comma);
+                    var size = ExpectExpression(true, TokenKind.CloseBracket);
+                    CurrentIndex--;
+                    Expect("Expected `]` and the array body;", TokenKind.CloseBracket);
+                    var array = new ArrayAllocationNode() { Size = size, Type = type };
+                    Expect("Expected the array body, empty (`{}`) if has to be instanced with type default values;", TokenKind.OpenBrace);
+                    if (!Match(TokenKind.CloseBrace))
+                    {
+                        do
+                        {
+                            array.AddArrayElement(ExpectExpression(true, TokenKind.Comma, TokenKind.CloseBrace));
+                            CurrentIndex--;
+                        }
+                        while (MatchAdvance(TokenKind.Comma));
+                    }
+                    Expect("", TokenKind.CloseBrace);
+                    CurrentIndex++;
+                    return array;
+                }
                 var name = ExpectIdentifier();
-                var allocation = new TypeAllocationNode() { Name = name };
+                var allocation = new TypeAllocationNode() { Name = name , Position = token.Position };
                 Expect("Type allocation requires `{}`;", TokenKind.OpenBrace);
                 if (Match(TokenKind.Identifier))
                     do
@@ -618,8 +654,11 @@ namespace Mug.Models.Parser
             node = new NamespaceNode() { GlobalScope = body, Position = name.Position, Name = name };
             return true;
         }
-        ImportDirective ExpectImportDirective()
+        bool MatchImportDirective(out IDirective directive)
         {
+            directive = null;
+            if (!MatchAdvance(TokenKind.KeyImport, out var token))
+                return false;
             MemberAccessNode body = new MemberAccessNode();
             ImportMode mode = ImportMode.FromPackages;
             if (MatchAdvance(TokenKind.ConstantString))
@@ -628,38 +667,42 @@ namespace Mug.Models.Parser
                 body.Add(Back);
             }
             else
-                body = ExpectIdentifier();
+            {
+                if (MatchIdentifierAdvance(out var path))
+                    body = path;
+                else if (MatchAdvance(TokenKind.Star))
+                {
+                    _lastName.Add(Back);
+                    body = _lastName;
+                }
+                else
+                    ParseError("Invalid path in the import directive;");
+            }
             Expect("Expected `;`, at the end of an import directive;", TokenKind.Semicolon);
-            return new ImportDirective() { Mode = mode, Member = body };
+            directive = new ImportDirective() { Mode = mode, Member = body, Position = token.Position };
+            return true;
         }
-        UseDirective ExpectUseDirective()
+        bool MatchUseDirective(out IDirective directive)
         {
+            directive = null;
             UseMode mode = UseMode.UsingNamespace;
+            if (!MatchAdvance(TokenKind.KeyUse, out var token))
+                return false;
             MemberAccessNode body = ExpectIdentifier();
             Token alias = new();
             if (MatchAdvance(TokenKind.KeyAs))
                 alias = Expect("Expected the import path alias, after `as` in an import directive;", TokenKind.Identifier);
             Expect("Expected `;`, at the end of an import directive;", TokenKind.Semicolon);
-            return new UseDirective() { Mode = mode, Member = body, Alias = alias };
-        }
-        IDirective IllegalDirective()
-        {
-            ParseError("Illegal directive: expected valid directive, after `@`;");
-            return null;
+            directive = new UseDirective() { Mode = mode, Member = body, Alias = alias, Position = token.Position };
+            return true;
         }
         bool DirectiveDefinition(out IStatement directive)
         {
             directive = null;
-            if (!MatchAdvance(TokenKind.DirectiveSymbol))
-                return false;
-            var dir = Expect("Expected directive, after `@`;", TokenKind.Identifier);
-            directive = dir.Value switch
-            {
-                "import" => ExpectImportDirective(),
-                "use" => ExpectUseDirective(),
-                _ => IllegalDirective()
-            };
-            directive.Position = dir.Position;
+            if (!MatchImportDirective(out var dir))
+                if (!MatchUseDirective(out dir))
+                    return false;
+            directive = dir;
             return true;
         }
         Token ExpectGenericType(bool isFirst = true)
@@ -692,7 +735,6 @@ namespace Mug.Models.Parser
                 return false;
             var name = Expect("Expected the type name after `type` keyword;", TokenKind.Identifier);
             var statement = new TypeStatement() { Name = name.Value.ToString(), Position = name.Position };
-            statement.Init();
             var count = 0;
             if (MatchAdvance(TokenKind.OpenBracket))
             {
