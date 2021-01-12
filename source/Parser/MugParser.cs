@@ -35,6 +35,15 @@ namespace Mug.Models.Parser
             Lexer = lexer;
             Lexer.Tokenize();
         }
+        Token Next
+        {
+            get
+            {
+                if (CurrentIndex + 1 < Lexer.TokenCollection.Count)
+                    return Lexer.TokenCollection[CurrentIndex + 1];
+                return new Token();
+            }
+        }
         Token Current
         {
             get
@@ -362,7 +371,7 @@ namespace Mug.Models.Parser
                 e = c;
             }
         ret:
-            if (MatchAdvance(TokenKind.OpenBracket))
+            while (MatchAdvance(TokenKind.OpenBracket))
             {
                 if (e is null)
                 {
@@ -378,7 +387,7 @@ namespace Mug.Models.Parser
                 par = true;
                 goto start;
             }
-            return /*MatchCallStatement(out e) ||*/  value;
+            return value;
         }
         INode ExpectFactor()
         {
