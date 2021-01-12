@@ -5,7 +5,7 @@ using System.Text;
 
 namespace Mug.Models.Parser.NodeKinds.Statements
 {
-    public class TypeStatement : IStatement 
+    public class TypeStatement : INode 
     {
         public String Name { get; set; }
         List<Token> _genericTypes { get; set; } = new();

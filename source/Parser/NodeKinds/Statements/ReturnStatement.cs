@@ -4,7 +4,7 @@ using System.Text;
 
 namespace Mug.Models.Parser.NodeKinds.Statements
 {
-    public class ReturnStatement : IStatement
+    public class ReturnStatement : INode
     {
         public INode Body { get; set; }
         public Range Position { get; set; }

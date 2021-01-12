@@ -9,7 +9,7 @@ namespace Mug.Models.Parser.NodeKinds
     public class FieldNode : INode
     {
         public String Name { get; set; }
-        public Token Type { get; set; }
+        public INode Type { get; set; }
         public Modifier Modifier { get; set; }
         public Range Position { get; set; }
 

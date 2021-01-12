@@ -11,10 +11,10 @@ namespace Mug.Models.Parser.NodeKinds.Statements
         Public,
         Instance
     }
-    public class FunctionNode : IStatement
+    public class FunctionNode : INode
     {
         public String Name { get; set; }
-        public Token Type { get; set; }
+        public INode Type { get; set; }
         public Modifier Modifier { get; set; }
         public ParameterListNode ParameterList { get; set; }
         public Boolean IsMethod
@@ -49,8 +49,8 @@ namespace Mug.Models.Parser.NodeKinds.Statements
         {
             string types = "";
             for (int i = 0; i < _genericTypes.Count; i++)
-                types += indent + "      " + _genericTypes[i].Stringize(indent + "      ") + ",\n";
-            return indent+$"FunctionNode: {{\n{indent}   IsMethod: {IsMethod},\n{indent}   Type: {{\n{indent}      {Type.Stringize(indent + "      ")}\n{indent}   }},\n{indent}   Name: {Name},\n{indent}   Modifier: {Modifier},\n{indent}   ParameterList: {{\n{ParameterList.Stringize(indent+"      ")}\n{indent}   }},,\n{indent}   IsGeneric: {IsGeneric}{(IsGeneric ? $",\n{indent}   GenericType: {{\n{types}{indent}   }}" : "")}\n{indent}   Body: {{\n{Body.Stringize(indent+"      ")}\n{indent}   }}\n{indent}}}";
+                types += _genericTypes[i].Stringize(indent + "      ") + ",\n";
+            return indent+$"FunctionNode: {{\n{indent}   IsMethod: {IsMethod},\n{indent}   Type: {{\n{Type.Stringize(indent + "      ")}\n{indent}   }},\n{indent}   Name: {Name},\n{indent}   Modifier: {Modifier},\n{indent}   ParameterList: {{\n{ParameterList.Stringize(indent+"      ")}\n{indent}   }},\n{indent}   IsGeneric: {IsGeneric}{(IsGeneric ? $",\n{indent}   GenericType: {{\n{types}{indent}   }}" : "")},\n{indent}   Body: {{\n{Body.Stringize(indent+"      ")}\n{indent}   }}\n{indent}}}";
         }
     }
 }

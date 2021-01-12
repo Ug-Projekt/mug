@@ -5,10 +5,10 @@ using System.Text;
 
 namespace Mug.Models.Parser.NodeKinds.Statements
 {
-    public struct VariableStatement : IStatement 
+    public struct VariableStatement : INode
     {
-        public String Name { get; set; }
-        public Token Type { get; set; }
+        public INode Name { get; set; }
+        public INode Type { get; set; }
         public Boolean IsAssigned { get; set; }
         public INode Body { get; set; }
         public Range Position { get; set; }

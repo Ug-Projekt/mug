@@ -7,7 +7,7 @@ namespace Mug.Models.Parser.NodeKinds
 {
     public class BlockNode : INode
     {
-        public IStatement[] Statements
+        public INode[] Statements
         {
             get
             {
@@ -17,8 +17,8 @@ namespace Mug.Models.Parser.NodeKinds
 
         public Range Position { get; set; }
 
-        List<IStatement> statements = new();
-        public void Add(IStatement node)
+        List<INode> statements = new();
+        public void Add(INode node)
         {
             statements.Add(node);
         }

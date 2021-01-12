@@ -7,7 +7,7 @@ namespace Mug.Models.Parser.NodeKinds
 {
     public struct Parameter
     {
-        public Token Type { get; }
+        public INode Type { get; }
         public String Name { get; }
         public Boolean IsSelf { get; }
         public Token DefaultConstantValue { get; }
@@ -18,7 +18,7 @@ namespace Mug.Models.Parser.NodeKinds
                 return DefaultConstantValue.Kind != TokenKind.Bad;
             }
         }
-        public Parameter(Token type, string name, Token defaultConstValue, bool isSelf = false)
+        public Parameter(INode type, string name, Token defaultConstValue, bool isSelf = false)
         {
             IsSelf = isSelf;
             Type = type;

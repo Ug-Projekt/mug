@@ -9,7 +9,7 @@ namespace Mug.Models.Parser.NodeKinds
 {
     public class ArrayAllocationNode : INode
     {
-        public Token Type { get; set; }
+        public INode Type { get; set; }
         public INode Size { get; set; }
         List<INode> _body { get; set; } = new();
         public INode[] Body

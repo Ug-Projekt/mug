@@ -3,6 +3,7 @@ using Mug.Compilation;
 using Mug.Models.Generator.Emitter;
 using Mug.Models.Lexer;
 using Mug.Models.Parser;
+using Mug.Models.Parser.NodeKinds;
 using System;
 using System.Collections.Generic;
 using System.IO;

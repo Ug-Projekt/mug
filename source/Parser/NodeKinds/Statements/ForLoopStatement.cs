@@ -5,7 +5,7 @@ using System.Text;
 
 namespace Mug.Models.Parser.NodeKinds.Statements
 {
-    public struct ForLoopStatement : IStatement 
+    public struct ForLoopStatement : INode 
     {
         public TokenKind Operator { get; set; }
         // VariableStatement, AssignStatement, ForCounterReference

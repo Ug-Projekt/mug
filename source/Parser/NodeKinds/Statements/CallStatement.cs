@@ -5,9 +5,9 @@ using System.Text;
 
 namespace Mug.Models.Parser.NodeKinds.Statements
 {
-    public class CallStatement : IStatement
+    public class CallStatement : INode
     {
-        public MemberAccessNode Name { get; set; }
+        public INode Name { get; set; }
         public NodeBuilder Parameters { get; set; }
         public Boolean HasParameters
         {
@@ -16,8 +16,8 @@ namespace Mug.Models.Parser.NodeKinds.Statements
                 return Parameters != null;
             }
         }
-        List<Token> _genericTypes { get; set; } = new();
-        public Token[] GenericTypes
+        List<INode> _genericTypes { get; set; } = new();
+        public INode[] GenericTypes
         {
             get
             {
@@ -31,7 +31,7 @@ namespace Mug.Models.Parser.NodeKinds.Statements
                 return GenericTypes.Length > 0;
             }
         }
-        public void SetGenericTypes(List<Token> types)
+        public void SetGenericTypes(List<INode> types)
         {
             _genericTypes = types;
         }
@@ -40,7 +40,7 @@ namespace Mug.Models.Parser.NodeKinds.Statements
         {
             string types = "";
             for (int i = 0; i < _genericTypes.Count; i++)
-                types += indent + "      " + _genericTypes[i].Stringize(indent + "      ") + ",\n";
+                types += _genericTypes[i].Stringize(indent + "      ") + ",\n";
             return indent + $"CallStatement: {{\n{indent}   Name: {{\n{Name.Stringize(indent + "      ")}\n{indent}   }},\n{indent}   Parameters: {{\n{(HasParameters ? Parameters.Stringize(indent+"      ") : "")}\n{indent}   }},\n{indent}   IsGeneric: {IsGeneric}{(IsGeneric ? $",\n{indent}   GenericType: {{\n{types}{indent}   }}" : "")}\n{indent}}}";
         }
     }

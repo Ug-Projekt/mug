@@ -9,7 +9,7 @@ namespace Mug.Models.Parser.NodeKinds
 {
     public class TypeAllocationNode : INode
     {
-        public MemberAccessNode Name { get; set; }
+        public INode Name { get; set; }
         List<FieldAssignNode> _body { get; set; } = new();
         public FieldAssignNode[] Body
         {

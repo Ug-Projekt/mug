@@ -5,9 +5,9 @@ using System.Text;
 
 namespace Mug.Models.Parser.NodeKinds.Statements
 {
-    public class AssignStatement : IStatement 
+    public class AssignStatement : INode 
     {
-        public MemberAccessNode Name { get; set; }
+        public INode Name { get; set; }
         public INode Body { get; set; }
         public Range Position { get; set; }
 

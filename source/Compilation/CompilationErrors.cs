@@ -52,7 +52,7 @@ namespace Mug.Compilation
         }
         static void WriteSourceLine(int start, int end, int lineAt, string line, string error)
         {
-            Console.WriteLine($"Raw [Line: {lineAt}, Char: {start}:{end}];");
+            Console.WriteLine($"@Raw(Line: {lineAt}, Position: ({start}..{end}))");
             Console.Write(lineAt);
             Console.ForegroundColor = ConsoleColor.DarkGreen;
             Console.Write(" | ");

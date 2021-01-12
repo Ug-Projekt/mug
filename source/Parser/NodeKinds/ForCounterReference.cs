@@ -6,7 +6,7 @@ namespace Mug.Models.Parser.NodeKinds
 {
     public class ForCounterReference : INode
     {
-        public MemberAccessNode ReferenceName { get; set; }
+        public INode ReferenceName { get; set; }
         public Range Position { get; set; }
 
         public string Stringize(string indent = "")

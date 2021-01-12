@@ -5,7 +5,7 @@ using System.Text;
 
 namespace Mug.Models.Parser.NodeKinds.Statements
 {
-    public class LoopManagmentStatement : IStatement
+    public class LoopManagmentStatement : INode
     {
         public Token Managment { get; set; }
         public Range Position { get; set; }

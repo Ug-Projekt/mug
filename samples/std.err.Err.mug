@@ -6,4 +6,7 @@ std.err
 		except: unknown,
 		result: Result
 	}
+	func cast[T]()
+	{
+	}
 }

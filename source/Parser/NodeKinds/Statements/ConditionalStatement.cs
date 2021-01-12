@@ -5,7 +5,7 @@ using System.Text;
 
 namespace Mug.Models.Parser.NodeKinds.Statements
 {
-    public struct ConditionalStatement : IStatement 
+    public struct ConditionalStatement : INode 
     {
         public TokenKind Kind { get; set; }
         public INode Expression { get; set; }

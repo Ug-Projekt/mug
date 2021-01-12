@@ -11,16 +11,16 @@ namespace Mug.Models.Parser.NodeKinds.Directives
         RedefiningAlias,
         UsingNamespace,
     }
-    public class UseDirective : IDirective
+    public class UseDirective : INode
     {
-        public MemberAccessNode Member { get; set; }
+        public INode Body { get; set; }
         public Token Alias { get; set; }
         public UseMode Mode { get; set; }
         public Range Position { get; set; }
 
         public string Stringize(string indent = "")
         {
-            return indent + $"UseDirective: {{\n{indent}   Mode: {Mode},\n{indent}   Alias: {Alias},\n{indent}   Member: {{\n{Member.Stringize(indent+"      ")}\n{indent}   }}\n{indent}}}";
+            return indent + $"UseDirective: {{\n{indent}   Mode: {Mode},\n{indent}   Alias: {Alias},\n{indent}   Member: {{\n{Body.Stringize(indent+"      ")}\n{indent}   }}\n{indent}}}";
         }
     }
 }

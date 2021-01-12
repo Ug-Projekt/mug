@@ -1,16 +1,18 @@
-﻿using Mug.Models.Parser.NodeKinds;
+﻿using Mug.Models.Parser;
+using Mug.Models.Parser.NodeKinds;
 using System;
 using System.Collections.Generic;
 using System.Text;
 
 namespace Mug.Models.Lexer
 {
-    public struct Token
+    public struct Token : INode
     {
         public Int32 LineAt { get; }
         public TokenKind Kind { get; }
         public Object Value { get; }
-        public Range Position { get; }
+        public Range Position { get; set; }
+
         public Token(int lineAt, TokenKind kind, object value, Range position)
         {
             LineAt = lineAt;
@@ -20,8 +22,7 @@ namespace Mug.Models.Lexer
         }
         public string Stringize(string indent = "")
         {
-            return Value is MemberAccessNode ? $"{{\n{indent}{Kind}: {{\n{((MemberAccessNode)Value).Stringize(indent+"   ")}\n{indent}}}\n{indent[..^3]}}}" : ToString();
+            return indent+$"Literal: {{\n{indent}   Kind: {Kind},\n{indent}   Value: {(Value is INode node ? $"{{\n{node.Stringize(indent+"      ")}\n{indent}   }}" : Value)}\n{indent}}}";
         }
-        public override string ToString() => $"{Kind}: '{(Value is null ? "<null>" : Value)}'";
     }
 }

@@ -10,9 +10,9 @@ namespace Mug.Models.Parser.NodeKinds.Directives
         FromPackages,
         FromLocal,
     }
-    public class ImportDirective : IDirective
+    public class ImportDirective : INode
     {
-        public MemberAccessNode Member { get; set; }
+        public INode Member { get; set; }
         public ImportMode Mode { get; set; }
         public Range Position { get; set; }
 
