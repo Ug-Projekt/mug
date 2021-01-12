@@ -27,10 +27,10 @@ namespace Mug.Models.Lexer
         ConstantFloatDigit,
         Dot,
         Comma,
-        BoolOperatorEQ,
+        BooleanEQ,
         Equal,
         Slash,
-        BoolOperatorNEQ,
+        BooleanNEQ,
         KeySelf,
         KeyTi32,
         KeyTi8,
@@ -54,10 +54,10 @@ namespace Mug.Models.Lexer
         KeyIf,
         KeyElif,
         KeyElse,
-        BoolOperatorMinor,
-        BoolOperatorMajor,
-        BoolOperatorMinEQ,
-        BoolOperatorMajEQ,
+        BooleanMinor,
+        BooleanMajor,
+        BooleanMinEQ,
+        BooleanMajEQ,
         Negation,
         KeyWhile,
         KeyTo,
@@ -77,6 +77,8 @@ namespace Mug.Models.Lexer
         MulAssignment,
         DivAssignment,
         OperatorIncrement,
-        OperatorDecrement
+        OperatorDecrement,
+        BooleanOR,
+        BooleanAND
     }
 }

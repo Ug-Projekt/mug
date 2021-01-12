@@ -273,14 +273,14 @@ namespace Mug.Models.Parser
                 return false;
             }
             List<INode> generics = new();
-            if (MatchAdvance(TokenKind.BoolOperatorMinor))
+            if (MatchAdvance(TokenKind.BooleanMinor))
             {
-                if (Match(TokenKind.BoolOperatorMajor))
+                if (Match(TokenKind.BooleanMajor))
                     ParseError("Invalid generic type passing content;");
                 do
                     generics.Add(ExpectType());
                 while (MatchAdvance(TokenKind.Comma));
-                Expect("", TokenKind.BoolOperatorMajor);
+                Expect("", TokenKind.BooleanMajor);
             }
             if (!MatchAdvance(TokenKind.OpenPar))
             {
@@ -339,14 +339,14 @@ namespace Mug.Models.Parser
             {
                 var oldIndex = CurrentIndex;
                 List<INode> generics = new();
-                if (MatchAdvance(TokenKind.BoolOperatorMinor))
+                if (MatchAdvance(TokenKind.BooleanMinor))
                 {
-                    if (Match(TokenKind.BoolOperatorMajor))
+                    if (Match(TokenKind.BooleanMajor))
                         ParseError("Invalid generic type passing content;");
                     do
                         generics.Add(ExpectType());
                     while (MatchAdvance(TokenKind.Comma));
-                    Expect("", TokenKind.BoolOperatorMajor);
+                    Expect("", TokenKind.BooleanMajor);
                 }
                 if (!MatchAdvance(TokenKind.OpenPar))
                 {
@@ -435,12 +435,14 @@ namespace Mug.Models.Parser
         }
         bool MatchBooleanOperator(out Token op)
         {
-            return MatchAdvance(TokenKind.BoolOperatorEQ, out op) ||
-                MatchAdvance(TokenKind.BoolOperatorNEQ, out op) ||
-                MatchAdvance(TokenKind.BoolOperatorMajor, out op) ||
-                MatchAdvance(TokenKind.BoolOperatorMinor, out op) ||
-                MatchAdvance(TokenKind.BoolOperatorMajEQ, out op) ||
-                MatchAdvance(TokenKind.BoolOperatorMinEQ, out op) ||
+            return MatchAdvance(TokenKind.BooleanEQ, out op) ||
+                MatchAdvance(TokenKind.BooleanNEQ, out op) ||
+                MatchAdvance(TokenKind.BooleanMajor, out op) ||
+                MatchAdvance(TokenKind.BooleanMinor, out op) ||
+                MatchAdvance(TokenKind.BooleanMajEQ, out op) ||
+                MatchAdvance(TokenKind.BooleanMinEQ, out op) ||
+                MatchAdvance(TokenKind.BooleanOR, out op) ||
+                MatchAdvance(TokenKind.BooleanAND, out op) ||
                 MatchAdvance(TokenKind.KeyIn, out op);
         }
         INode ExpectExpression(bool isFirst, params TokenKind[] end)

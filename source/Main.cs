@@ -11,7 +11,12 @@ if (debug.isDebug())
 {
     var testPath = $"C:/Users/{Environment.UserName}/Desktop/Mug/tests/LastUpdates.mug";
     var test = @"
-var i: i32 = (new [chr, 1] { 2 })[0];
+func main()
+{
+    if ((90 == 9) | (2 != 0)) | (true)
+    {
+    }
+}
 ";
 
     try

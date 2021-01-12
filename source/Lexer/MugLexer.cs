@@ -87,10 +87,12 @@ namespace Mug.Models.Lexer
             ']' => TokenKind.CloseBracket,
             '{' => TokenKind.OpenBrace,
             '}' => TokenKind.CloseBrace,
-            '<' => TokenKind.BoolOperatorMinor,
-            '>' => TokenKind.BoolOperatorMajor,
+            '<' => TokenKind.BooleanMinor,
+            '>' => TokenKind.BooleanMajor,
             '=' => TokenKind.Equal,
             '!' => TokenKind.Negation,
+            '&' => TokenKind.BooleanAND,
+            '|' => TokenKind.BooleanOR,
             '+' => TokenKind.Plus,
             '-' => TokenKind.Minus,
             '*' => TokenKind.Star,
@@ -244,10 +246,10 @@ namespace Mug.Models.Lexer
             switch (current)
             {
                 case '=':
-                    if (MatchNext('=')) { AddMultiple(TokenKind.BoolOperatorEQ, 2); break; }
+                    if (MatchNext('=')) { AddMultiple(TokenKind.BooleanEQ, 2); break; }
                     goto default;
                 case '!':
-                    if (MatchNext('=')) { AddMultiple(TokenKind.BoolOperatorNEQ, 2); break; }
+                    if (MatchNext('=')) { AddMultiple(TokenKind.BooleanNEQ, 2); break; }
                     goto default;
                 case '+':
                     if (MatchNext('+')) { AddMultiple(TokenKind.OperatorIncrement, 2); break; }
@@ -267,10 +269,10 @@ namespace Mug.Models.Lexer
                     if (MatchNext(':')) { AddMultiple(TokenKind.Block, 2); break; }
                     goto default;
                 case '<':
-                    if (MatchNext('=')) { AddMultiple(TokenKind.BoolOperatorMinEQ, 2); break; }
+                    if (MatchNext('=')) { AddMultiple(TokenKind.BooleanMinEQ, 2); break; }
                     goto default;
                 case '>':
-                    if (MatchNext('=')) { AddMultiple(TokenKind.BoolOperatorMajEQ, 2); break; }
+                    if (MatchNext('=')) { AddMultiple(TokenKind.BooleanMajEQ, 2); break; }
                     goto default;
                 case '.':
                     if (MatchNext('.')) { AddMultiple(TokenKind.RangeDots, 2); break; }
