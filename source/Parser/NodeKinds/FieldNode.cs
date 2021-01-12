@@ -15,7 +15,7 @@ namespace Mug.Models.Parser.NodeKinds
 
         public string Stringize(string indent = "")
         {
-            return indent+$"FieldNode: {{\n{indent}   Name: {Name},\n{indent}   Modifier: {Modifier},\n{indent}   Type: {Type.Stringize(indent+"      ")}\n{indent}}}";
+            return indent+$"FieldNode: {{\n{indent}   Name: {Name},\n{indent}   Modifier: {Modifier},\n{indent}   Type: {{\n{Type.Stringize(indent+"      ")}\n{indent}   }}\n{indent}}}";
         }
     }
 }

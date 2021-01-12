@@ -27,7 +27,7 @@ namespace Mug.Models.Parser.NodeKinds
         }
         public string Stringize(string indent)
         {
-            return indent+$"Type: {{\n{indent}   {Type.Stringize(indent+"      ")}\n{indent}}},\n{indent}Name: {Name},\n{indent}IsSelf: {IsSelf},\n{indent}DefaultConstantValue: {{\n{indent}   {DefaultConstantValue}\n{indent}}}";
+            return indent+$"Type: {{\n{Type.Stringize(indent+"   ")}\n{indent}}},\n{indent}Name: {Name},\n{indent}IsSelf: {IsSelf},\n{indent}DefaultConstantValue: {{\n{DefaultConstantValue.Stringize(indent+"   ")}\n{indent}}}";
         }
     }
     public class ParameterListNode : INode
@@ -58,7 +58,7 @@ namespace Mug.Models.Parser.NodeKinds
         {
             string nodes = "";
             for (int i = 0; i < parameters.Count; i++)
-                nodes += indent+"   "+"Parameter["+i+"] {\n"+parameters[i].Stringize(indent+"      ")+'\n'+indent+"   },\n";
+                nodes += indent+"   Parameter["+i+"] {\n"+parameters[i].Stringize(indent+"      ")+'\n'+indent+"   },\n";
             return indent+$"ParameterListNode: {{\n{nodes}{indent}}}";
         }
     }

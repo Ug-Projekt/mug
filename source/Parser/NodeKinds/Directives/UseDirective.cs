@@ -8,7 +8,7 @@ namespace Mug.Models.Parser.NodeKinds.Directives
 {
     public enum UseMode
     {
-        RedefiningAlias,
+        UsingAlias,
         UsingNamespace,
     }
     public class UseDirective : INode
@@ -20,7 +20,7 @@ namespace Mug.Models.Parser.NodeKinds.Directives
 
         public string Stringize(string indent = "")
         {
-            return indent + $"UseDirective: {{\n{indent}   Mode: {Mode},\n{indent}   Alias: {Alias},\n{indent}   Member: {{\n{Body.Stringize(indent+"      ")}\n{indent}   }}\n{indent}}}";
+            return indent + $"UseDirective: {{\n{indent}   Mode: {Mode},\n{indent}   Alias: {{\n{Alias.Stringize(indent+"      ")}\n{indent}   }},\n{indent}   Member: {{\n{Body.Stringize(indent+"      ")}\n{indent}   }}\n{indent}}}";
         }
     }
 }

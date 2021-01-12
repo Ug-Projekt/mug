@@ -91,7 +91,7 @@ namespace Mug.Models.Parser
                 CurrentIndex++;
             return expect;
         }
-        INode ExpectType()
+        INode ExpectType(bool expectKeyTypeInGeneric = false)
         {
             if (MatchAdvance(TokenKind.OpenBracket, out Token open))
             {
@@ -103,23 +103,14 @@ namespace Mug.Models.Parser
             if (MatchIdentifier(out var members))
                 find = members;
             else
-                find = ExpectMultipleMute("Expected a type: built in or user defined, but found `" + Current.Kind.ToString() + "`;",
-                    TokenKind.KeyTi32,
-                    TokenKind.KeyTVoid,
-                    TokenKind.KeyTbool,
-                    TokenKind.KeyTchr,
-                    TokenKind.KeyTi64,
-                    TokenKind.KeyTi8,
-                    TokenKind.KeyTu32,
-                    TokenKind.KeyTu8,
-                    TokenKind.KeyTu64,
-                    TokenKind.KeyTstr,
-                    TokenKind.KeyTunknown);
+                find = ExpectKeywordTypes();
             if (MatchAdvance(TokenKind.OpenBracket))
             {
+                if (expectKeyTypeInGeneric)
+                    Expect("", TokenKind.KeyType);
                 var type = ExpectType();
                 find = new Token(0, TokenKind.KeyTgeneric, type, new(find.Position.Start, type.Position.End));
-                Expect("Generic type specification must wrote between `[]`;", TokenKind.CloseBracket);
+                Expect("Generic type specification must be wrote between `[]`;", TokenKind.CloseBracket);
             }
             return find;
         }
@@ -155,7 +146,7 @@ namespace Mug.Models.Parser
                 else
                 {
                     Expect("In the current context must specify the type of the instance to extend;", TokenKind.Colon);
-                    var t = ExpectType();
+                    var t = ExpectType(true);
                     if (Match(TokenKind.Equal))
                         ParseError("A self parameter cannot be an optional parameter;");
                     return new Parameter(t, "self", new(), true);
@@ -181,6 +172,36 @@ namespace Mug.Models.Parser
                 TokenKind.RangeDots => OperatorKind.Range,
             };
         }
+        INode ExpectKeywordTypes()
+        {
+            var match = MatchBuiltInTypes(out var type);
+            if (!match)
+                ParseError("Expected a built in type, but found `" + Current.Kind.ToString() + "`;");
+            return type;
+        }
+        bool MatchBuiltInTypes(out Token type)
+        {
+            return
+                MatchAdvance(TokenKind.KeyTi32, out type) ||
+                MatchAdvance(TokenKind.KeyTVoid, out type) ||
+                MatchAdvance(TokenKind.KeyTbool, out type) ||
+                MatchAdvance(TokenKind.KeyTchr, out type) ||
+                MatchAdvance(TokenKind.KeyTi64, out type) ||
+                MatchAdvance(TokenKind.KeyTi8, out type) ||
+                MatchAdvance(TokenKind.KeyTu32, out type) ||
+                MatchAdvance(TokenKind.KeyTu8, out type) ||
+                MatchAdvance(TokenKind.KeyTu64, out type) ||
+                MatchAdvance(TokenKind.KeyTstr, out type) ||
+                MatchAdvance(TokenKind.KeyTunknown, out type);
+        }
+        bool MatchAllowedFirstBase()
+        {
+            return
+                MatchAdvance(TokenKind.Identifier) ||
+                MatchAdvance(TokenKind.KeySelf) ||
+                MatchConstantAdvance() ||
+                MatchBuiltInTypes(out _);
+        }
         bool MatchIdentifier(out INode identifier, bool isInstance = false)
         {
             return MatchIdentifier(out identifier, out _, isInstance);
@@ -194,9 +215,7 @@ namespace Mug.Models.Parser
                 if (!MatchAdvance(TokenKind.Dot))
                     return false;
             }
-            else if (!MatchAdvance(TokenKind.Identifier) &&
-                !MatchAdvance(TokenKind.KeySelf) &&
-                !MatchConstantAdvance())
+            else if (!MatchAllowedFirstBase())
                 return false;
             identifier = Back;
             memberCount = 1;
@@ -233,42 +252,6 @@ namespace Mug.Models.Parser
             if (!MatchAdvance(TokenKind.OpenPar))
                 return false;
             e = ExpectExpression(true, TokenKind.ClosePar);
-            /*if (MatchAdvance(TokenKind.Dot))
-            {
-                var oldIndex = CurrentIndex;
-                List<INode> generics = new();
-                if (MatchAdvance(TokenKind.BoolOperatorMinor))
-                {
-                    if (Match(TokenKind.BoolOperatorMajor))
-                        ParseError("Invalid generic type passing content;");
-                    do
-                        generics.Add(ExpectType());
-                    while (MatchAdvance(TokenKind.Comma));
-                    Expect("", TokenKind.BoolOperatorMajor);
-                }
-                if (!MatchAdvance(TokenKind.OpenPar))
-                {
-                    if (generics.Count > 0)
-                        ParseError("Expected parameter list, after generic types specification");
-                    CurrentIndex = oldIndex;
-                    goto ret;
-                }
-                if (Match(TokenKind.ClosePar))
-                {
-                    var c1 = new CallStatement() { Name = e, Parameters = null, Position = e.Position };
-                    c1.SetGenericTypes(generics);
-                    e = c1;
-                    CurrentIndex++;
-                    goto ret;
-                }
-                NodeBuilder parameters = new();
-                while (Back.Kind != TokenKind.ClosePar)
-                    parameters.Add(ExpectExpression(true, TokenKind.Comma, TokenKind.ClosePar));
-                var c = new CallStatement() { Name = e, Parameters = parameters, Position = e.Position };
-                c.SetGenericTypes(generics);
-                e = c;
-            }
-        ret:*/
             return true;
         }
         bool MatchValue(out INode e)
@@ -478,7 +461,7 @@ namespace Mug.Models.Parser
                     CurrentIndex++;
                     return array;
                 }
-                var name = ExpectIdentifier();
+                var name = ExpectType();
                 var allocation = new TypeAllocationNode() { Name = name , Position = token.Position };
                 Expect("Type allocation requires `{}`;", TokenKind.OpenBrace);
                 if (Match(TokenKind.Identifier))
@@ -716,7 +699,7 @@ namespace Mug.Models.Parser
                 }
             }
             var parameters = ExpectParameterListDeclaration();
-            INode type = null;
+            INode type;
             if (Match(TokenKind.OpenBrace))
                 type = new Token(name.LineAt, TokenKind.KeyTVoid, null, name.Position);
             else
@@ -741,29 +724,32 @@ namespace Mug.Models.Parser
             node = new NamespaceNode() { Members = body, Position = name.Position, Name = name };
             return true;
         }
+        INode ExpectPath()
+        {
+            INode path = Expect("", TokenKind.Identifier);
+            while (MatchAdvance(TokenKind.Dot))
+            {
+                var member = ExpectMultiple("Expected member, after `.`", TokenKind.Identifier, TokenKind.Star);
+                path = new MemberNode() { Position = Back.Position, Base = path, Member = member };
+                if (member.Kind == TokenKind.Star)
+                    break;
+            }
+            return path;
+        }
         bool MatchImportDirective(out INode directive)
         {
             directive = null;
             if (!MatchAdvance(TokenKind.KeyImport, out var token))
                 return false;
-            INode body = null;
+            INode body;
             ImportMode mode = ImportMode.FromPackages;
             if (MatchAdvance(TokenKind.ConstantString))
             {
-                mode = ImportMode.FromLocal;
                 body = Back;
+                mode = ImportMode.FromLocal;
             }
             else
-            {
-                if (MatchIdentifier(out var path))
-                    body = path;
-                else if (MatchAdvance(TokenKind.Star))
-                {
-                    //////////// see
-                }
-                else
-                    ParseError("Invalid path in the import directive;");
-            }
+                body = ExpectPath();
             Expect("Expected `;`, at the end of an import directive;", TokenKind.Semicolon);
             directive = new ImportDirective() { Mode = mode, Member = body, Position = token.Position };
             return true;
@@ -774,11 +760,14 @@ namespace Mug.Models.Parser
             UseMode mode = UseMode.UsingNamespace;
             if (!MatchAdvance(TokenKind.KeyUse, out var token))
                 return false;
-            var body = ExpectIdentifier();
+            INode body = ExpectPath();
             Token alias = new();
             if (MatchAdvance(TokenKind.KeyAs))
-                alias = Expect("Expected the import path alias, after `as` in an import directive;", TokenKind.Identifier);
-            Expect("Expected `;`, at the end of an import directive;", TokenKind.Semicolon);
+            {
+                alias = Expect("Expected the use path alias, after `as` in a use directive;", TokenKind.Identifier);
+                mode = UseMode.UsingAlias;
+            }
+            Expect("Expected `;`, at the end of a use directive;", TokenKind.Semicolon);
             directive = new UseDirective() { Mode = mode, Body = body, Alias = alias, Position = token.Position };
             return true;
         }
