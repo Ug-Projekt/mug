@@ -10,8 +10,8 @@ namespace Mug.Models.Parser.NodeKinds
     public class TypeAllocationNode : INode
     {
         public INode Name { get; set; }
-        List<FieldAssignNode> _body { get; set; } = new();
-        public FieldAssignNode[] Body
+        List<FieldAssignmentNode> _body { get; set; } = new();
+        public FieldAssignmentNode[] Body
         {
             get
             {
@@ -19,7 +19,7 @@ namespace Mug.Models.Parser.NodeKinds
             }
         }
         public Range Position { get; set; }
-        public void AddFieldAssign(FieldAssignNode fieldAssign)
+        public void AddFieldAssign(FieldAssignmentNode fieldAssign)
         {
             _body.Add(fieldAssign);
         }

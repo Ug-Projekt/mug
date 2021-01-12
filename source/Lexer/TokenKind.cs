@@ -42,10 +42,8 @@ namespace Mug.Models.Lexer
         KeyTu8,
         KeyTu32,
         KeyTu64,
-        Increment,
-        Decrement,
-        IncrementAssign,
-        DecrementAssign,
+        AddAssignment,
+        SubAssignment,
         Plus,
         Minus,
         Star,
@@ -75,6 +73,10 @@ namespace Mug.Models.Lexer
         KeyPub,
         KeyNew,
         KeyUse,
-        KeyImport
+        KeyImport,
+        MulAssignment,
+        DivAssignment,
+        OperatorIncrement,
+        OperatorDecrement
     }
 }

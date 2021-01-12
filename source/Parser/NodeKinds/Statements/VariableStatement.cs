@@ -15,7 +15,7 @@ namespace Mug.Models.Parser.NodeKinds.Statements
 
         public string Stringize(string indent = "")
         {
-            return indent+$"VariableStatement: {{\n{indent}   Type: {Type.Stringize(indent+"      ")},\n{indent}   Name: {Name},\n{indent}   IsAssigned: {IsAssigned}{(IsAssigned ? $",\n{indent}   Body: {{\n{Body.Stringize(indent+"      ")}\n{indent}   }}" : "")}\n{indent}}}";
+            return indent+$"VariableStatement: {{\n{indent}   Type: {{\n{Type.Stringize(indent+"      ")}\n{indent}   }},\n{indent}   Name: {{\n{Name.Stringize(indent+"      ")}\n{indent}   }},\n{indent}   IsAssigned: {IsAssigned}{(IsAssigned ? $",\n{indent}   Body: {{\n{Body.Stringize(indent+"      ")}\n{indent}   }}" : "")}\n{indent}}}";
         }
     }
 }

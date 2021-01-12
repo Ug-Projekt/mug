@@ -29,7 +29,7 @@ namespace Mug.Models.Parser.NodeKinds
             string nodes = "";
             for (int i = 0; i < _body.Count; i++)
                 nodes += indent+"      ArrayElement["+i+"] {\n"+_body[i].Stringize(indent+"         ")+"\n"+indent+"      },\n";
-            return indent+$"ArrayAllocationNode: {{\n{indent}   Size: {{\n{Size.Stringize(indent+"      ")}\n{indent}   }},\n{indent}   Type: {{\n{indent}      {Type.Stringize(indent+"      ")}\n{indent}   }},\n{indent}   Body: {{\n{nodes}\n{indent}   }}\n{indent}}}";
+            return indent+$"ArrayAllocationNode: {{\n{indent}   Size: {{\n{Size.Stringize(indent+"      ")}\n{indent}   }},\n{indent}   Type: {{\n{Type.Stringize(indent+"      ")}\n{indent}   }},\n{indent}   Body: {{\n{nodes}\n{indent}   }}\n{indent}}}";
         }
     }
 }

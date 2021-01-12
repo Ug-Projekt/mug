@@ -123,7 +123,7 @@ namespace Mug.Models.Lexer
         void AddMultiple(TokenKind kind, int count)
         {
             InsertCurrentSymbol();
-            TokenCollection.Add(new(CurrentLine, kind, null, new(CurrentIndex-1, CurrentIndex + count)));
+            TokenCollection.Add(new(CurrentLine, kind, null, new(CurrentIndex-1, CurrentIndex + count-1)));
         }
         void InsertCurrentSymbol()
         {
@@ -250,12 +250,18 @@ namespace Mug.Models.Lexer
                     if (MatchNext('=')) { AddMultiple(TokenKind.BoolOperatorNEQ, 2); break; }
                     goto default;
                 case '+':
-                    if (MatchNext('+')) { AddMultiple(TokenKind.Increment, 2); break; }
-                    else if (MatchNext('=')) { AddMultiple(TokenKind.IncrementAssign, 2); break; }
+                    if (MatchNext('+')) { AddMultiple(TokenKind.OperatorIncrement, 2); break; }
+                    else if (MatchNext('=')) { AddMultiple(TokenKind.AddAssignment, 2); break; }
                     goto default;
                 case '-':
-                    if (MatchNext('-')) { AddMultiple(TokenKind.Decrement, 2); break; }
-                    else if (MatchNext('=')) { AddMultiple(TokenKind.DecrementAssign, 2); break; }
+                    if (MatchNext('-')) { AddMultiple(TokenKind.OperatorDecrement, 2); break; }
+                    else if (MatchNext('=')) { AddMultiple(TokenKind.SubAssignment, 2); break; }
+                    goto default;
+                case '*':
+                    if (MatchNext('=')) { AddMultiple(TokenKind.MulAssignment, 2); break; }
+                    goto default;
+                case '/':
+                    if (MatchNext('=')) { AddMultiple(TokenKind.DivAssignment, 2); break; }
                     goto default;
                 case ':':
                     if (MatchNext(':')) { AddMultiple(TokenKind.Block, 2); break; }

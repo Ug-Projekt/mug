@@ -5,7 +5,7 @@ using System.Text;
 
 namespace Mug.Models.Parser.NodeKinds
 {
-    public class FieldAssignNode : INode
+    public class FieldAssignmentNode : INode
     {
         public String Name { get; set; }
         public INode Body { get; set; }
@@ -13,7 +13,7 @@ namespace Mug.Models.Parser.NodeKinds
 
         public string Stringize(string indent = "")
         {
-            return indent+ $"FieldAssignNode: {{\n{indent}   Name: {Name},\n{indent}   Body: {{\n{Body.Stringize(indent+"      ")}\n{indent}   }}\n{indent}}}";
+            return indent+ $"FieldAssignmentNode: {{\n{indent}   Name: {Name},\n{indent}   Body: {{\n{Body.Stringize(indent+"      ")}\n{indent}   }}\n{indent}}}";
         }
     }
 }

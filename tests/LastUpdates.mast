@@ -1,0 +1,552 @@
+NamespaceNode: {
+   Name: {
+     Literal: {
+        Kind: Identifier,
+        Value: global
+     }
+   },
+   ImportDirective: {
+      Mode: FromPackages,
+      Member: {
+         MemberNode: {
+            Base: {
+               MemberNode: {
+                  Base: {
+                     Literal: {
+                        Kind: Identifier,
+                        Value: std
+                     }
+                  },
+                  Members: {
+                     Literal: {
+                        Kind: Identifier,
+                        Value: err
+                     }
+                  }
+               }
+            },
+            Members: {
+               Literal: {
+                  Kind: Star,
+                  Value: 
+               }
+            }
+         }
+      }
+   },
+   ImportDirective: {
+      Mode: FromPackages,
+      Member: {
+         MemberNode: {
+            Base: {
+               MemberNode: {
+                  Base: {
+                     Literal: {
+                        Kind: Identifier,
+                        Value: std
+                     }
+                  },
+                  Members: {
+                     Literal: {
+                        Kind: Identifier,
+                        Value: io
+                     }
+                  }
+               }
+            },
+            Members: {
+               Literal: {
+                  Kind: Star,
+                  Value: 
+               }
+            }
+         }
+      }
+   },
+   VariableStatement: {
+      Type: {
+         Literal: {
+            Kind: Identifier,
+            Value: IO
+         }
+      },
+      Name: {
+         Literal: {
+            Kind: Identifier,
+            Value: io
+         }
+      },
+      IsAssigned: True,
+      Body: {
+         CallStatement: {
+            Name: {
+               Literal: {
+                  Kind: Identifier,
+                  Value: IO
+               }
+            },
+            Parameters: {
+
+            },
+            IsGeneric: False
+         }
+      }
+   },
+   FunctionNode: {
+      IsMethod: False,
+      Type: {
+         Literal: {
+            Kind: KeyTVoid,
+            Value: 
+         }
+      },
+      Name: main,
+      Modifier: Public,
+      ParameterList: {
+         ParameterListNode: {
+         }
+      },
+      IsGeneric: False,
+      Body: {
+         BlockNode: {
+            Statement[0] {
+               ConstantStatement: {
+                  Type: {
+                     Literal: {
+                        Kind: KeyTstr,
+                        Value: 
+                     }
+                  },
+                  Name: prompt,
+                  Body: {
+                     Literal: {
+                        Kind: ConstantString,
+                        Value: "Index of char to print in the text 'ciao': "
+                     }
+                  }
+               }
+            },
+            Statement[1] {
+               VariableStatement: {
+                  Type: {
+                     Literal: {
+                        Kind: KeyTarray,
+                        Value: {
+                           Literal: {
+                              Kind: KeyTchr,
+                              Value: 
+                           }
+                        }
+                     }
+                  },
+                  Name: {
+                     Literal: {
+                        Kind: Identifier,
+                        Value: arr
+                     }
+                  },
+                  IsAssigned: True,
+                  Body: {
+                     ArrayAllocationNode: {
+                        Size: {
+                           Literal: {
+                              Kind: ConstantDigit,
+                              Value: 4
+                           }
+                        },
+                        Type: {
+                           Literal: {
+                              Kind: KeyTchr,
+                              Value: 
+                           }
+                        },
+                        Body: {
+                           ArrayElement[0] {
+                              Literal: {
+                                 Kind: ConstantChar,
+                                 Value: 'c'
+                              }
+                           },
+                           ArrayElement[1] {
+                              Literal: {
+                                 Kind: ConstantChar,
+                                 Value: 'i'
+                              }
+                           },
+                           ArrayElement[2] {
+                              Literal: {
+                                 Kind: ConstantChar,
+                                 Value: 'a'
+                              }
+                           },
+                           ArrayElement[3] {
+                              Literal: {
+                                 Kind: ConstantChar,
+                                 Value: 'o'
+                              }
+                           },
+
+                        }
+                     }
+                  }
+               }
+            },
+            Statement[2] {
+               VariableStatement: {
+                  Type: {
+                     Literal: {
+                        Kind: KeyTgeneric,
+                        Value: {
+                           Literal: {
+                              Kind: KeyTu32,
+                              Value: 
+                           }
+                        }
+                     }
+                  },
+                  Name: {
+                     Literal: {
+                        Kind: Identifier,
+                        Value: index
+                     }
+                  },
+                  IsAssigned: True,
+                  Body: {
+                     CallStatement: {
+                        Name: {
+                           MemberNode: {
+                              Base: {
+                                 Literal: {
+                                    Kind: Identifier,
+                                    Value: io
+                                 }
+                              },
+                              Members: {
+                                 Literal: {
+                                    Kind: Identifier,
+                                    Value: readu32
+                                 }
+                              }
+                           }
+                        },
+                        Parameters: {
+                           Literal: {
+                              Kind: Identifier,
+                              Value: prompt
+                           },
+
+                        },
+                        IsGeneric: False
+                     }
+                  }
+               }
+            },
+            Statement[3] {
+               ConditionalStatement: {
+                  Kind: KeyWhile,
+                  Expression: {
+                     CallStatement: {
+                        Name: {
+                           MemberNode: {
+                              Base: {
+                                 Literal: {
+                                    Kind: Identifier,
+                                    Value: index
+                                 }
+                              },
+                              Members: {
+                                 Literal: {
+                                    Kind: Identifier,
+                                    Value: is_err
+                                 }
+                              }
+                           }
+                        },
+                        Parameters: {
+
+                        },
+                        IsGeneric: False
+                     }
+                  },
+                  Body: {
+                     BlockNode: {
+                        Statement[0] {
+                           CallStatement: {
+                              Name: {
+                                 MemberNode: {
+                                    Base: {
+                                       Literal: {
+                                          Kind: Identifier,
+                                          Value: io
+                                       }
+                                    },
+                                    Members: {
+                                       Literal: {
+                                          Kind: Identifier,
+                                          Value: println
+                                       }
+                                    }
+                                 }
+                              },
+                              Parameters: {
+                                 Literal: {
+                                    Kind: ConstantString,
+                                    Value: "Invalid number"
+                                 },
+
+                              },
+                              IsGeneric: False
+                           }
+                        },
+                        Statement[1] {
+                           AssignmentStatement: {
+                              Name: {
+                                 Literal: {
+                                    Kind: Identifier,
+                                    Value: index
+                                 }
+                              },
+                              Operator: Equal,
+                              Body: {
+                                 CallStatement: {
+                                    Name: {
+                                       MemberNode: {
+                                          Base: {
+                                             Literal: {
+                                                Kind: Identifier,
+                                                Value: io
+                                             }
+                                          },
+                                          Members: {
+                                             Literal: {
+                                                Kind: Identifier,
+                                                Value: readu32
+                                             }
+                                          }
+                                       }
+                                    },
+                                    Parameters: {
+                                       Literal: {
+                                          Kind: Identifier,
+                                          Value: prompt
+                                       },
+
+                                    },
+                                    IsGeneric: False
+                                 }
+                              }
+                           }
+                        },
+                     }
+                  }
+               }
+            },
+            Statement[4] {
+               VariableStatement: {
+                  Type: {
+                     Literal: {
+                        Kind: KeyTgeneric,
+                        Value: {
+                           Literal: {
+                              Kind: KeyTchr,
+                              Value: 
+                           }
+                        }
+                     }
+                  },
+                  Name: {
+                     Literal: {
+                        Kind: Identifier,
+                        Value: c
+                     }
+                  },
+                  IsAssigned: True,
+                  Body: {
+                     ArraySelectElemNode: {
+                        Left: {
+                           Literal: {
+                              Kind: Identifier,
+                              Value: arr
+                           }
+                        },
+                        IndexExpression: {
+                           CallStatement: {
+                              Name: {
+                                 MemberNode: {
+                                    Base: {
+                                       Literal: {
+                                          Kind: Identifier,
+                                          Value: index
+                                       }
+                                    },
+                                    Members: {
+                                       Literal: {
+                                          Kind: Identifier,
+                                          Value: discard
+                                       }
+                                    }
+                                 }
+                              },
+                              Parameters: {
+
+                              },
+                              IsGeneric: False
+                           }
+                        }
+                     }
+                  }
+               }
+            },
+            Statement[5] {
+               ConditionalStatement: {
+                  Kind: KeyIf,
+                  Expression: {
+                     CallStatement: {
+                        Name: {
+                           MemberNode: {
+                              Base: {
+                                 Literal: {
+                                    Kind: Identifier,
+                                    Value: c
+                                 }
+                              },
+                              Members: {
+                                 Literal: {
+                                    Kind: Identifier,
+                                    Value: is_err
+                                 }
+                              }
+                           }
+                        },
+                        Parameters: {
+
+                        },
+                        IsGeneric: False
+                     }
+                  },
+                  Body: {
+                     BlockNode: {
+                        Statement[0] {
+                           CallStatement: {
+                              Name: {
+                                 MemberNode: {
+                                    Base: {
+                                       Literal: {
+                                          Kind: Identifier,
+                                          Value: io
+                                       }
+                                    },
+                                    Members: {
+                                       Literal: {
+                                          Kind: Identifier,
+                                          Value: println
+                                       }
+                                    }
+                                 }
+                              },
+                              Parameters: {
+                                 Literal: {
+                                    Kind: ConstantString,
+                                    Value: "Invalid index"
+                                 },
+
+                              },
+                              IsGeneric: False
+                           }
+                        },
+                     }
+                  }
+               }
+            },
+            Statement[6] {
+               ConditionalStatement: {
+                  Kind: KeyElse,
+                  Expression: {
+
+                  },
+                  Body: {
+                     BlockNode: {
+                        Statement[0] {
+                           CallStatement: {
+                              Name: {
+                                 MemberNode: {
+                                    Base: {
+                                       Literal: {
+                                          Kind: Identifier,
+                                          Value: io
+                                       }
+                                    },
+                                    Members: {
+                                       Literal: {
+                                          Kind: Identifier,
+                                          Value: println
+                                       }
+                                    }
+                                 }
+                              },
+                              Parameters: {
+                                 ExpressionNode: {
+                                    Operator: Sum,
+                                    Left: {
+                                       Literal: {
+                                          Kind: ConstantString,
+                                          Value: "Char: "
+                                       }
+                                    },
+                                    Right: {
+                                        CallStatement: {
+                                           Name: {
+                                              MemberNode: {
+                                                 Base: {
+                                                    CallStatement: {
+                                                       Name: {
+                                                          MemberNode: {
+                                                             Base: {
+                                                                Literal: {
+                                                                   Kind: Identifier,
+                                                                   Value: c
+                                                                }
+                                                             },
+                                                             Members: {
+                                                                Literal: {
+                                                                   Kind: Identifier,
+                                                                   Value: discard
+                                                                }
+                                                             }
+                                                          }
+                                                       },
+                                                       Parameters: {
+
+                                                       },
+                                                       IsGeneric: False
+                                                    }
+                                                 },
+                                                 Members: {
+                                                    Literal: {
+                                                       Kind: Identifier,
+                                                       Value: to_str
+                                                    }
+                                                 }
+                                              }
+                                           },
+                                           Parameters: {
+
+                                           },
+                                           IsGeneric: False
+                                        }
+                                    }
+                                 },
+
+                              },
+                              IsGeneric: False
+                           }
+                        },
+                     }
+                  }
+               }
+            },
+         }
+      }
+   },
+
+}

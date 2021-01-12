@@ -202,34 +202,29 @@ namespace Mug.Models.Parser
                 MatchConstantAdvance() ||
                 MatchBuiltInTypes(out _);
         }
-        bool MatchIdentifier(out INode identifier, bool isInstance = false)
+        bool MatchIdentifier(out INode identifier)
         {
-            return MatchIdentifier(out identifier, out _, isInstance);
+            return MatchIdentifier(out identifier, out _);
         }
-        bool MatchIdentifier(out INode identifier, out int memberCount, bool isInstance = false)
+        bool MatchIdentifier(out INode identifier, out int memberCount)
         {
             identifier = null;
             memberCount = 0;
-            if (isInstance)
-            {
-                if (!MatchAdvance(TokenKind.Dot))
-                    return false;
-            }
-            else if (!MatchAllowedFirstBase())
+            if (!MatchAllowedFirstBase())
                 return false;
             identifier = Back;
             memberCount = 1;
-            
+
             while (MatchAdvance(TokenKind.Dot))
             {
                 identifier = new MemberNode() { Position = Back.Position, Base = identifier, Member = Expect("Expected member, after `.`", TokenKind.Identifier) };
-                memberCount++;
+                memberCount+=2;
             }
             return true;
         }
-        INode ExpectIdentifier(bool isInstance = false)
+        INode ExpectIdentifier()
         {
-            if (!MatchIdentifier(out var identifier, isInstance))
+            if (!MatchIdentifier(out var identifier))
                 ParseError("Expected identifier here, found `", Current.Kind.ToString(), "`;");
             return identifier;
         }
@@ -280,7 +275,7 @@ namespace Mug.Models.Parser
             }
             if (!MatchAdvance(TokenKind.OpenPar))
             {
-                CurrentIndex-=count-1;
+                CurrentIndex -=count;
                 return false;
             }
             if (Current.Kind == TokenKind.ClosePar)
@@ -301,6 +296,7 @@ namespace Mug.Models.Parser
         }
         bool MatchTerm(out INode e)
         {
+            e = null;
             if (MatchAdvance(TokenKind.Minus) ||
                 MatchAdvance(TokenKind.Plus) ||
                 MatchAdvance(TokenKind.Negation))
@@ -366,6 +362,17 @@ namespace Mug.Models.Parser
                 e = c;
             }
         ret:
+            if (MatchAdvance(TokenKind.OpenBracket))
+            {
+                if (e is null)
+                {
+                    CurrentIndex--;
+                    ParseError("Cannot find a value to index, in the current context;");
+                }
+                var startPos = Back.Position.Start;
+                var index = ExpectExpression(true, TokenKind.CloseBracket);
+                e = new ArraySelectElemNode() { IndexExpression = index, Left = e, Position = new(startPos, Back.Position.End)};
+            }
             if (Match(TokenKind.Dot))
             {
                 par = true;
@@ -387,7 +394,7 @@ namespace Mug.Models.Parser
                 MatchAdvance(TokenKind.Slash) ||
                 MatchAdvance(TokenKind.RangeDots);
         }
-        FieldAssignNode ExpectFieldAssign()
+        FieldAssignmentNode ExpectFieldAssign()
         {
             if (!MatchAdvance(TokenKind.Identifier))
                 ParseError("Expected field assign;");
@@ -395,7 +402,7 @@ namespace Mug.Models.Parser
             Expect("Required `:` after field name;", TokenKind.Colon);
             var expression = ExpectExpression(true, TokenKind.Comma, TokenKind.CloseBrace);
             CurrentIndex--;
-            return new FieldAssignNode() { Name = name.Value.ToString(), Body = expression, Position = name.Position };
+            return new FieldAssignmentNode() { Name = name.Value.ToString(), Body = expression, Position = name.Position };
         }
         bool MatchFactor(out INode e)
         {
@@ -561,25 +568,40 @@ namespace Mug.Models.Parser
             statement = new ReturnStatement() { Position = pos, Body = body };
             return true;
         }
-        bool AssignValue(out INode statement)
+        bool MatchAssigmentOperators()
+        {
+            return
+                MatchAdvance(TokenKind.Equal) ||
+                MatchAdvance(TokenKind.AddAssignment) ||
+                MatchAdvance(TokenKind.SubAssignment) ||
+                MatchAdvance(TokenKind.MulAssignment) ||
+                MatchAdvance(TokenKind.OperatorIncrement) ||
+                MatchAdvance(TokenKind.OperatorDecrement) ||
+                MatchAdvance(TokenKind.DivAssignment);
+        }
+        bool ValueAssignment(out INode statement)
         {
             statement = null;
-            if (Back.Kind == TokenKind.Dot)
-                return false;
-            ////// to see
             if (!MatchIdentifier(out var name, out var count))
             {
                 CurrentIndex -= count;
                 return false;
             }
-            if (!MatchAdvance(TokenKind.Equal))
+            if (!MatchAssigmentOperators())
             {
-                CurrentIndex--;
+                CurrentIndex-=count;
                 return false;
             }
+            var op = Back.Kind;
             var pos = Back.Position;
+            statement = new AssignmentStatement() { Operator = op, Position = pos, Left = name };
+            if (op == TokenKind.OperatorIncrement || op == TokenKind.OperatorDecrement)
+            {
+                CurrentIndex++;
+                return true;
+            }
             var body = ExpectExpression(true, TokenKind.Semicolon);
-            statement = new AssignStatement() { Position = pos, Name = name, Body = body };
+            (statement as AssignmentStatement).Right = body;
             return true;
         }
         bool ConditionDefinition(out INode statement)
@@ -613,7 +635,7 @@ namespace Mug.Models.Parser
                 counter = new VariableStatement() { Position = pos, Body = varBody, IsAssigned = varBody != null, Name = name, Type = type };
             }
             else if (MatchAdvance(TokenKind.Equal))
-                counter = new AssignStatement() { Position = pos, Body = ExpectFactor(), Name = name };
+                counter = new AssignmentStatement() { Operator = TokenKind.Equal, Position = pos, Right = ExpectFactor(), Left = name };
             var op = ExpectMultiple("Expected an operator for the for statement, allowed: `in`, `to`;", TokenKind.KeyIn, TokenKind.KeyTo).Kind;
             var expression = ExpectFactor();
             var body = ExpectBlock();
@@ -654,7 +676,7 @@ namespace Mug.Models.Parser
                                             CurrentIndex++;
                                         else
                                         {
-                                            if (!AssignValue(out statement))
+                                            if (!ValueAssignment(out statement))
                                                 ParseError("In the current local context, this is not a valid imperative statement;");
                                         }
             return statement;

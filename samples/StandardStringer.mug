@@ -2,7 +2,7 @@ import std.err.Err;
 
 std.text
 {
-	// Member
+	# Member
 	type Stringer
 	{
 		raw: [chr],
@@ -18,7 +18,7 @@ std.text
 		};
 	}
 
-	// Private
+	# Private
 	func match_overflow(self: Stringer): bit
 	{
 		return self.len == self.seg;
@@ -43,7 +43,7 @@ std.text
 		self.len = self.len+1;
 	}
 
-	// Public
+	# Public
 	func append(self: Stringer, value: chr)
 	{
 		if self.match_overflow()

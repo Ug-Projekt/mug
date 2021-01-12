@@ -5,9 +5,11 @@ using System;
 using System.Diagnostics;
 using System.IO;
 
+
+
 if (debug.isDebug())
 {
-    var testPath = $"C:/Users/{Environment.UserName}/Desktop/Mug/samples/StandardErr.mug";
+    var testPath = $"C:/Users/{Environment.UserName}/Desktop/Mug/tests/LastUpdates.mug";
     var test = @"
 ";
 
