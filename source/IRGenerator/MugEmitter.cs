@@ -20,9 +20,17 @@ namespace Mug.Models.Generator.Emitter
         void EmitInstruction(LowCodeInstruction instruction)
         {
             var arguments = "";
-            for (int i = 0; i < instruction.ArgumentsCount; i++)
-                arguments += (i > 0 ? "," : "") + instruction.Arguments[i].Type + " " + instruction.Arguments[i].Value;
-            EmitLine($"  {(string.IsNullOrEmpty(instruction.Label) ? "" : " "+instruction.Label+" = ")} {instruction.Kind} {arguments}");
+            if (instruction.Kind == LowCodeInstructionKind.mov)
+            {
+                arguments = instruction.Arguments[0].Type + " " + instruction.Arguments[0].Value;
+                EmitLine($"  {(string.IsNullOrEmpty(instruction.Label) ? "" : " " + instruction.Label + " = ")} {arguments}");
+            }
+            else
+            {
+                for (int i = 0; i < instruction.ArgumentsCount; i++)
+                    arguments += (i > 0 ? "," : "") + instruction.Arguments[i].Type + " " + instruction.Arguments[i].Value;
+                EmitLine($"  {(string.IsNullOrEmpty(instruction.Label) ? "" : " " + instruction.Label + " = ")} {instruction.Kind} {arguments}");
+            }
         }
         public void DefineFunction(string name, string type, LowCodeInstruction[] localScope)
         {

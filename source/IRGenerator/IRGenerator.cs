@@ -1,4 +1,5 @@
 ﻿using Mug.Compilation;
+using Mug.Models.Evaluator;
 using Mug.Models.Generator.Emitter;
 using Mug.Models.Lexer;
 using Mug.Models.Parser;
@@ -37,45 +38,34 @@ namespace Mug.Models.Generator
         {
             Parser.Lexer.Throw(token, error);
         }
-        LowCodeInstruction[] EvaluateExpression(ref SymbolTable symbolTable, INode expression)
-        {
-            List<LowCodeInstruction> code = new();
-            if (expression is Token t)
-            {
-                if (t.Kind == TokenKind.Identifier)
-                {
-                    if (!symbolTable.TryGetValue(t.Value.ToString(), out object v))
-                        GenerationError(t, "Undeclared variable in the current scope");
-                    code.Add(new LowCodeInstruction() { Kind = LowCodeInstructionKind.load});
-                }
-            }
-        }
         LowCodeInstruction[] GenerateFromFunction(FunctionNode function)
         {
             var symbolTable = new SymbolTable(SymbolTable);
-            List<LowCodeInstruction> code = new();
+            LowCodeBuilder code = new();
             foreach (var statement in function.Body.Statements)
             {
                 switch (statement)
                 {
                     case VariableStatement v:
                         symbolTable.Add(v.Name, v);
-                        var allocation = new LowCodeInstruction() { Kind = LowCodeInstructionKind.alloca, Label = "%"+v.Name };
-                        allocation.AddArgument(new LowCodeInstructionArgument() { Value = "i32",  });
-                        code.Add(allocation);
+                        var type = SolveType(v.Type, SolveName(v.Type));
+                        code.EmitDeclareLocal(v.Name, type);
                         if (v.IsAssigned)
-                            code.AddRange(EvaluateExpression(ref symbolTable, v.Body));
+                            code.EmitCode(new ExpressionEvaluator(ref symbolTable).EvaluateExpression(v.Body), 1);
                         else
-                        {
-                            var defaultValue = new LowCodeInstruction() { Kind = LowCodeInstructionKind.store, new LowCodeInstructionArgument[] { new LowCodeInstructionArgument() { Type = "i32", Value = "0" } } };
-                            code.Add();
-                        }
+                            code.EmitLoadConst("0", type);
+                        code.EmitStoreLocal(v.Name, type);
+                        break;
+                    case ReturnStatement r:
+                        type = SolveType(function.Type, SolveName(function.Type));
+                        code.EmitCode(new ExpressionEvaluator(ref symbolTable).EvaluateExpression(r.Body), 1);
+                        code.EmitRet(type);
                         break;
                     default:
                         break;
                 }
             }
-            return code.ToArray();
+            return code.Build();
         }
         void DefineSymbol(string symbol, INode value)
         {
@@ -87,6 +77,8 @@ namespace Mug.Models.Generator
             {
                 case FunctionNode function:
                     var name = namespaceName + '.' + function.Name;
+                    if (function.Name == "main")
+                        name = "main";
                     Emitter.DefineFunction(name, SolveType(function.Type, SolveName(function.Type)), GenerateFromFunction(function));
                     break;
                 default:
@@ -142,8 +134,8 @@ namespace Mug.Models.Generator
             var memberName = nsName + SolveName(ns.Name);
             foreach (var node in ns.Members.Nodes)
                 DefineNode(memberName, node);
-            foreach (var node in ns.Members.Nodes)
-                RecognizeGlobalStatement(memberName, node);
+            foreach (var node in SymbolTable)
+                RecognizeGlobalStatement(memberName, (INode)node.Value);
         }
         public string Generate()
         {

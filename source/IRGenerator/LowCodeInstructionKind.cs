@@ -13,6 +13,7 @@ namespace Mug.Models.Generator
         ret,
         alloca,
         load,
-        store
+        store,
+        mov
     }
 }

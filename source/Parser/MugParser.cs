@@ -637,8 +637,7 @@ namespace Mug.Models.Parser
             statement = null;
             if (!MatchAdvance(TokenKind.KeyFor, out Token key))
                 return false;
-            //// see -> at generation time expect a local var so an ident not member node
-            var name = ExpectIdentifier();
+            var name = Expect("", TokenKind.Identifier);
             INode counter = new ForCounterReference() { Position = name.Position, ReferenceName = name };
             var pos = name.Position;
             if (MatchAdvance(TokenKind.Colon))
@@ -647,7 +646,7 @@ namespace Mug.Models.Parser
                 var type = ExpectType();
                 if (MatchAdvance(TokenKind.Equal))
                     varBody = ExpectFactor();
-                counter = new VariableStatement() { Position = pos, Body = varBody, IsAssigned = varBody != null, Name = name, Type = type };
+                counter = new VariableStatement() { Position = pos, Body = varBody, IsAssigned = varBody != null, Name = name.Value.ToString(), Type = type };
             }
             else if (MatchAdvance(TokenKind.Equal))
                 counter = new AssignmentStatement() { Operator = TokenKind.Equal, Position = pos, Right = ExpectFactor(), Left = name };
