@@ -13,10 +13,10 @@ namespace Mug.Compilation
 {
     public class CompilationUnit
     {
-        IRGenerator IRGenerator;
+        public IRGenerator IRGenerator;
         public static String ModuleName { get; set; }
         static String temp => $"C:/Users/{Environment.UserName}/AppData/Local/Temp/mug/";
-        public static String tempbc => ModuleName+".bc";
+        static String tempbc => ModuleName + ".ll";
         static String tempexe => ModuleName + ".exe";
         String CompletePath;
         public CompilationUnit(string moduleName, string source)
@@ -27,20 +27,26 @@ namespace Mug.Compilation
         public CompilationUnit(string path)
         {
             CompletePath = path;
-            if (!File.Exists(path))
-                debug.exit("`", path, "`: ", "Invalid Path");
             IRGenerator = new (Path.GetFileName(path), File.ReadAllText(path));
+        }
+        public string Compile()
+        {
+            IRGenerator.Parser.Lexer.Tokenize();
+            IRGenerator.Parser.Parse();
+            return IRGenerator.Generate();
         }
         public void Compile(string filePathDestination = null)
         {
             if (filePathDestination is null) {
                 if (CompletePath is null)
-                    CompilationErrors.Throw("User Bad Practice: the user must pass a valid path");
+                    CompilationErrors.Throw("Extern User: the user must pass a valid path");
                 filePathDestination = CompletePath;
             }
             File.Delete(tempbc);
             File.Delete(tempexe);
-            IRGenerator.Compile();
+            File.Delete(filePathDestination);
+            var gen = Compile();
+            File.WriteAllText(tempbc, gen);
             while (!File.Exists(tempbc));
             var clangCall = Process.Start("clang", tempbc + " -o " + tempexe);
             clangCall.WaitForExit();

@@ -1,4 +1,5 @@
-﻿using Mug.Models.Parser;
+﻿using Mug.Compilation;
+using Mug.Models.Parser;
 using Mug.Models.Parser.NodeKinds;
 using System;
 using System.Collections.Generic;
@@ -23,6 +24,12 @@ namespace Mug.Models.Lexer
         public string Stringize(string indent = "")
         {
             return indent+$"Literal: {{\n{indent}   Kind: {Kind},\n{indent}   Value: {(Value is INode node ? $"{{\n{node.Stringize(indent+"      ")}\n{indent}   }}" : Value)}\n{indent}}}";
+        }
+        public override string ToString()
+        {
+            if (Kind == TokenKind.KeyTi32)
+                return "i32";
+            return Value is null ? "" : Value.ToString();
         }
     }
 }

@@ -1,4 +1,4 @@
-﻿using LLVMSharp;
+﻿using Mug.Models.Parser;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -7,20 +7,34 @@ namespace Mug.Models.Generator.Emitter
 {
     public class MugEmitter
     {
-        public String ModuleName { get; }
-        public LLVMModuleRef LLVMModule { get; }
+        readonly String ModuleName;
+        readonly StringBuilder Module = new();
         public MugEmitter(string moduleName)
         {
             ModuleName = moduleName;
-            LLVMModule = LLVM.ModuleCreateWithName(moduleName);
         }
-        public void DefineFunction()
+        void EmitLine(string code)
         {
-            LLVMTypeRef[] args = { };
-            var main = LLVM.AddFunction(LLVMModule, "main", LLVM.FunctionType(LLVM.Int32Type(), args, false));
-            var entry = LLVM.AppendBasicBlock(main, "entry");
-            LLVMBuilderRef builder = LLVM.CreateBuilder();
-            LLVM.PositionBuilderAtEnd(builder, entry);
+            Module.AppendLine(code);
+        }
+        void EmitInstruction(LowCodeInstruction instruction)
+        {
+            var arguments = "";
+            for (int i = 0; i < instruction.ArgumentsCount; i++)
+                arguments += (i > 0 ? "," : "") + instruction.Arguments[i].Type + " " + instruction.Arguments[i].Value;
+            EmitLine($"  {(string.IsNullOrEmpty(instruction.Label) ? "" : " "+instruction.Label+" = ")} {instruction.Kind} {arguments}");
+        }
+        public void DefineFunction(string name, string type, LowCodeInstruction[] localScope)
+        {
+            EmitLine($"define {type} @{(name != "main" ? '"' + name + '"' : name)}()");
+            EmitLine("{");
+            foreach (var instruction in localScope)
+                EmitInstruction(instruction);
+            EmitLine("}");
+        }
+        public string Build()
+        {
+            return Module.ToString();
         }
     }
 }

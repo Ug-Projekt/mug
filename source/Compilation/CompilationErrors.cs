@@ -1,4 +1,5 @@
 ﻿using Mug.Models.Lexer;
+using Mug.Models.Parser;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -26,7 +27,7 @@ namespace Mug.Compilation
                 end++;
             WriteModule(Lexer.ModuleName);
             WriteSourceLine(pos - start - 1, (pos+1) - start - 1, lineAt + 1, Lexer.Source[(start + 1)..end], string.Join("", error));
-            throw new CompilationException(null, new(lineAt, TokenKind.Bad, null, new(pos, pos)), string.Join("", error));
+            throw new CompilationException(null, new(pos, pos), string.Join("", error));
         }
         public static void Throw(this MugLexer Lexer, Token token, params string[] error)
         {
@@ -38,7 +39,19 @@ namespace Mug.Compilation
                 end++;
             WriteModule(Lexer.ModuleName);
             WriteSourceLine(token.Position.Start.Value - start - 1, token.Position.End.Value - start - 1, token.LineAt+1, Lexer.Source[(start+1)..end], string.Join("", error));
-            throw new CompilationException(null, token, string.Join("", error));
+            throw new CompilationException(null, token.Position, string.Join("", error));
+        }
+        public static void Throw(this MugParser Parser, INode node, params string[] error)
+        {
+            int start = node.Position.Start.Value;
+            int end = node.Position.End.Value;
+            while (start >= 0 && Parser.Lexer.Source[start] != '\n')
+                start--;
+            while (end < Parser.Lexer.Source.Length && Parser.Lexer.Source[end] != '\n')
+                end++;
+            WriteModule(Parser.Lexer.ModuleName);
+            WriteSourceLine(node.Position.Start.Value - start - 3, node.Position.End.Value - start - 3, CountLines(Parser.Lexer.Source, node.Position.Start.Value), Parser.Lexer.Source[(start + 1)..(end-3)], string.Join("", error));
+            throw new CompilationException(null, node.Position, string.Join("", error));
         }
         static void WriteModule(string moduleName)
         {
@@ -49,6 +62,14 @@ namespace Mug.Compilation
             Console.ForegroundColor = ConsoleColor.DarkMagenta;
             Console.WriteLine("]");
             Console.ResetColor();
+        }
+        static int CountLines(string source, int posStart)
+        {
+            int count = 1;
+            for (; posStart >= 0; posStart--)
+                if (source[posStart] == '\n')
+                    count++;
+            return count;
         }
         static void WriteSourceLine(int start, int end, int lineAt, string line, string error)
         {

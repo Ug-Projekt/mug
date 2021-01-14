@@ -14,9 +14,5 @@ namespace Mug.Models.Parser.NodeKinds
         {
             return indent+$"MemberNode: {{\n{indent}   Base: {{\n{Base.Stringize(indent+"      ")}\n{indent}   }},\n{indent}   Members: {{\n{Member.Stringize(indent+"      ")}\n{indent}   }}\n{indent}}}";
         }
-        public override string ToString()
-        {
-            return Stringize();
-        }
     }
 }

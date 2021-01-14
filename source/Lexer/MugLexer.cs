@@ -10,8 +10,8 @@ namespace Mug.Models.Lexer
 {
     public class MugLexer
     {
-        public string Source;
-        public string ModuleName;
+        public readonly string Source;
+        public readonly string ModuleName;
         public List<Token> TokenCollection;
         string CurrentSymbol = "";
         int CurrentIndex = 0;
@@ -23,8 +23,17 @@ namespace Mug.Models.Lexer
                 return TokenCollection == null ? TokenCollection.Count : 0;
             }
         }
+        bool IsValidModuleName(string moduleName)
+        {
+            for (int i = 0; i < moduleName.Length; i++)
+                if (!IsValidIdentifierChar(moduleName[i]))
+                    return false;
+            return true;
+        }
         public MugLexer(string moduleName, string source)
         {
+            if (!IsValidModuleName(moduleName))
+                CompilationErrors.Throw("Invalid module name");
             ModuleName = moduleName;
             Source = source;
         }
@@ -229,7 +238,7 @@ namespace Mug.Models.Lexer
             AddToken(TokenKind.ConstantString, CurrentSymbol + '"', true);
             CurrentSymbol = "";
         }
-        bool IsValidIdentifier(char current)
+        bool IsValidIdentifierChar(char current)
         {
             return char.IsLetterOrDigit(current) || current == '_';
         }
@@ -305,24 +314,10 @@ namespace Mug.Models.Lexer
             }
             if (IsControl(current))
                 InsertCurrentSymbol();
-            else if (IsValidIdentifier(current))
+            else if (IsValidIdentifierChar(current))
                 CurrentSymbol += current;
             else
                 ProcessSpecial(current);
-        }
-        void FixCollection()
-        {
-            // collecting <ident> <::> <ident> in one token
-            for (int i = 0; i < TokenCollection.Count; i++)
-                if (TokenCollection[i].Kind == TokenKind.Block &&
-                    TokenCollection[i - 1].Kind == TokenKind.Identifier &&
-                    TokenCollection[i + 1].Kind == TokenKind.Identifier)
-                {
-                    TokenCollection.RemoveAt(i);
-                    var token = TokenCollection[i - 1];
-                    TokenCollection[i - 1] = new Token(token.LineAt, token.Kind, token.Value+"::"+ TokenCollection[i].Value, token.Position);
-                    TokenCollection.RemoveAt(i);
-                }
         }
         public List<Token> Tokenize()
         {
@@ -333,7 +328,6 @@ namespace Mug.Models.Lexer
                 ProcessChar(Source[CurrentIndex]);
             while (CurrentIndex++ < Source.Length-1);
             AddSpecial(TokenKind.EOF);
-            FixCollection();
             return TokenCollection;
         }
     }
