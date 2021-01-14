@@ -40,12 +40,10 @@ class debug
     }
     public static bool askfast(params string[] msg)
     {
-#if DEBUG
         Console.Write(string.Join("", msg)+"? [y/..]: ");
         var x = Console.ReadKey().KeyChar == 'y';
         Console.Write('\n');
         return x;
-#endif
     }
     public static void readfast(params string[] msg)
     {

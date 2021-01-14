@@ -7,21 +7,19 @@ using System.Diagnostics;
 using System.IO;
 
 
-
-if (debug.isDebug())
+try
 {
-    var testPath = $"C:/Users/{Environment.UserName}/Desktop/Mug/tests/LastUpdates.mug";
-    var test = @"
+    if (debug.isDebug())
+    {
+        var testPath = $"C:/Users/{Environment.UserName}/Desktop/Mug/tests/LastUpdates.mug";
+        var test = @"
 func main(): i32
 {
-    return 2*3*4;
+    return ;
 }
 ";
 
-    try
-    {
-        //var unit = new CompilationUnit("test", test);
-        //unit.Compile("C:/Users/Mondelli/Desktop/a.exe");
+        
         //var lexer = new MugLexer(testPath, File.ReadAllText(testPath));
         var lexer = new MugLexer("test", test);
         lexer.Tokenize();
@@ -35,8 +33,21 @@ func main(): i32
         //    debug.print(member.Key, " -> ", ((INode)member.Value).Stringize());
         debug.print(gen);
         //File.WriteAllText(Path.ChangeExtension(testPath, "mast"), tree.Stringize());
+
     }
-    catch (CompilationException)
+    else
     {
+        if (args.Length == 0)
+            CompilationErrors.Throw("No arguments passed");
+        for (int i = 0; i < args.Length; i++)
+        {
+            var unit = new CompilationUnit(args[i]);
+            unit.Compile(Path.ChangeExtension(args[i], "exe"));
+        }
     }
+}
+catch (CompilationException)
+{
+    Console.WriteLine("Cannot build due to previous errors");
+    Environment.Exit(1);
 }

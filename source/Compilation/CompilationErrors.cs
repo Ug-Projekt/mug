@@ -12,9 +12,9 @@ namespace Mug.Compilation
         public static void Throw(params string[] error)
         {
             Console.ForegroundColor = ConsoleColor.DarkRed;
-            Console.Write("Internal Error: ");
+            Console.Write("Error");
             Console.ResetColor();
-            Console.WriteLine(string.Join("", error));
+            Console.WriteLine(": "+string.Join("", error));
             throw new CompilationException(null, new(), string.Join("", error));
         }
         public static void Throw(this MugLexer Lexer, int pos, int lineAt, params string[] error)

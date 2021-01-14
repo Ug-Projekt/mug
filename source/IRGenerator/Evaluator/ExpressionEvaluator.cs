@@ -6,47 +6,53 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-using SymbolTable = System.Collections.Generic.Dictionary<string, object>;
+using SymbolTable = System.Collections.Generic.Dictionary<string, Mug.Models.Parser.INode>;
 
 namespace Mug.Models.Evaluator
 {
     public class ExpressionEvaluator
     {
         readonly SymbolTable SymbolTable;
-        readonly LowCodeBuilder Builder = new();
+        readonly StringBuilder Builder = new();
         public ExpressionEvaluator(ref SymbolTable symbolTable)
         {
             SymbolTable = symbolTable;
         }
-        void Operate(OperatorKind kind)
+        void EmitOperator(OperatorKind kind)
         {
-            if (kind == OperatorKind.Multiply)
-                Builder.EmitOp(LowCodeInstructionKind.mul);
-            else if (kind == OperatorKind.Divide)
-                Builder.EmitOp(LowCodeInstructionKind.div);
-            else if (kind == OperatorKind.Sum)
-                Builder.EmitOp(LowCodeInstructionKind.add);
-            else if (kind == OperatorKind.Subtract)
-                Builder.EmitOp(LowCodeInstructionKind.sub);
+            Builder.Append(kind switch
+            {
+                OperatorKind.Divide => '/',
+                OperatorKind.Multiply => '*',
+                OperatorKind.Subtract => '-',
+                OperatorKind.Sum => '+',
+                _ => "+"
+            });
         }
         void Build(INode expression)
         {
             if (expression is ExpressionNode e)
             {
                 Build(e.Left);
+                EmitOperator(e.Operator);
                 Build(e.Right);
-                Operate(e.Operator);
+            }
+            else if (expression is InParExpressionNode i)
+            {
+                Builder.Append('(');
+                Build(i.Content);
+                Builder.Append(')');
             }
             else if (expression is Token t)
             {
                 if (t.Kind == TokenKind.ConstantDigit)
-                    Builder.EmitLoadConst(t.Value.ToString(), "i32");
+                    Builder.Append(t.Value.ToString());
             }
         }
-        public LowCodeInstruction[] EvaluateExpression(INode expression)
+        public string EvaluateExpression(INode expression)
         {
             Build(expression);
-            return Builder.Build();
+            return Builder.ToString();
         }
     }
 }

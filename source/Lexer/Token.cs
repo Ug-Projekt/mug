@@ -29,6 +29,8 @@ namespace Mug.Models.Lexer
         {
             if (Kind == TokenKind.KeyTi32)
                 return "i32";
+            else if (Kind == TokenKind.KeyTVoid)
+                return "?";
             return Value is null ? "" : Value.ToString();
         }
     }

@@ -259,15 +259,13 @@ namespace Mug.Models.Parser
             e = null;
             if (!MatchAdvance(TokenKind.OpenPar))
                 return false;
-            e = ExpectExpression(true, TokenKind.ClosePar);
+            e = new InParExpressionNode() { Content = ExpectExpression(true, TokenKind.ClosePar) };
             return true;
         }
         bool MatchValue(out INode e)
         {
             return MatchIdentifier(out e);
         }
-
-        ///////////// see
         bool MatchCallStatement(out INode e)
         {
             e = null;
@@ -359,6 +357,12 @@ namespace Mug.Models.Parser
                     _currentIndex = oldIndex;
                     goto ret;
                 }
+                if (e is Token t)
+                    if (t.Kind != TokenKind.Identifier)
+                    {
+                        _currentIndex-=2;
+                        ParseError("Impossible perform operation call on this item;");
+                    }
                 if (Match(TokenKind.ClosePar))
                 {
                     var c1 = new CallStatement() { Name = e, Parameters = null, Position = e.Position };

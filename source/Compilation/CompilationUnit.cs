@@ -16,9 +16,8 @@ namespace Mug.Compilation
         public IRGenerator IRGenerator;
         public static String ModuleName { get; set; }
         static String temp => $"C:/Users/{Environment.UserName}/AppData/Local/Temp/mug/";
-        static String tempbc => ModuleName + ".ll";
-        static String tempexe => ModuleName + ".exe";
-        String CompletePath;
+        static String tempc => temp + ModuleName + ".c";
+        static String tempexe => temp + ModuleName + ".exe";
         public CompilationUnit(string moduleName, string source)
         {
             ModuleName = moduleName;
@@ -26,10 +25,10 @@ namespace Mug.Compilation
         }
         public CompilationUnit(string path)
         {
-            CompletePath = path;
-            IRGenerator = new (Path.GetFileName(path), File.ReadAllText(path));
+            ModuleName = Path.GetFileNameWithoutExtension(path);
+            IRGenerator = new (Path.GetFileNameWithoutExtension(path), File.ReadAllText(path));
         }
-        public string Compile()
+        public string CompileModule()
         {
             IRGenerator.Parser.Lexer.Tokenize();
             IRGenerator.Parser.Parse();
@@ -37,18 +36,20 @@ namespace Mug.Compilation
         }
         public void Compile(string filePathDestination = null)
         {
-            if (filePathDestination is null) {
-                if (CompletePath is null)
-                    CompilationErrors.Throw("Extern User: the user must pass a valid path");
-                filePathDestination = CompletePath;
-            }
-            File.Delete(tempbc);
-            File.Delete(tempexe);
-            File.Delete(filePathDestination);
-            var gen = Compile();
-            File.WriteAllText(tempbc, gen);
-            while (!File.Exists(tempbc));
-            var clangCall = Process.Start("clang", tempbc + " -o " + tempexe);
+            if (filePathDestination is null)
+                filePathDestination = ModuleName;
+            if (File.Exists(tempc))
+                File.Delete(tempc);
+            if (File.Exists(tempexe))
+                File.Delete(tempexe);
+            if (File.Exists(filePathDestination))
+                File.Delete(filePathDestination);
+            var gen = CompileModule();
+            if (!Directory.Exists(temp))
+                Directory.CreateDirectory(temp);
+            File.WriteAllText(tempc, gen);
+            while (!File.Exists(tempc));
+            var clangCall = Process.Start("gcc", tempc + " -o " + tempexe);
             clangCall.WaitForExit();
             if (clangCall.ExitCode != 0)
                 CompilationErrors.Throw("Extern Compiler: impossible to build due to prevoius errors");
