@@ -50,7 +50,7 @@ namespace Mug.Compilation
             while (end < Parser.Lexer.Source.Length && Parser.Lexer.Source[end] != '\n')
                 end++;
             WriteModule(Parser.Lexer.ModuleName);
-            WriteSourceLine(node.Position.Start.Value - start - 3, node.Position.End.Value - start - 3, CountLines(Parser.Lexer.Source, node.Position.Start.Value), Parser.Lexer.Source[(start + 1)..(end-3)], string.Join("", error));
+            WriteSourceLine(node.Position.Start.Value - start - 1, node.Position.End.Value - start - 1, CountLines(Parser.Lexer.Source, start), Parser.Lexer.Source[(start + 1)..end], string.Join("", error));
             throw new CompilationException(null, node.Position, string.Join("", error));
         }
         static void WriteModule(string moduleName)

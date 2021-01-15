@@ -21,6 +21,7 @@ namespace Mug.Models.Generator
         public readonly MugEmitter Emitter = new();
         public readonly SymbolTable SymbolTable = new();
         public readonly RedefinitionTable RedefinitionTable = new();
+        public String EntryPointGeneratedName { get; set; }
         public IRGenerator(string moduleName, string source)
         {
             Parser = new(moduleName, source);
@@ -37,18 +38,30 @@ namespace Mug.Models.Generator
         {
             Parser.Lexer.Throw(token, error);
         }
-        string BuildFunctionName(string nsName, FunctionNode function)
+        public static string BuildFunctionName(string nsName, FunctionNode function)
         {
-            var name = nsName + '.' + function.Name;
-            foreach (var parameter in function.ParameterList.Parameters)
-                nsName += '_'+SolveName(parameter.Type);
-            return name;
+            var name = nsName + '.' + function.Name + '(';
+            var par = function.ParameterList.Parameters;
+            var len = par.Length;
+            for (int i = 0; i < len; i++)
+                name += SolveName(par[i].Type)+(i < len-1 ? "," : "");
+            return name+')';
+        }
+        public static string BuildFunctionCallingName(CallStatement function, INode[] types)
+        {
+            var name = SolveName(function.Name) + '(';
+            var par = function.Parameters.Nodes;
+            var len = par.Length;
+            for (int i = 0; i < len; i++)
+                name += SolveName(types[i]) + (i < len - 1 ? "," : "");
+            return name + ')';
         }
         string BuildFunctionParameters(ParameterListNode parameters)
         {
             var declaration = "";
-            foreach (var parameter in parameters.Parameters)
-                declaration += SolveType(parameter.Type, SolveName(parameter.Type))+" "+parameter.Name;
+            var len = parameters.Parameters.Length;
+            for (int i = 0; i < len; i++)
+                declaration += SolveType(parameters.Parameters[i].Type, SolveName(parameters.Parameters[i].Type)) + ' ' + parameters.Parameters[i].Name + (i < len - 1 ? ", " : "");
             return declaration;
         }
         string DefaultValue(string type)
@@ -60,19 +73,52 @@ namespace Mug.Models.Generator
                 _ => "0"
             };
         }
-        string GenerateFromFunction(FunctionNode function)
+        string RemoveNamespace(string member, string nsName)
         {
-            var symbolTable = new SymbolTable(SymbolTable);
+            if (member.StartsWith(member))
+                member.Remove(0, nsName.Length);
+            return member;
+        }
+        void BuildFunctionCall(string nsName, SymbolTable symbolTable, CallStatement c, out string genName, out string[] paramBodies)
+        {
+            genName = "";
+            paramBodies = null;
+            if (c.Name is Token t && t.Kind == TokenKind.Identifier)
+            {
+                var _paramTypes = new List<INode>();
+                var _paramBodies = new List<string>();
+                if (c.Parameters is null)
+                    c.Parameters = new();
+                for (int i = 0; i < c.Parameters.Nodes.Length; i++)
+                {
+                    _paramBodies.Add(EvaluateExpression(nsName, c.Parameters.Nodes[i], out var expressionType, symbolTable));
+                    _paramTypes.Add(expressionType);
+                }
+                var name = nsName + '.' + BuildFunctionCallingName(c, _paramTypes.ToArray());
+                if (!RedefinitionTable.TryGetValue(name, out genName))
+                    GenerationError(c, "Undeclared function");
+                paramBodies = _paramBodies.ToArray();
+            }
+            else if (c.Name is MemberNode m)
+            {
+            }
+        }
+        string GenerateFromFunction(string nsName, FunctionNode function)
+        {
+            var symbolTable = new SymbolTable();
             LocalEmitter local = new();
+            foreach (var par in function.ParameterList.Parameters)
+                symbolTable.Add(par.Name, par);
             foreach (var statement in function.Body.Statements)
             {
                 switch (statement)
                 {
                     case VariableStatement v:
-                        symbolTable.Add(v.Name, v);
+                        if (!symbolTable.TryAdd(v.Name, v))
+                            GenerationError(v, "Variable already declared");
                         var type = SolveType(v.Type, SolveName(v.Type));
                         if (v.IsAssigned)
-                            local.EmitVarDefining(type, v.Name, new ExpressionEvaluator(ref symbolTable).EvaluateExpression(v.Body));
+                            local.EmitVarDefining(type, v.Name, EvaluateExpression(nsName, v.Body, symbolTable));
                         else
                         {
                             var body = DefaultValue(type);
@@ -82,8 +128,28 @@ namespace Mug.Models.Generator
                                 local.EmitVarDefining(type, v.Name, body);
                         }
                         break;
+                    case ConstantStatement cs:
+                        if (!symbolTable.TryAdd(cs.Name, cs))
+                            GenerationError(cs, "Variable already declared");
+                        var cstype = SolveType(cs.Type, SolveName(cs.Type));
+                        local.EmitConstDefining(cstype, cs.Name, EvaluateExpression(nsName, cs.Body, symbolTable));
+                        break;
+                    case AssignmentStatement a:
+                        if (!symbolTable.ContainsKey(SolveName(a.Name)))
+                        {
+                            if (!RedefinitionTable.ContainsKey(SolveName(a.Name)))
+                                GenerationError(a, "Undefined variable");
+                        }
+                        else if (symbolTable[SolveName(a.Name)] is ConstantStatement)
+                            GenerationError(a, "Cannot perform assign operation with constants");
+                        local.EmitAssignment(SolveName(a.Name), EvaluateExpression(nsName, a.Body, symbolTable));
+                        break;
+                    case CallStatement c:
+                        BuildFunctionCall(nsName, symbolTable, c, out var name, out var paramBodies);
+                        local.EmitCall(name, string.Join(", ", paramBodies));
+                        break;
                     case ReturnStatement r:
-                        local.EmitReturn(new ExpressionEvaluator(ref symbolTable).EvaluateExpression(r.Body));
+                        local.EmitReturn(EvaluateExpression(nsName, r.Body, symbolTable));
                         break;
                     default:
                         break;
@@ -91,22 +157,30 @@ namespace Mug.Models.Generator
             }
             return local.Build();
         }
+        public string EvaluateExpression(string nsName, INode expression, SymbolTable symbolTable)
+        {
+            return new ExpressionEvaluator(nsName, symbolTable, Parser, RedefinitionTable).EvaluateExpression(expression);
+        }
+        public string EvaluateExpression(string nsName, INode expression, out INode expressionType, SymbolTable symbolTable)
+        {
+            return new ExpressionEvaluator(nsName, symbolTable, Parser, RedefinitionTable).EvaluateExpression(expression, out expressionType);
+        }
         bool DefineSymbol(string symbol, INode value)
         {
             return SymbolTable.TryAdd(symbol, value);
         }
-        void RecognizeGlobalStatement(string redefinition, INode statement)
+        void RecognizeGlobalStatement(string nsName, string redefinition, INode statement)
         {
             switch (statement)
             {
                 case FunctionNode function:
-                    Emitter.DefineFunction(redefinition, SolveType(function.Type, SolveName(function.Type)), BuildFunctionParameters(function.ParameterList), GenerateFromFunction(function));
+                    Emitter.DefineFunction(redefinition, SolveType(function.Type, SolveName(function.Type)), BuildFunctionParameters(function.ParameterList), GenerateFromFunction(nsName, function));
                     break;
                 default:
                     break;
             }
         }
-        string SolveName(INode name)
+        public static string SolveName(INode name)
         {
             return name switch
             {
@@ -128,6 +202,7 @@ namespace Mug.Models.Generator
                     "u32" => "unsigned int",
                     "u64" => "unsigned int64",
                     "str" => "String",
+                    "chr" => "char",
                     "unknown" => "Object",
                     "bit" => "unsigned int8",
                     "?" => "void",
@@ -167,18 +242,24 @@ namespace Mug.Models.Generator
             }
             return name;
         }
+        void InitBuiltIns()
+        {
+            Emitter.DefineInclude("MugStandard.h");
+            RedefinitionTable.Add(Parser.Lexer.ModuleName+".print(chr)", "putchar");
+            //SymbolTable.Add("STD_putchar", putchar);
+        }
         bool IsEntryPoint(string name)
         {
-            return name == Parser.Lexer.ModuleName+".main";
+            return name == Parser.Lexer.ModuleName+".main()";
         }
         bool TryDefine(string name, INode value)
         {
-            var gen = "";
-            if (IsEntryPoint(name))
-                return DefineSymbol("main", value);
+            string gen;
             do
                 gen = GenerateName();
             while (!RedefinitionTable.TryAdd(name, gen));
+            if (IsEntryPoint(name))
+                EntryPointGeneratedName = gen;
             return DefineSymbol(gen, value);
         }
         void DefineNode(string nsName, INode value)
@@ -197,6 +278,12 @@ namespace Mug.Models.Generator
                 }
             }
         }
+        void EmitEntryPoint()
+        {
+            if (EntryPointGeneratedName is null)
+                CompilationErrors.Throw("Missing entry point");
+            Emitter.DefineEntryPoint(EntryPointGeneratedName);
+        }
         void ProcessNamespace(NamespaceNode ns, string nsName = "")
         {
             foreach (var node in ns.Members.Nodes)
@@ -205,12 +292,14 @@ namespace Mug.Models.Generator
         void ProcessSymbols()
         {
             foreach (var node in SymbolTable)
-                RecognizeGlobalStatement(node.Key, node.Value);
+                RecognizeGlobalStatement(Parser.Lexer.ModuleName, node.Key, node.Value);
         }
         public string Generate()
         {
+            InitBuiltIns();
             ProcessNamespace(Parser.Module);
             ProcessSymbols();
+            EmitEntryPoint();
             return Emitter.Build();
         }
         public List<Token> GetTokenCollection() => Parser.GetTokenCollection();

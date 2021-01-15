@@ -24,6 +24,15 @@ namespace Mug.Models.Generator.Emitter
             Emit(code);
             EmitLine("}");
         }
+        public void DefineInclude(string include)
+        {
+            EmitLine("#include \""+include+'"');
+        }
+        public void DefineEntryPoint(string entryPointName)
+        {
+            DefineFunction("main", "int", "int argcount, char** args", @$"   {entryPointName}();
+");
+        }
         public string Build()
         {
             return Module.ToString();

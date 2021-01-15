@@ -8,7 +8,13 @@ namespace Mug.Models.Parser.NodeKinds.Statements
     {
         public INode Body { get; set; }
         public Range Position { get; set; }
-
+        public Boolean IsVoid
+        {
+            get
+            {
+                return Body is null;
+            }
+        }
         public string Stringize(string indent = "")
         {
             return indent + $"ReturnStatement: {{\n{indent}   Body: {{\n{(Body is not null ? Body.Stringize(indent + "      ") : "")}\n{indent}   }}\n{indent}}}";

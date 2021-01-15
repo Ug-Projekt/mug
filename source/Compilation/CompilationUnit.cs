@@ -54,6 +54,7 @@ namespace Mug.Compilation
             if (clangCall.ExitCode != 0)
                 CompilationErrors.Throw("Extern Compiler: impossible to build due to prevoius errors");
             while (!File.Exists(tempexe));
+            File.Delete(tempc);
             File.Move(tempexe, filePathDestination);
         }
         public string GetStringAST()

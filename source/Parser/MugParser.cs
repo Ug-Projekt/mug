@@ -144,7 +144,7 @@ namespace Mug.Models.Parser
             ParseError(error);
             return new ();
         }
-        Parameter ExpectParameter(bool isFirst)
+        ParameterNode ExpectParameter(bool isFirst)
         {
             if (!isFirst)
                 Expect("Parameters must be separed by a comma;", TokenKind.Comma);
@@ -161,7 +161,7 @@ namespace Mug.Models.Parser
                     var t = ExpectType(true);
                     if (Match(TokenKind.Equal))
                         ParseError("A self parameter cannot be an optional parameter;");
-                    return new Parameter(t, "self", new(), true);
+                    return new ParameterNode(t, "self", new(), true);
                 }
             }
             var name = Expect("In parameter declaration must specify the param name;", TokenKind.Identifier).Value;
@@ -172,7 +172,7 @@ namespace Mug.Models.Parser
                  defaultvalue = ExpectConstantMute("A default parameter value must be evaluable at compilation-time, so a constant;");
             ExpectMultiple("In the current context is only allowed to close the parameter list or add a parameter to it;", TokenKind.Comma, TokenKind.ClosePar);
             _currentIndex--;
-            return new Parameter(type, name.ToString(), defaultvalue);
+            return new ParameterNode(type, name.ToString(), defaultvalue);
         }
         OperatorKind ToOperatorKind(TokenKind op)
         {
@@ -227,10 +227,9 @@ namespace Mug.Models.Parser
                 return false;
             identifier = Back;
             memberCount = 1;
-
             while (MatchAdvance(TokenKind.Dot))
             {
-                identifier = new MemberNode() { Position = Back.Position, Base = identifier, Member = Expect("Expected member, after `.`", TokenKind.Identifier) };
+                identifier = new MemberNode() { Position = identifier.Position, Base = identifier, Member = Expect("Expected member, after `.`", TokenKind.Identifier) };
                 memberCount+=2;
             }
             return true;
@@ -613,14 +612,14 @@ namespace Mug.Models.Parser
             }
             var op = Back.Kind;
             var pos = Back.Position;
-            statement = new AssignmentStatement() { Operator = op, Position = pos, Left = name };
+            statement = new AssignmentStatement() { Operator = op, Position = pos, Name = name };
             if (op == TokenKind.OperatorIncrement || op == TokenKind.OperatorDecrement)
             {
                 _currentIndex++;
                 return true;
             }
             var body = ExpectExpression(true, TokenKind.Semicolon);
-            (statement as AssignmentStatement).Right = body;
+            (statement as AssignmentStatement).Body = body;
             return true;
         }
         bool ConditionDefinition(out INode statement)
@@ -653,7 +652,7 @@ namespace Mug.Models.Parser
                 counter = new VariableStatement() { Position = pos, Body = varBody, IsAssigned = varBody != null, Name = name.Value.ToString(), Type = type };
             }
             else if (MatchAdvance(TokenKind.Equal))
-                counter = new AssignmentStatement() { Operator = TokenKind.Equal, Position = pos, Right = ExpectFactor(), Left = name };
+                counter = new AssignmentStatement() { Operator = TokenKind.Equal, Position = pos, Body = ExpectFactor(), Name = name };
             var op = ExpectMultiple("Expected an operator for the for statement, allowed: `in`, `to`;", TokenKind.KeyIn, TokenKind.KeyTo).Kind;
             var expression = ExpectFactor();
             var body = ExpectBlock();

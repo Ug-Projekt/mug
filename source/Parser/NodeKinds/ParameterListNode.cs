@@ -5,7 +5,7 @@ using System.Text;
 
 namespace Mug.Models.Parser.NodeKinds
 {
-    public struct Parameter
+    public struct ParameterNode : INode
     {
         public INode Type { get; }
         public String Name { get; }
@@ -18,11 +18,15 @@ namespace Mug.Models.Parser.NodeKinds
                 return DefaultConstantValue.Kind != TokenKind.Bad;
             }
         }
-        public Parameter(INode type, string name, Token defaultConstValue, bool isSelf = false)
+
+        public Range Position { get; set; }
+
+        public ParameterNode(INode type, string name, Token defaultConstValue, bool isSelf = false)
         {
             IsSelf = isSelf;
             Type = type;
             Name = name;
+            Position = new();
             DefaultConstantValue = defaultConstValue;
         }
         public string Stringize(string indent)
@@ -32,7 +36,7 @@ namespace Mug.Models.Parser.NodeKinds
     }
     public class ParameterListNode : INode
     {
-        public Parameter[] Parameters
+        public ParameterNode[] Parameters
         {
             get
             {
@@ -42,7 +46,7 @@ namespace Mug.Models.Parser.NodeKinds
 
         public Range Position { get; set; }
 
-        List<Parameter> parameters = new();
+        List<ParameterNode> parameters = new();
         public bool HasInstanceParam
         {
             get
@@ -50,7 +54,7 @@ namespace Mug.Models.Parser.NodeKinds
                 return parameters.Count > 0 && parameters[0].IsSelf;
             }
         }
-        public void Add(Parameter parameter)
+        public void Add(ParameterNode parameter)
         {
             parameters.Add(parameter);
         }

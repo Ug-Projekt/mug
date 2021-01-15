@@ -20,9 +20,25 @@ namespace Mug.Models.Generator.Emitter
         {
             EmitLine(type+" "+name+" = "+body+";");
         }
+        public void EmitConstDefining(string type, string name, string body)
+        {
+            EmitLine("register "+type + " " + name + " = " + body + ";");
+        }
+        public void EmitCall(string name, string parameters)
+        {
+            EmitLine(name + '(' + parameters + ");");
+        }
         public void EmitVarDefiningWithoutBody(string type, string name)
         {
             EmitLine(type + " " + name + ";");
+        }
+        public void EmitAssignment(string name, string body)
+        {
+            EmitLine(name + " = " + body + ";");
+        }
+        public void EmitCode(string code)
+        {
+            EmitLine(code);
         }
         public void EmitReturn(string body)
         {

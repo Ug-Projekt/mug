@@ -13,9 +13,14 @@ try
     {
         var testPath = $"C:/Users/{Environment.UserName}/Desktop/Mug/tests/LastUpdates.mug";
         var test = @"
-func main(): i32
+func add(a: i32, b: i32): chr
 {
-    return ;
+    return a+b;
+}
+func main()
+{
+    const x: chr = add(1, 2);
+    print(x);
 }
 ";
 
@@ -29,8 +34,8 @@ func main(): i32
         var gen = generator.Generate();
 
         //debug.print(parser.Module.Stringize());
-        //foreach (var member in generator.SymbolTable)
-        //    debug.print(member.Key, " -> ", ((INode)member.Value).Stringize());
+        //foreach (var member in generator.RedefinitionTable)
+            //debug.print(member.Key, " -> ", member.Value);
         debug.print(gen);
         //File.WriteAllText(Path.ChangeExtension(testPath, "mast"), tree.Stringize());
 
