@@ -43,6 +43,8 @@ namespace Mug.Models.Lexer
                 return "chr";
             else if (Kind == TokenKind.KeyTVoid)
                 return "?";
+            else if (Kind == TokenKind.KeyTstr)
+                return "str";
             return Value is null ? "" : Value.ToString();
         }
     }

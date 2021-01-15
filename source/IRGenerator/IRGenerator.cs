@@ -68,7 +68,7 @@ namespace Mug.Models.Generator
         {
             return type switch
             {
-                "int8" or "int" or "int64" or "unsigned int8" or "unsigned int" or "unsigned int64" => "0",
+                "int8" or "int" or "int64" or "unsigned int8" or "unsigned int" or "unsigned int64" or "chr" => "0",
                 "str" => "\"\"",
                 _ => "0"
             };
@@ -246,7 +246,9 @@ namespace Mug.Models.Generator
         {
             Emitter.DefineInclude("MugStandard.h");
             RedefinitionTable.Add(Parser.Lexer.ModuleName+".print(chr)", "putchar");
-            //SymbolTable.Add("STD_putchar", putchar);
+            RedefinitionTable.Add(Parser.Lexer.ModuleName + ".print(str)", "putstring");
+            RedefinitionTable.Add(Parser.Lexer.ModuleName + ".println(str)", "puts");
+            RedefinitionTable.Add(Parser.Lexer.ModuleName + ".println()", "putline");
         }
         bool IsEntryPoint(string name)
         {

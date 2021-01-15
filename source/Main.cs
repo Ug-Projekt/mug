@@ -13,14 +13,9 @@ try
     {
         var testPath = $"C:/Users/{Environment.UserName}/Desktop/Mug/tests/LastUpdates.mug";
         var test = @"
-func add(a: i32, b: i32): chr
-{
-    return a+b;
-}
 func main()
 {
-    const x: chr = add(1, 2);
-    print(x);
+    print(""d"");
 }
 ";
 

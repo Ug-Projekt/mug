@@ -74,6 +74,18 @@ namespace Mug.Models.Evaluator
                     }
                     _builder.Append(t.Value.ToString());
                 }
+                else if (t.Kind == TokenKind.ConstantString)
+                {
+                    if (_type is null)
+                        _type = new Token(0, TokenKind.KeyTstr, null, new());
+                    _builder.Append(t.Value.ToString());
+                }
+                else if (t.Kind == TokenKind.ConstantChar)
+                {
+                    if (_type is null)
+                        _type = new Token(0, TokenKind.KeyTchr, null, new());
+                    _builder.Append(t.Value.ToString());
+                }
             }
             else if (expression is CallStatement c)
             {
