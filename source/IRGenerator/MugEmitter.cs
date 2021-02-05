@@ -1,41 +1,63 @@
-﻿using Mug.Models.Parser;
-using Mug.Models.Parser.NodeKinds;
+﻿using Mono.Cecil;
+using Mono.Cecil.Cil;
+using Mug.Models.Lexer;
 using System;
-using System.Collections.Generic;
-using System.Text;
+using System.IO;
+using System.Reflection;
 
 namespace Mug.Models.Generator.Emitter
 {
     public class MugEmitter
     {
-        readonly StringBuilder Module = new();
-        void EmitLine(string code)
+        readonly AssemblyDefinition _program;
+        readonly ModuleDefinition _module;
+        const string RuntimeConfig = @"{
+  ""runtimeOptions"": {
+    ""tfm"": ""netcoreapp3.1"",
+    ""framework"": {
+      ""name"": ""Microsoft.NETCore.App"",
+      ""version"": ""3.1.9""
+    }
+  }
+}";
+        public MugEmitter(string moduleName)
         {
-            Module.AppendLine(code);
+            _program = AssemblyDefinition.CreateAssembly(
+            new(moduleName, new(1, 0, 0, 0)), moduleName, ModuleKind.Dll);
+            _module = _program.MainModule;
+            _module.Types.Add(new("", moduleName, Mono.Cecil.TypeAttributes.Public | Mono.Cecil.TypeAttributes.Class));
         }
-        void Emit(string code)
+        public void DefineMain(MethodDefinition method)
         {
-            Module.Append(code);
+            DefineFunction(method);
+            _module.EntryPoint = method;
         }
-        public void DefineFunction(string name, string ctype, string parameters, string code)
+        public TypeReference TypeOf(TokenKind kind)
         {
-            EmitLine(ctype+" "+name+"("+parameters+")");
-            EmitLine("{");
-            Emit(code);
-            EmitLine("}");
+            return kind switch
+            {
+                TokenKind.KeyTi32 => _module.TypeSystem.Int32,
+                TokenKind.KeyTstr => _module.TypeSystem.String,
+                TokenKind.KeyTVoid => _module.TypeSystem.Void,
+                _ => null
+            };
         }
-        public void DefineInclude(string include)
+        public void DefineFunction(MethodDefinition body)
         {
-            EmitLine("#include \""+include+'"');
+            _module.Types[0].Methods.Add(body);
         }
-        public void DefineEntryPoint(string entryPointName)
+        void WriteRuntimeConfig()
         {
-            DefineFunction("main", "int", "int argcount, char** args", @$"   {entryPointName}();
-");
+            File.WriteAllText(_module.Name + ".runtimeconfig.json", RuntimeConfig);
         }
-        public string Build()
+        public void Save()
         {
-            return Module.ToString();
+            _program.Write(_module.Name + ".dll");
+            WriteRuntimeConfig();
+        }
+        public MethodReference Import(MethodInfo methodInfo)
+        {
+            return _module.ImportReference(methodInfo);
         }
     }
 }

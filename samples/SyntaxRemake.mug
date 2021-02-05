@@ -1,0 +1,36 @@
+import sys.io.*;
+
+test {
+   type Age = int<0..120>
+
+   @(pub)
+   type Person {
+      @(pub read) name: string,
+      @(pub read) age: Age,
+   }
+
+   extend Person {
+      
+      Person(name: string, age: Age) {
+         return new Person {
+            name: name,
+            age: age,
+         }
+      }
+
+      @(pub self) {
+         fn talk(msg: string) {
+            console::writeln(self.name, ": ", msg);
+         }
+      }
+      @(priv) {
+
+      }
+   }
+}
+
+@(pub)
+fn main() {
+   var me: test::Person = test::Person("carpal", 15);
+   me.talk(console::readln("Write something: "));
+}

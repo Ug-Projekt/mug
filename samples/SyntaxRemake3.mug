@@ -1,0 +1,67 @@
+import io
+import panic
+
+type Person:
+   pub read name: string,
+   pub read age: uint8,
+   in_chat: bool
+
+extend Person:
+   pub func create(name: string, age: uint8) -> Person:
+      return new Person(name, age)
+   
+   @(pub, self):
+      func Person(name: string, age: uint8):
+         self.name = name
+         self.age = age
+         self.in_chat = false
+      
+      operator as string() -> string:
+         return "(name: string = '{self.name}', age: uint8 = {self.age})"
+
+      operator ==(right: Person) -> bool:
+         return self.name == right.name & self.age == right.age
+      
+      operator !=(right: Person) -> bool:
+         return self.name != right.name | self.age != right.age
+
+      func talk(msg..: string[]):
+         if not self.in_chat:
+            raise Panic("Tryed to send a message, but "+self.name+" was not in a chat")
+         println(self.name + ": " + msg.join(". "))
+      
+      func leave():
+         if not self.in_chat:
+            raise Panic("Tryed to exit from the chat, but "+self.name+" was not in a chat")
+         self.in_chat = false
+         println(self.name + " left the chat")
+      
+      func join():
+         if self.in_chat:
+            raise Panic("Tryed to join a chat, but "+self.name+" was already in a chat")
+         self.in_chat = true
+         println(self.name + " joined the chat")
+
+@(test)
+func test():
+   var me = Person::create("Carpal", 15)
+   var you = Person::create("Unknown", 0)
+
+   println("Allocated on the stack: "+(me as string))
+   println("Allocated on the stack: "+(you as string))
+   
+   println("(me == you) -> "+((me == you) as string))
+   
+   me.join()
+   you.join()
+   
+   try:
+      me.talk("Yo", "What's your name?")
+      you.talk("Cazzi miei")
+   except Panic as e:
+      println(e.msg)
+
+   me.leave()
+
+   you.talk("lol... 😵")
+   you.leave()

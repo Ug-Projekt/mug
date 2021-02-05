@@ -13,9 +13,13 @@ try
     {
         var testPath = $"C:/Users/{Environment.UserName}/Desktop/Mug/tests/LastUpdates.mug";
         var test = @"
-func main()
+func f()
 {
-    print(""d"");
+    print(""ciao"");
+}
+func main(): ?
+{
+    f();
 }
 ";
 
@@ -26,14 +30,12 @@ func main()
         var parser = new MugParser(lexer);
         parser.Parse();
         var generator = new IRGenerator(parser);
-        var gen = generator.Generate();
+        generator.Generate();
 
         //debug.print(parser.Module.Stringize());
         //foreach (var member in generator.RedefinitionTable)
             //debug.print(member.Key, " -> ", member.Value);
-        debug.print(gen);
         //File.WriteAllText(Path.ChangeExtension(testPath, "mast"), tree.Stringize());
-
     }
     else
     {
@@ -42,7 +44,7 @@ func main()
         for (int i = 0; i < args.Length; i++)
         {
             var unit = new CompilationUnit(args[i]);
-            unit.Compile(Path.ChangeExtension(args[i], "exe"));
+            unit.Compile();
         }
     }
 }

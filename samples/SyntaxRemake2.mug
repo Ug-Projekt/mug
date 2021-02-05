@@ -1,0 +1,81 @@
+import io           # console io
+import process      # start a process
+import path         # change extension
+import engine       # mug compilation engine
+import env          # argv
+import collections  # list
+
+func quit(error: string):
+   println("Error: "+error)
+   exit(1)
+
+const version = 0.1
+
+var args = env::get_cmd_args()
+var index = 0
+
+func fetch() -> string:
+   return
+      if index < args.len(): args[index++]
+      else: ""
+
+func fetch_option(option: out string) -> bool:
+   if not option.start_with("-") and option != "":
+      quit("Invalid option")
+   option = option.trim_start('-')
+   return option != ""
+
+func fetch_options() -> string[]:
+   var result = new List<int>()
+   var option: string
+   while fetch_option(out option):
+      result.append(option)
+   return result as string[]
+
+func compile(filename: string):
+   var engine = new MugEngine(filename)
+   engine.flags = fetch_options()
+   engine.compile()
+
+func run(filename: string):
+   compile(filename)
+   var exe = new Process((filename as Path).change_ext("exe"))
+   exe.start()
+   exe.wait()
+   println("ExitCode: "+(exe.exit_code as string))
+
+func printinfo():
+   println("
+ MugProjectManager Info:
+   Version: {version}
+   ")
+
+func printhelp():
+   println("
+ MugProjectManager Help:
+   usage: avo [command] filename -option
+   commands:
+      compile | c: compile a mug program
+         info | i: give mpm info
+          run | r: compile and run a mug program
+         help | h: show this list
+   ")
+
+@(entry)
+func main():
+   try:
+      const command = args[0]
+      match command:
+         if "compile", "c":
+            compile(fetch())
+         if "info", "i":
+            printinfo()
+         if "run", "r":
+            run(fetch())
+         if "help", "h":
+            printhelp()
+         else:
+            quit("Invalid command")
+
+   except IndexOutOfBounds:
+      quit("No such command")

@@ -28,34 +28,11 @@ namespace Mug.Compilation
             ModuleName = Path.GetFileNameWithoutExtension(path);
             IRGenerator = new (Path.GetFileNameWithoutExtension(path), File.ReadAllText(path));
         }
-        public string CompileModule()
+        public void Compile()
         {
             IRGenerator.Parser.Lexer.Tokenize();
             IRGenerator.Parser.Parse();
-            return IRGenerator.Generate();
-        }
-        public void Compile(string filePathDestination = null)
-        {
-            if (filePathDestination is null)
-                filePathDestination = ModuleName;
-            if (File.Exists(tempc))
-                File.Delete(tempc);
-            if (File.Exists(tempexe))
-                File.Delete(tempexe);
-            if (File.Exists(filePathDestination))
-                File.Delete(filePathDestination);
-            var gen = CompileModule();
-            if (!Directory.Exists(temp))
-                Directory.CreateDirectory(temp);
-            File.WriteAllText(tempc, gen);
-            while (!File.Exists(tempc));
-            var clangCall = Process.Start("gcc", tempc + " -o " + tempexe);
-            clangCall.WaitForExit();
-            if (clangCall.ExitCode != 0)
-                CompilationErrors.Throw("Extern Compiler: impossible to build due to prevoius errors");
-            while (!File.Exists(tempexe));
-            File.Delete(tempc);
-            File.Move(tempexe, filePathDestination);
+            IRGenerator.Generate();
         }
         public string GetStringAST()
         {

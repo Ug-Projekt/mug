@@ -16,7 +16,7 @@ namespace Mug.Models.Parser.NodeKinds.Statements
         public String Name { get; set; }
         public INode Type { get; set; }
         public Modifier Modifier { get; set; }
-        public ParameterListNode ParameterList { get; set; }
+        public ParameterListNode ParameterList { get; set; } = new();
         public Boolean IsMethod
         {
             get
@@ -43,7 +43,7 @@ namespace Mug.Models.Parser.NodeKinds.Statements
         {
             _genericTypes = types;
         }
-        public BlockNode Body { get; set; }
+        public BlockNode Body { get; set; } = new();
         public Range Position { get; set; }
         public string Stringize(string indent = "")
         {

@@ -258,7 +258,7 @@ namespace Mug.Models.Parser
             e = null;
             if (!MatchAdvance(TokenKind.OpenPar))
                 return false;
-            e = new InParExpressionNode() { Content = ExpectExpression(true, TokenKind.ClosePar) };
+            e = ExpectExpression(true, TokenKind.ClosePar);
             return true;
         }
         bool MatchValue(out INode e)
@@ -878,11 +878,10 @@ namespace Mug.Models.Parser
             {
                 if (!FunctionDefinition(out INode statement))
                     if (!VariableDefinition(out statement))
-                        if (!ConstantDefinition(out statement))
-                            if (!TypeDefinition(out statement))
-                                if (!DirectiveDefinition(out statement))
-                                    if (!NamespaceDefinition(out statement))
-                                        ParseError("In the current global context, this is not a valid global statement;");
+                        if (!TypeDefinition(out statement))
+                            if (!DirectiveDefinition(out statement))
+                                if (!NamespaceDefinition(out statement))
+                                    ParseError("In the current global context, this is not a valid global statement;");
                 nodes.Add(statement);
             }
             return nodes;
