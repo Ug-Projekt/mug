@@ -76,17 +76,18 @@ namespace Mug.Models.Generator
                 TokenKind.ConstantDigit => LLVMTypeRef.ConstInt(LLVMTypeRef.Int32Type(), Convert.ToUInt64(constant.Value), MugEmitter._llvmfalse)
             };
         }
-        LLVMValueRef EvaluateExpression(ref MugEmitter emitter, INode expression)
+        void EvaluateExpression(ref MugEmitter emitter, INode expression)
         {
             if (expression is ExpressionNode e)
             {
-                emitter.Load(EvaluateExpression(ref emitter, e.Left));
-                emitter.Load(EvaluateExpression(ref emitter, e.Right));
+                EvaluateExpression(ref emitter, e.Left);
+                EvaluateExpression(ref emitter, e.Right);
                 EmitOperator(ref emitter, e.Operator);
             }
             else if (expression is Token t)
-                return ConstToLLVMConst(t);
-            return new();
+                emitter.Load(ConstToLLVMConst(t));
+            else
+                throw new Exception("debug");
         }
         void RecognizeStatement(ref MugEmitter emitter, INode statement)
         {
@@ -94,7 +95,7 @@ namespace Mug.Models.Generator
             {
                 case VariableStatement variable:
                     emitter.DeclareVariable(variable.Name, TypeToLLVMType(variable.Type));
-                    emitter.Load(EvaluateExpression(ref emitter, variable.Body));
+                    EvaluateExpression(ref emitter, variable.Body);
                     emitter.StoreVariable(variable.Name);
                     break;
                 default:
