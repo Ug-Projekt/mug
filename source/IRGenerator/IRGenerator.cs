@@ -1,7 +1,5 @@
-﻿using Mono.Cecil;
-using Mono.Cecil.Cil;
-using Mug.Compilation;
-using Mug.Models.Evaluator;
+﻿using LLVMSharp;
+using Microsoft.VisualBasic;
 using Mug.Models.Generator.Emitter;
 using Mug.Models.Lexer;
 using Mug.Models.Parser;
@@ -9,141 +7,123 @@ using Mug.Models.Parser.NodeKinds;
 using Mug.Models.Parser.NodeKinds.Statements;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 
 namespace Mug.Models.Generator
 {
     public class IRGenerator
     {
         public readonly MugParser Parser;
-        public readonly MugEmitter Emitter;
-        readonly Dictionary<string, object> Symbols = new();
+        public readonly LLVMModuleRef Module;
         public IRGenerator(string moduleName, string source)
         {
             Parser = new(moduleName, source);
-            Emitter = new(moduleName);
+            Parser.Parse();
+            Module = LLVM.ModuleCreateWithName(moduleName);
         }
         public IRGenerator(MugParser parser)
         {
             Parser = parser;
-            Emitter = new(parser.Lexer.ModuleName);
+            Module = LLVM.ModuleCreateWithName(parser.Lexer.ModuleName);
         }
-        void GenerationError(INode node, params string[] error)
+        LLVMTypeRef PrimitiveTypeToLLVMType(TokenKind primitiveType)
         {
-            Parser.Throw(node, error);
-        }
-        void GenerationError(Token token, params string[] error)
-        {
-            Parser.Lexer.Throw(token, error);
-        }
-        TypeReference CreateType(INode type)
-        {
-            if (type is Token t)
-                return Emitter.TypeOf(t.Kind);
-            return null;
-        }
-        TypeReference FindType(INode type)
-        {
-            return Emitter.TypeOf(((Token)type).Kind);
-        }
-        string CreateName(INode name)
-        {
-            return (string)((Token)name).Value;
-        }
-        ParameterDefinition CreateParameter(ParameterNode parameter)
-        {
-            return new ParameterDefinition(CreateType(parameter.Type));
-        }
-        MethodReference CreateCall(CallStatement c)
-        {
-            if (c.Name is Token t && t.Kind == TokenKind.Identifier)
+            return primitiveType switch
             {
-                if (!Symbols.TryGetValue((string)t.Value, out var function))
-                    GenerationError(c, "Undeclared function");
-                if (function is FunctionNode func)
-                {
-                    var f = new MethodReference(func.Name, CreateType(func.Type));
-                    foreach (var parameter in func.ParameterList.Parameters)
-                        f.Parameters.Add(CreateParameter(parameter));
-                    return f;
-                }
-                if (function is System.Reflection.MethodInfo reference)
-                    return Emitter.Import(reference);
-                GenerationError(c, "Uncallable member");
-            }
-            return null;
+                TokenKind.KeyTi32 => LLVMTypeRef.Int32Type(),
+                TokenKind.KeyTVoid => LLVMTypeRef.VoidType(),
+            };
         }
-        MethodDefinition GenerateFunction(FunctionNode function)
+        LLVMTypeRef TypeToLLVMType(INode type)
         {
-            var body = new MethodDefinition(function.Name, MethodAttributes.Public | MethodAttributes.Static, CreateType(function.Type));
-            var il = body.Body.GetILProcessor();
-            foreach (var statement in function.Body.Statements)
+            return type switch
             {
-                switch (statement)
-                {
-                    case CallStatement c:
-                        if (c.Parameters is not null)
-                            foreach (var parameter in c.Parameters.Nodes)
-                                new ExpressionEvaluator(il).Evaluate(parameter);
-                        il.Append(il.Create(OpCodes.Call, CreateCall(c)));
-                        break;
-                    default:
-                        GenerationError(statement, "Unallowed here");
-                        break;
-                }
-            }
-            il.Emit(OpCodes.Ret);
-            return body;
+                Token t => PrimitiveTypeToLLVMType(t.Kind)
+            };
         }
-        void RecognizeGlobalStatement(INode statement)
+        LLVMTypeRef[] ParameterTypesToLLVMTypes(ParameterNode[] parameterTypes)
+        {
+            var result = new LLVMTypeRef[parameterTypes.Length];
+            for (int i = 0; i < parameterTypes.Length; i++)
+                result[i] = TypeToLLVMType(parameterTypes[i].Type);
+            return result;
+        }
+        LLVMBasicBlockRef InstallFunction(string name, INode type, ParameterListNode paramTypes)
+        {
+            var ft = LLVM.FunctionType(
+                    TypeToLLVMType(type),
+                    ParameterTypesToLLVMTypes(paramTypes.Parameters),
+                    false
+                );
+            var f = LLVM.AddFunction(Module, name, ft);
+            return LLVM.AppendBasicBlock(f, "");
+        }
+        void EmitOperator(ref MugEmitter emitter, OperatorKind kind)
+        {
+            switch (kind)
+            {
+                case OperatorKind.Sum: emitter.Add(); break;
+                case OperatorKind.Subtract: emitter.Sub(); break;
+                case OperatorKind.Multiply: emitter.Mul(); break;
+                case OperatorKind.Divide: emitter.Div(); break;
+                case OperatorKind.Range: break;
+            }
+        }
+        LLVMValueRef ConstToLLVMConst(Token constant)
+        {
+            return constant.Kind switch
+            {
+                TokenKind.ConstantDigit => LLVMTypeRef.ConstInt(LLVMTypeRef.Int32Type(), Convert.ToUInt64(constant.Value), MugEmitter._llvmfalse)
+            };
+        }
+        LLVMValueRef EvaluateExpression(ref MugEmitter emitter, INode expression)
+        {
+            if (expression is ExpressionNode e)
+            {
+                emitter.Load(EvaluateExpression(ref emitter, e.Left));
+                emitter.Load(EvaluateExpression(ref emitter, e.Right));
+                EmitOperator(ref emitter, e.Operator);
+            }
+            else if (expression is Token t)
+                return ConstToLLVMConst(t);
+            return new();
+        }
+        void RecognizeStatement(ref MugEmitter emitter, INode statement)
         {
             switch (statement)
             {
-                case FunctionNode function:
-                    var body = GenerateFunction(function);
-                    if (function.Name == "main")
-                        Emitter.DefineMain(body);
-                    else
-                        Emitter.DefineFunction(body);
+                case VariableStatement variable:
+                    emitter.DeclareVariable(variable.Name, TypeToLLVMType(variable.Type));
+                    emitter.Load(EvaluateExpression(ref emitter, variable.Body));
+                    emitter.StoreVariable(variable.Name);
                     break;
                 default:
-                    GenerationError(statement, "Unallowed here");
                     break;
             }
         }
-        void DefineBuiltinsSymbols()
+        void ProcessFunction(FunctionNode function)
         {
-            Symbols.Add("println",
-                typeof(Console).GetMethod("WriteLine", new[] { typeof(string) })
-            );
-            Symbols.Add("print",
-                typeof(Console).GetMethod("Write", new[] { typeof(string) })
-            );
+            var entry = InstallFunction(function.Name, function.Type, function.ParameterList);
+            MugEmitter emitter = new MugEmitter();
+            LLVM.PositionBuilderAtEnd(emitter.Builder, entry);
+            foreach (var statement in function.Body.Statements)
+                RecognizeStatement(ref emitter, statement);
         }
-        void DefineSymbols()
+        void RecognizeMember(INode member)
         {
-            DefineBuiltinsSymbols();
-            foreach (var member in Parser.Module.Members.Nodes)
-                switch (member)
-                {
-                    case FunctionNode function:
-                        if (!Symbols.TryAdd(function.Name, function))
-                            GenerationError(member, "Already defined");
-                        break;
-                    default:
-                        GenerationError(member, "Unallowed here");
-                        break;
-                }
-        }
-        void ProcessGlobals()
-        {
-            foreach (var member in Parser.Module.Members.Nodes)
-                RecognizeGlobalStatement(member);
+            switch (member)
+            {
+                case FunctionNode function:
+                    ProcessFunction(function);
+                    break;
+                default:
+                    break;
+            }
         }
         public void Generate()
         {
-            DefineSymbols();
-            ProcessGlobals();
-            Emitter.Save();
+            foreach (var member in Parser.Module.Members.Nodes)
+                RecognizeMember(member);
         }
         public List<Token> GetTokenCollection() => Parser.GetTokenCollection();
         public List<Token> GetTokenCollection(out MugLexer lexer) => Parser.GetTokenCollection(out lexer);

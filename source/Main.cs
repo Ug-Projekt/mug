@@ -1,4 +1,5 @@
-﻿using Mug.Compilation;
+﻿using LLVMSharp;
+using Mug.Compilation;
 using Mug.Models.Generator;
 using Mug.Models.Lexer;
 using Mug.Models.Parser;
@@ -13,17 +14,11 @@ try
     {
         var testPath = $"C:/Users/{Environment.UserName}/Desktop/Mug/tests/LastUpdates.mug";
         var test = @"
-func f()
-{
-    print(""ciao"");
-}
-func main(): ?
-{
-    f();
+func main() {
+  var i: i32 = 1*2;
 }
 ";
 
-        
         //var lexer = new MugLexer(testPath, File.ReadAllText(testPath));
         var lexer = new MugLexer("test", test);
         lexer.Tokenize();
@@ -32,6 +27,7 @@ func main(): ?
         var generator = new IRGenerator(parser);
         generator.Generate();
 
+        LLVM.DumpModule(generator.Module);
         //debug.print(parser.Module.Stringize());
         //foreach (var member in generator.RedefinitionTable)
             //debug.print(member.Key, " -> ", member.Value);
