@@ -4,20 +4,19 @@ using Mug.Models.Generator;
 using Mug.Models.Lexer;
 using Mug.Models.Parser;
 using System;
-using System.Diagnostics;
-using System.IO;
 
 
 try
 {
     if (debug.isDebug())
     {
-        var testPath = $"C:/Users/{Environment.UserName}/Desktop/Mug/tests/LastUpdates.mug";
+        var testPath = $"C:/Users/{Environment.UserName}/Desktop/Mug/tests/.mug";
         var test = @"
-func main() {
-  var i: i32 = 1*2;
-}
-";
+func main(): i32 {
+  var j: i32 = 2;
+  var i: i32 = 3;
+  return i;
+}";
 
         //var lexer = new MugLexer(testPath, File.ReadAllText(testPath));
         var lexer = new MugLexer("test", test);
@@ -26,11 +25,12 @@ func main() {
         parser.Parse();
         var generator = new IRGenerator(parser);
         generator.Generate();
-
+        
         LLVM.DumpModule(generator.Module);
+        LLVM.VerifyModule(generator.Module, LLVMVerifierFailureAction.LLVMPrintMessageAction, out string err);
         //debug.print(parser.Module.Stringize());
         //foreach (var member in generator.RedefinitionTable)
-            //debug.print(member.Key, " -> ", member.Value);
+        //debug.print(member.Key, " -> ", member.Value);
         //File.WriteAllText(Path.ChangeExtension(testPath, "mast"), tree.Stringize());
     }
     else
@@ -40,7 +40,7 @@ func main() {
         for (int i = 0; i < args.Length; i++)
         {
             var unit = new CompilationUnit(args[i]);
-            unit.Compile();
+            unit.Compile(0);
         }
     }
 }

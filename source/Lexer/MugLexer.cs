@@ -32,8 +32,6 @@ namespace Mug.Models.Lexer
         }
         public MugLexer(string moduleName, string source)
         {
-            if (!IsValidModuleName(moduleName))
-                CompilationErrors.Throw("Invalid module name");
             ModuleName = moduleName;
             Source = source;
         }
@@ -211,8 +209,12 @@ namespace Mug.Models.Lexer
         bool ConsumeComments()
         {
             if (MatchStartMultiLineComment())
+            {
+                CurrentIndex+=2;
                 while (!MatchEndMultiLineComment())
                     CurrentIndex++;
+                CurrentIndex += 2;
+            }
             else if (MatchInlineComment())
                 while (!MatchEolEof())
                     CurrentIndex++;
@@ -291,10 +293,10 @@ namespace Mug.Models.Lexer
                     break;
             }
         }
-        void ProcessChar(char current)
+        void ProcessCurrentChar()
         {
-            if (ConsumeComments())
-                return;
+            ConsumeComments();
+            char current = Source[CurrentIndex];
             if (current == '.' && NextIsDigit())
                 CurrentSymbol += '.';
             if (current == '"')
@@ -325,7 +327,7 @@ namespace Mug.Models.Lexer
                 return TokenCollection;
             TokenCollection = new ();
             do
-                ProcessChar(Source[CurrentIndex]);
+                ProcessCurrentChar();
             while (CurrentIndex++ < Source.Length-1);
             AddSpecial(TokenKind.EOF);
             return TokenCollection;

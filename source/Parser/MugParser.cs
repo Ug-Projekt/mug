@@ -420,6 +420,12 @@ namespace Mug.Models.Parser
             _currentIndex--;
             return new FieldAssignmentNode() { Name = name.Value.ToString(), Body = expression, Position = name.Position };
         }
+        INode ExpectTerm()
+        {
+            if (!MatchTerm(out var e))
+                ParseError("Expected term");
+            return e;
+        }
         bool MatchFactor(out INode e)
         {
             e = null;
@@ -429,14 +435,15 @@ namespace Mug.Models.Parser
             if (MatchFactorOps())
             {
                 var op = Back;
-                while (MatchTerm(out INode right))
+                var right = ExpectTerm();
+                do
                 {
                     e = new ExpressionNode() { Left = e, Right = right, Operator = ToOperatorKind(op.Kind), Position = new(left.Position.Start, right.Position.End) };
                     if (MatchFactorOps())
                         op = Back;
                     else
                         break;
-                }
+                } while (MatchTerm(out right));
             }
             return true;
         }
@@ -507,7 +514,8 @@ namespace Mug.Models.Parser
                 {
                     var op = Back.Kind;
                     e = left;
-                    while (MatchFactor(out var right))
+                    var right = ExpectFactor();
+                    do
                     {
                         e = new ExpressionNode() { Operator = ToOperatorKind(op), Left = e, Right = right, Position = new(left.Position.Start, right.Position.End) };
                         if (MatchAdvance(TokenKind.Plus) ||
@@ -515,7 +523,7 @@ namespace Mug.Models.Parser
                             op = Back.Kind;
                         else
                             break;
-                    }
+                    } while (MatchFactor(out right));
                 }
             }
             if (e is null)

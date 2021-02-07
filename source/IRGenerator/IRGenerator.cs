@@ -8,6 +8,7 @@ using Mug.Models.Parser.NodeKinds.Statements;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 
 namespace Mug.Models.Generator
 {
@@ -69,6 +70,10 @@ namespace Mug.Models.Generator
                 case OperatorKind.Range: break;
             }
         }
+        bool IsVoid(INode type)
+        {
+            return TypeToLLVMType(type).TypeKind == LLVMTypeKind.LLVMVoidTypeKind;
+        }
         LLVMValueRef ConstToLLVMConst(Token constant)
         {
             return constant.Kind switch
@@ -85,9 +90,12 @@ namespace Mug.Models.Generator
                 EmitOperator(ref emitter, e.Operator);
             }
             else if (expression is Token t)
-                emitter.Load(ConstToLLVMConst(t));
-            else
-                throw new Exception("debug");
+            {
+                if (t.Kind == TokenKind.Identifier)
+                    emitter.LoadFromMemory((string)t.Value);
+                else
+                    emitter.Load(ConstToLLVMConst(t));
+            }
         }
         void RecognizeStatement(ref MugEmitter emitter, INode statement)
         {
@@ -97,6 +105,15 @@ namespace Mug.Models.Generator
                     emitter.DeclareVariable(variable.Name, TypeToLLVMType(variable.Type));
                     EvaluateExpression(ref emitter, variable.Body);
                     emitter.StoreVariable(variable.Name);
+                    break;
+                case ReturnStatement @return:
+                    if (@return.Body is null)
+                        emitter.RetVoid();
+                    else
+                    {
+                        EvaluateExpression(ref emitter, @return.Body);
+                        emitter.Ret();
+                    }
                     break;
                 default:
                     break;
@@ -109,6 +126,8 @@ namespace Mug.Models.Generator
             LLVM.PositionBuilderAtEnd(emitter.Builder, entry);
             foreach (var statement in function.Body.Statements)
                 RecognizeStatement(ref emitter, statement);
+            if (IsVoid(function.Type))
+                emitter.RetVoid();
         }
         void RecognizeMember(INode member)
         {

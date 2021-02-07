@@ -9,8 +9,8 @@ namespace Mug.Models.Generator.Emitter
 {
     public class MugEmitter
     {
-        public LLVMBuilderRef Builder = CreateBuilder();
-        
+        public LLVMBuilderRef Builder { get; private set; } = CreateBuilder();
+
         readonly Stack<LLVMValueRef> _stack = new();
         readonly Dictionary<string, LLVMValueRef> _memory = new();
 
@@ -30,19 +30,23 @@ namespace Mug.Models.Generator.Emitter
         }
         public void Add()
         {
-            Load(BuildAdd(Builder, Pop(), Pop(), "tmpadd"));
+            var second = Pop();
+            Load(BuildAdd(Builder, Pop(), second, ""));
         }
         public void Sub()
         {
-            Load(BuildSub(Builder, Pop(), Pop(), "tmpsub"));
+            var second = Pop();
+            Load(BuildSub(Builder, Pop(), second, ""));
         }
         public void Mul()
         {
-            Load(BuildMul(Builder, Pop(), Pop(), "tmpmul"));
+            var second = Pop();
+            Load(BuildMul(Builder, Pop(), second, ""));
         }
         public void Div()
         {
-            Load(BuildSDiv(Builder, Pop(), Pop(), "tmpdiv"));
+            var second = Pop();
+            Load(BuildSDiv(Builder, Pop(), second, ""));
         }
         LLVMValueRef GetFromMemory(string name)
         {
@@ -59,6 +63,18 @@ namespace Mug.Models.Generator.Emitter
         public void StoreVariable(string name)
         {
             BuildStore(Builder, Pop(), GetFromMemory(name));
+        }
+        public void LoadFromMemory(string name)
+        {
+            Load(BuildLoad(Builder, GetFromMemory(name), ""));
+        }
+        public void Ret()
+        {
+            BuildRet(Builder, Pop());
+        }
+        public void RetVoid()
+        {
+            BuildRetVoid(Builder);
         }
     }
 }
