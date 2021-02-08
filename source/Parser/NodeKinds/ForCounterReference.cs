@@ -9,7 +9,7 @@ namespace Mug.Models.Parser.NodeKinds
         public INode ReferenceName { get; set; }
         public Range Position { get; set; }
 
-        public string Stringize(string indent = "")
+        public string Dump(string indent = "")
         {
             return indent+$"ForCounterReference: {ReferenceName}";
         }

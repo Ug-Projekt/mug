@@ -10,9 +10,9 @@ namespace Mug.Models.Parser.NodeKinds
         public INode IFBody { get; set; }
         public INode ElseBody { get; set; }
         public Range Position { get; set; }
-        public string Stringize(string indent = "")
+        public string Dump(string indent = "")
         {
-            return indent + $"InlineConditionalExpression: {{\n{indent}   Expression: {{\n{Expression.Stringize(indent+"      ")}\n{indent}   }},\n{indent}   IfBody: {{\n{IFBody.Stringize(indent + "      ")}\n{indent}   }},\n{indent}   ElseBody: {{\n{ElseBody.Stringize(indent+"      ")}\n{indent}   }}\n{indent}}}";
+            return indent + $"InlineConditionalExpression: {{\n{indent}   Expression: {{\n{Expression.Dump(indent+"      ")}\n{indent}   }},\n{indent}   IfBody: {{\n{IFBody.Dump(indent + "      ")}\n{indent}   }},\n{indent}   ElseBody: {{\n{ElseBody.Dump(indent+"      ")}\n{indent}   }}\n{indent}}}";
         }
     }
 }

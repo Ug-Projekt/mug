@@ -10,9 +10,9 @@ namespace Mug.Models.Parser.NodeKinds
         public INode Expression { get; set; }
         public TokenKind Prefix { get; set; }
         public Range Position { get; set; }
-        public string Stringize(string indent = "")
+        public string Dump(string indent = "")
         {
-            return indent + $"PrefixOperator: {{\n{indent}   Prefix: {Prefix},\n{indent}   Expression: {{\n{Expression.Stringize(indent+"      ")}\n{indent}   }}\n{indent}}}";
+            return indent + $"PrefixOperator: {{\n{indent}   Prefix: {Prefix},\n{indent}   Expression: {{\n{Expression.Dump(indent+"      ")}\n{indent}   }}\n{indent}}}";
         }
     }
 }

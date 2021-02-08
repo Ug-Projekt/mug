@@ -15,9 +15,9 @@ namespace Mug.Models.Parser.NodeKinds
         {
             Members = new NodeBuilder();
         }
-        public string Stringize(string indent = "")
+        public string Dump(string indent = "")
         {
-            return indent+$"NamespaceNode: {{\n{indent}   Name: {{\n{Name.Stringize(indent+"     ")}\n{indent}   }},\n{Members.Stringize(indent+"   ")}\n{indent}}}";
+            return indent+$"NamespaceNode: {{\n{indent}   Name: {{\n{Name.Dump(indent+"     ")}\n{indent}   }},\n{Members.Dump(indent+"   ")}\n{indent}}}";
         }
     }
 }

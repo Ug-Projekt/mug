@@ -12,9 +12,9 @@ namespace Mug.Models.Parser.NodeKinds.Statements
         public BlockNode Body { get; set; }
         public Range Position { get; set; }
 
-        public string Stringize(string indent = "")
+        public string Dump(string indent = "")
         {
-            return indent + $"ConditionalStatement: {{\n{indent}   Kind: {Kind},\n{indent}   Expression: {{\n{(Kind != TokenKind.KeyElse ? Expression.Stringize(indent+"      ") : "")}\n{indent}   }},\n{indent}   Body: {{\n{Body.Stringize(indent+"      ")}\n{indent}   }}\n{indent}}}";
+            return indent + $"ConditionalStatement: {{\n{indent}   Kind: {Kind},\n{indent}   Expression: {{\n{(Kind != TokenKind.KeyElse ? Expression.Dump(indent+"      ") : "")}\n{indent}   }},\n{indent}   Body: {{\n{Body.Dump(indent+"      ")}\n{indent}   }}\n{indent}}}";
         }
     }
 }

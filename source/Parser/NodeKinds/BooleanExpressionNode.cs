@@ -12,9 +12,9 @@ namespace Mug.Models.Parser.NodeKinds
         public INode Right { get; set; }
         public TokenKind Operator { get; set; }
         public Range Position { get; set; }
-        public string Stringize(string indent = "")
+        public string Dump(string indent = "")
         {
-            return indent+ $"BooleanExpressionNode: {{\n{indent}   Operator: {Operator},\n{indent}   Left: {{\n{Left.Stringize(indent+"      ")}\n{indent}   }},\n{indent}   Right: {{\n{Right.Stringize(indent+"      ")}\n{indent}   }}\n{indent}}}";
+            return indent+ $"BooleanExpressionNode: {{\n{indent}   Operator: {Operator},\n{indent}   Left: {{\n{Left.Dump(indent+"      ")}\n{indent}   }},\n{indent}   Right: {{\n{Right.Dump(indent+"      ")}\n{indent}   }}\n{indent}}}";
         }
     }
 }

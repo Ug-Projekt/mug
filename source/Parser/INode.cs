@@ -7,6 +7,6 @@ namespace Mug.Models.Parser
     public interface INode
     {
         public abstract Range Position { get; set; }
-        public abstract string Stringize(string indent = "");
+        public abstract string Dump(string indent = "");
     }
 }

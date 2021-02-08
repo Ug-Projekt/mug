@@ -3,6 +3,7 @@ using Mug.Models.Lexer;
 using Mug.Models.Parser.NodeKinds;
 using Mug.Models.Parser.NodeKinds.Directives;
 using Mug.Models.Parser.NodeKinds.Statements;
+using Mug.TypeSystem;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -102,25 +103,22 @@ namespace Mug.Models.Parser
                 _currentIndex++;
             return expect;
         }
-        INode ExpectType(bool expectKeyTypeInGeneric = false)
+        MugType ExpectType(bool expectKeyTypeInGeneric = false)
         {
-            if (MatchAdvance(TokenKind.OpenBracket, out Token open))
+            if (MatchAdvance(TokenKind.OpenBracket))
             {
                 var type = ExpectType();
-                var close = Expect("An array type definition must end with `CloseBracket`;", TokenKind.CloseBracket);
-                return new Token(0, TokenKind.KeyTarray, type, new(open.Position.Start, close.Position.End));
+                Expect("An array type definition must end with `CloseBracket`;", TokenKind.CloseBracket);
+                return new MugType(TypeKind.Array, type);
             }
-            INode find;
-            if (MatchIdentifier(out var members))
-                find = members;
-            else
-                find = ExpectKeywordTypes();
+            MugType find;
+            find = ExpectBaseType();
             if (MatchAdvance(TokenKind.OpenBracket))
             {
                 if (expectKeyTypeInGeneric)
                     Expect("", TokenKind.KeyType);
                 var type = ExpectType();
-                find = new Token(0, TokenKind.KeyTgeneric, type, new(find.Position.Start, type.Position.End));
+                find = new MugType(TypeKind.GenericStruct, type);
                 Expect("Generic type specification must be wrote between `[]`;", TokenKind.CloseBracket);
             }
             
@@ -142,29 +140,13 @@ namespace Mug.Models.Parser
             if (match)
                 return Back;
             ParseError(error);
-            return new ();
+            return new();
         }
         ParameterNode ExpectParameter(bool isFirst)
         {
             if (!isFirst)
                 Expect("Parameters must be separed by a comma;", TokenKind.Comma);
-            if (MatchAdvance(TokenKind.KeySelf))
-            {
-                if (!isFirst)
-                {
-                    _currentIndex--;
-                    ParseError("The `self` keyword must be placed as first parameter;");
-                }
-                else
-                {
-                    Expect("In the current context must specify the type of the instance to extend;", TokenKind.Colon);
-                    var t = ExpectType(true);
-                    if (Match(TokenKind.Equal))
-                        ParseError("A self parameter cannot be an optional parameter;");
-                    return new ParameterNode(t, "self", new(), true);
-                }
-            }
-            var name = Expect("In parameter declaration must specify the param name;", TokenKind.Identifier).Value;
+            var name = Expect("In parameter declaration must specify the param name;", TokenKind.Identifier);
             Expect("In parameter declaration must specify the param type;", TokenKind.Colon);
             var type = ExpectType();
             var defaultvalue = new Token();
@@ -172,7 +154,7 @@ namespace Mug.Models.Parser
                  defaultvalue = ExpectConstantMute("A default parameter value must be evaluable at compilation-time, so a constant;");
             ExpectMultiple("In the current context is only allowed to close the parameter list or add a parameter to it;", TokenKind.Comma, TokenKind.ClosePar);
             _currentIndex--;
-            return new ParameterNode(type, name.ToString(), defaultvalue);
+            return new ParameterNode(type, name.Value, defaultvalue, name.Position);
         }
         OperatorKind ToOperatorKind(TokenKind op)
         {
@@ -185,14 +167,14 @@ namespace Mug.Models.Parser
                 TokenKind.RangeDots => OperatorKind.Range,
             };
         }
-        INode ExpectKeywordTypes()
+        MugType ExpectBaseType()
         {
-            var match = MatchBuiltInTypes(out var type);
+            var match = MatchPrimitiveType(out var type) || MatchAdvance(TokenKind.Identifier, out type);
             if (!match)
                 ParseError("Expected a built in type, but found `" + Current.Kind.ToString() + "`;");
-            return type;
+            return MugType.FromToken(type);
         }
-        bool MatchBuiltInTypes(out Token type)
+        bool MatchPrimitiveType(out Token type)
         {
             return
                 MatchAdvance(TokenKind.KeyTi32, out type) ||
@@ -211,9 +193,7 @@ namespace Mug.Models.Parser
         {
             return
                 MatchAdvance(TokenKind.Identifier) ||
-                MatchAdvance(TokenKind.KeySelf) ||
-                MatchConstantAdvance() ||
-                MatchBuiltInTypes(out _);
+                MatchConstantAdvance();
         }
         bool MatchIdentifier(out INode identifier)
         {
@@ -273,7 +253,7 @@ namespace Mug.Models.Parser
                 _currentIndex -= count;
                 return false;
             }
-            List<INode> generics = new();
+            List<MugType> generics = new();
             if (MatchAdvance(TokenKind.BooleanMinor))
             {
                 if (Match(TokenKind.BooleanMajor))
@@ -339,7 +319,7 @@ namespace Mug.Models.Parser
             if (value)
             {
                 var oldIndex = _currentIndex;
-                List<INode> generics = new();
+                List<MugType> generics = new();
                 if (MatchAdvance(TokenKind.BooleanMinor))
                 {
                     if (Match(TokenKind.BooleanMajor))
@@ -746,9 +726,9 @@ namespace Mug.Models.Parser
                 }
             }
             var parameters = ExpectParameterListDeclaration();
-            INode type;
+            MugType type;
             if (Match(TokenKind.OpenBrace))
-                type = new Token(name.LineAt, TokenKind.KeyTVoid, null, name.Position);
+                type = new MugType(TypeKind.Void);
             else
             {
                 Expect("In function definition must specify the type, or if it returns void the type can by omitted;", TokenKind.Colon);

@@ -53,6 +53,18 @@ namespace Mug.Compilation
             WriteSourceLine(node.Position.Start.Value - start - 1, node.Position.End.Value - start - 1, CountLines(Parser.Lexer.Source, start), Parser.Lexer.Source[(start + 1)..end], string.Join("", error));
             throw new CompilationException(null, node.Position, string.Join("", error));
         }
+        public static void Throw(this MugLexer Lexer, Range position, params string[] error)
+        {
+            int start = position.Start.Value;
+            int end = position.End.Value;
+            while (start >= 0 && Lexer.Source[start] != '\n')
+                start--;
+            while (end < Lexer.Source.Length && Lexer.Source[end] != '\n')
+                end++;
+            WriteModule(Lexer.ModuleName);
+            WriteSourceLine(position.Start.Value - start - 1, position.End.Value - start - 1, CountLines(Lexer.Source, start), Lexer.Source[(start + 1)..end], string.Join("", error));
+            throw new CompilationException(null, position, string.Join("", error));
+        }
         static void WriteModule(string moduleName)
         {
             Console.ForegroundColor = ConsoleColor.DarkMagenta;

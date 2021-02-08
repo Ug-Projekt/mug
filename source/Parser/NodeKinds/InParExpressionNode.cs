@@ -10,9 +10,9 @@ namespace Mug.Models.Parser.NodeKinds
     {
         public INode Content { get; set; }
         public Range Position { get; set; }
-        public string Stringize(string indent = "")
+        public string Dump(string indent = "")
         {
-            return indent+$"InParExpressionNode: {{\n{Content.Stringize(indent+"   ")}\n{indent}}}";
+            return indent+$"InParExpressionNode: {{\n{Content.Dump(indent+"   ")}\n{indent}}}";
         }
     }
 }

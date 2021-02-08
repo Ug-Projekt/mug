@@ -1,4 +1,5 @@
 ﻿using Mug.Models.Lexer;
+using Mug.TypeSystem;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -14,16 +15,9 @@ namespace Mug.Models.Parser.NodeKinds.Statements
     public class FunctionNode : INode
     {
         public String Name { get; set; }
-        public INode Type { get; set; }
+        public MugType Type { get; set; }
         public Modifier Modifier { get; set; }
         public ParameterListNode ParameterList { get; set; } = new();
-        public Boolean IsMethod
-        {
-            get
-            {
-                return ParameterList.HasInstanceParam;
-            }
-        }
         List<Token> _genericTypes { get; set; } = new();
         public Token[] GenericTypes
         {
@@ -45,12 +39,12 @@ namespace Mug.Models.Parser.NodeKinds.Statements
         }
         public BlockNode Body { get; set; } = new();
         public Range Position { get; set; }
-        public string Stringize(string indent = "")
+        public string Dump(string indent = "")
         {
             string types = "";
             for (int i = 0; i < _genericTypes.Count; i++)
-                types += _genericTypes[i].Stringize(indent + "      ") + ",\n";
-            return indent+$"FunctionNode: {{\n{indent}   IsMethod: {IsMethod},\n{indent}   Type: {{\n{Type.Stringize(indent + "      ")}\n{indent}   }},\n{indent}   Name: {Name},\n{indent}   Modifier: {Modifier},\n{indent}   ParameterList: {{\n{ParameterList.Stringize(indent+"      ")}\n{indent}   }},\n{indent}   IsGeneric: {IsGeneric}{(IsGeneric ? $",\n{indent}   GenericType: {{\n{types}{indent}   }}" : "")},\n{indent}   Body: {{\n{Body.Stringize(indent+"      ")}\n{indent}   }}\n{indent}}}";
+                types += _genericTypes[i].Dump(indent + "      ") + ",\n";
+            return indent+$"FunctionNode: {{\n{indent}   Type: {{\n{Type.Dump(indent + "      ")}\n{indent}   }},\n{indent}   Name: {Name},\n{indent}   Modifier: {Modifier},\n{indent}   ParameterList: {{\n{ParameterList.Dump(indent+"      ")}\n{indent}   }},\n{indent}   IsGeneric: {IsGeneric}{(IsGeneric ? $",\n{indent}   GenericType: {{\n{types}{indent}   }}" : "")},\n{indent}   Body: {{\n{Body.Dump(indent+"      ")}\n{indent}   }}\n{indent}}}";
         }
     }
 }

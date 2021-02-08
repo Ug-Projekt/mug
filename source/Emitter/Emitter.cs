@@ -1,4 +1,5 @@
 ﻿using LLVMSharp;
+using Mug.Models.Lexer;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -54,11 +55,15 @@ namespace Mug.Models.Generator.Emitter
         }
         void SetMemory(string name, LLVMValueRef value)
         {
-            _memory.Add(name, value);
+            _memory.TryAdd(name, value);
         }
         public void DeclareVariable(string name, LLVMTypeRef type)
         {
             SetMemory(name, BuildAlloca(Builder, type, name));
+        }
+        public bool IsDeclared(string name)
+        {
+            return _memory.ContainsKey(name);
         }
         public void StoreVariable(string name)
         {

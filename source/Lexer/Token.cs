@@ -11,19 +11,19 @@ namespace Mug.Models.Lexer
     {
         public Int32 LineAt { get; }
         public TokenKind Kind { get; }
-        public Object Value { get; }
+        public String Value { get; }
         public Range Position { get; set; }
 
-        public Token(int lineAt, TokenKind kind, object value, Range position)
+        public Token(int lineAt, TokenKind kind, string value, Range position)
         {
             LineAt = lineAt;
             Kind = kind;
             Value = value;
             Position = position;
         }
-        public string Stringize(string indent = "")
+        public string Dump(string indent = "")
         {
-            return indent+$"Literal: {{\n{indent}   Kind: {Kind},\n{indent}   Value: {(Value is INode node ? $"{{\n{node.Stringize(indent+"      ")}\n{indent}   }}" : Value)}\n{indent}}}";
+            return indent+$"Literal: {{\n{indent}   Kind: {Kind},\n{indent}   Value: {Value}\n{indent}}}";
         }
         public override string ToString()
         {

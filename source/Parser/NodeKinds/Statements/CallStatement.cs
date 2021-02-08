@@ -1,4 +1,5 @@
 ﻿using Mug.Models.Lexer;
+using Mug.TypeSystem;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -16,8 +17,8 @@ namespace Mug.Models.Parser.NodeKinds.Statements
                 return Parameters != null;
             }
         }
-        List<INode> _genericTypes { get; set; } = new();
-        public INode[] GenericTypes
+        List<MugType> _genericTypes { get; set; } = new();
+        public MugType[] GenericTypes
         {
             get
             {
@@ -31,17 +32,17 @@ namespace Mug.Models.Parser.NodeKinds.Statements
                 return GenericTypes.Length > 0;
             }
         }
-        public void SetGenericTypes(List<INode> types)
+        public void SetGenericTypes(List<MugType> types)
         {
             _genericTypes = types;
         }
         public Range Position { get; set; }
-        public string Stringize(string indent = "")
+        public string Dump(string indent = "")
         {
             string types = "";
             for (int i = 0; i < _genericTypes.Count; i++)
-                types += _genericTypes[i].Stringize(indent + "      ") + ",\n";
-            return indent + $"CallStatement: {{\n{indent}   Name: {{\n{Name.Stringize(indent + "      ")}\n{indent}   }},\n{indent}   Parameters: {{\n{(HasParameters ? Parameters.Stringize(indent+"      ") : "")}\n{indent}   }},\n{indent}   IsGeneric: {IsGeneric}{(IsGeneric ? $",\n{indent}   GenericType: {{\n{types}{indent}   }}" : "")}\n{indent}}}";
+                types += _genericTypes[i].Dump(indent + "      ") + ",\n";
+            return indent + $"CallStatement: {{\n{indent}   Name: {{\n{Name.Dump(indent + "      ")}\n{indent}   }},\n{indent}   Parameters: {{\n{(HasParameters ? Parameters.Dump(indent+"      ") : "")}\n{indent}   }},\n{indent}   IsGeneric: {IsGeneric}{(IsGeneric ? $",\n{indent}   GenericType: {{\n{types}{indent}   }}" : "")}\n{indent}}}";
         }
     }
 }

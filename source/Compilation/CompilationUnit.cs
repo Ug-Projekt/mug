@@ -71,7 +71,7 @@ namespace Mug.Compilation
                     new ProcessStartInfo
                     {
                         FileName = clangFilename,
-                        Arguments = $"{outputFilename} -O{optimizazioneLevel}",
+                        Arguments = $"{outputFilename} -O{optimizazioneLevel} -o {Path.ChangeExtension(outputFilename, "exe")}",
                         CreateNoWindow = true,
                         UseShellExecute = false,
                         ErrorDialog = false,
@@ -84,7 +84,7 @@ namespace Mug.Compilation
         }
         public string GetStringAST()
         {
-            return GetNodeCollection().Stringize();
+            return GetNodeCollection().Dump();
         }
         public List<Token> GetTokenCollection() => IRGenerator.GetTokenCollection();
         public List<Token> GetTokenCollection(out MugLexer lexer) => IRGenerator.GetTokenCollection(out lexer);

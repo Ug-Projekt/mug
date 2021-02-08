@@ -61,7 +61,6 @@ namespace Mug.Models.Lexer
             "func" => AddKeyword(TokenKind.KeyFunc, s.Length),
             "var" => AddKeyword(TokenKind.KeyVar, s.Length),
             "const" => AddKeyword(TokenKind.KeyConst, s.Length),
-            "self" => AddKeyword(TokenKind.KeySelf, s.Length),
             "str" => AddKeyword(TokenKind.KeyTstr, s.Length),
             "chr" => AddKeyword(TokenKind.KeyTchr, s.Length),
             "bit" => AddKeyword(TokenKind.KeyTbool, s.Length),

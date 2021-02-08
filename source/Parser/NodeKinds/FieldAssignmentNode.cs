@@ -11,9 +11,9 @@ namespace Mug.Models.Parser.NodeKinds
         public INode Body { get; set; }
         public Range Position { get; set; }
 
-        public string Stringize(string indent = "")
+        public string Dump(string indent = "")
         {
-            return indent+ $"FieldAssignmentNode: {{\n{indent}   Name: {Name},\n{indent}   Body: {{\n{Body.Stringize(indent+"      ")}\n{indent}   }}\n{indent}}}";
+            return indent+ $"FieldAssignmentNode: {{\n{indent}   Name: {Name},\n{indent}   Body: {{\n{Body.Dump(indent+"      ")}\n{indent}   }}\n{indent}}}";
         }
     }
 }
