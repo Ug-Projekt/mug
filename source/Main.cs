@@ -12,8 +12,8 @@ try
     {
         var testPath = $"C:/Users/{Environment.UserName}/Desktop/Mug/tests/.mug";
         var test = @"
-func main(argcount: i32): i32 {
-  return argcount-1;
+func main(argcount: i32): ? {
+  var x: i32 = -argcount;
 }";
 
         //var lexer = new MugLexer(testPath, File.ReadAllText(testPath));

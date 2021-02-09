@@ -81,5 +81,9 @@ namespace Mug.Models.Generator.Emitter
         {
             BuildRetVoid(Builder);
         }
+        public void Neg()
+        {
+            Load(BuildNeg(Builder, Pop(), ""));
+        }
     }
 }

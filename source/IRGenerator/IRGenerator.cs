@@ -106,6 +106,16 @@ namespace Mug.Models.Generator
                 else
                     emitter.Load(ConstToLLVMConst(t, t.Position));
             }
+            else if (expression is PrefixOperator p)
+            {
+                if (p.Prefix != TokenKind.Plus)
+                {
+                    EvaluateExpression(ref emitter, p.Expression);
+                    emitter.Neg();
+                }
+            }
+            else
+                Error(expression.Position, "expression not supported yet");
         }
         MugType ExpectNonVoidType(MugType type, Range position)
         {
