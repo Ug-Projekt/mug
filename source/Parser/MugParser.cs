@@ -291,6 +291,7 @@ namespace Mug.Models.Parser
                 MatchAdvance(TokenKind.Plus) ||
                 MatchAdvance(TokenKind.Negation))
             {
+                var prefixOp = Back;
                 if (Match(TokenKind.Minus) ||
                 Match(TokenKind.Plus) ||
                 Match(TokenKind.Negation))
@@ -301,7 +302,7 @@ namespace Mug.Models.Parser
                     ParseError("Unexpected prefix operator;");
                 }
                 _currentIndex--;
-                e = new PrefixOperator() { Expression = e, Position = Back.Position, Prefix = Back.Kind };
+                e = new PrefixOperator() { Expression = e, Position = prefixOp.Position, Prefix = prefixOp.Kind };
                 _currentIndex++;
                 return true;
             }

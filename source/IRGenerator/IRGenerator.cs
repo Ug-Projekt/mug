@@ -8,6 +8,8 @@ using Mug.Models.Parser.NodeKinds.Statements;
 using Mug.TypeSystem;
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 
 namespace Mug.Models.Generator
 {
@@ -27,23 +29,29 @@ namespace Mug.Models.Generator
             Parser = parser;
             Module = LLVM.ModuleCreateWithName(parser.Lexer.ModuleName);
         }
-        void Error(Range position, params string[] error)
+        public void Error(Range position, params string[] error)
         {
             Parser.Lexer.Throw(position, error);
         }
-        T NotSupportedType<T>(string type, Range position)
+        public T NotSupportedType<T>(string type, Range position)
         {
             Error(position, "`", type, "` type is not supported yet");
             throw new Exception("unreachable");
         }
-        LLVMTypeRef TypeToLLVMType(MugType type, Range position)
+        public LLVMTypeRef TypeToLLVMType(MugType type, Range position)
         {
             return type.Kind switch
             {
                 TypeKind.Int32 => LLVMTypeRef.Int32Type(),
+                TypeKind.Bool => LLVMTypeRef.Int1Type(),
                 TypeKind.Void => LLVMTypeRef.VoidType(),
                 _ => NotSupportedType<LLVMTypeRef>(type.Kind.ToString(), position)
             };
+        }
+        void DeclareSymbol(string name, LLVMValueRef value, Range position)
+        {
+            if (!_symbols.TryAdd(name, value))
+                Error(position, "`", name, "` member already declared");
         }
         LLVMTypeRef[] ParameterTypesToLLVMTypes(ParameterNode[] parameterTypes)
         {
@@ -51,11 +59,6 @@ namespace Mug.Models.Generator
             for (int i = 0; i < parameterTypes.Length; i++)
                 result[i] = TypeToLLVMType(parameterTypes[i].Type, parameterTypes[i].Position);
             return result;
-        }
-        void DeclareSymbol(string name, LLVMValueRef value, Range position)
-        {
-            if (!_symbols.TryAdd(name, value))
-                Error(position, "`", name, "` member already declared");
         }
         LLVMBasicBlockRef InstallFunction(string name, MugType type, Range position, ParameterListNode paramTypes)
         {
@@ -65,97 +68,47 @@ namespace Mug.Models.Generator
                     false
                 );
             var f = LLVM.AddFunction(Module, name, ft);
+
             DeclareSymbol(name, f, position);
+
             return LLVM.AppendBasicBlock(f, "");
-        }
-        void EmitOperator(ref MugEmitter emitter, OperatorKind kind)
-        {
-            switch (kind)
-            {
-                case OperatorKind.Sum: emitter.Add(); break;
-                case OperatorKind.Subtract: emitter.Sub(); break;
-                case OperatorKind.Multiply: emitter.Mul(); break;
-                case OperatorKind.Divide: emitter.Div(); break;
-                case OperatorKind.Range: break;
-            }
         }
         bool IsVoid(MugType type)
         {
             return type.Kind == TypeKind.Void;
         }
-        LLVMValueRef ConstToLLVMConst(Token constant, Range position)
+        ulong StringBoolToIntBool(string value)
+        {
+            return Convert.ToUInt64(Convert.ToBoolean(value));
+        }
+        public LLVMValueRef ConstToLLVMConst(Token constant, Range position)
         {
             return constant.Kind switch
             {
-                TokenKind.ConstantDigit => LLVMTypeRef.ConstInt(LLVMTypeRef.Int32Type(), Convert.ToUInt64(constant.Value), MugEmitter._llvmfalse),
+                TokenKind.ConstantDigit => LLVMTypeRef.ConstInt(LLVMTypeRef.Int32Type(), Convert.ToUInt64(constant.Value), MugEmitter.ConstLLVMFalse),
+                TokenKind.ConstantBoolean => LLVMTypeRef.ConstInt(LLVMTypeRef.Int1Type(), StringBoolToIntBool(constant.Value), MugEmitter.ConstLLVMTrue),
                 _ => NotSupportedType<LLVMValueRef>(constant.Kind.ToString(), position)
             };
         }
-        void EvaluateExpression(ref MugEmitter emitter, INode expression)
+        public void ExpectSameTypes(LLVMTypeRef firstType, Range position, string error, params LLVMTypeRef[] types)
         {
-            if (expression is ExpressionNode e)
-            {
-                EvaluateExpression(ref emitter, e.Left);
-                EvaluateExpression(ref emitter, e.Right);
-                EmitOperator(ref emitter, e.Operator);
-            }
-            else if (expression is Token t)
-            {
-                if (t.Kind == TokenKind.Identifier)
-                    emitter.LoadFromMemory(t.Value);
-                else
-                    emitter.Load(ConstToLLVMConst(t, t.Position));
-            }
-            else if (expression is PrefixOperator p)
-            {
-                if (p.Prefix != TokenKind.Plus)
-                {
-                    EvaluateExpression(ref emitter, p.Expression);
-                    emitter.Neg();
-                }
-            }
-            else
-                Error(expression.Position, "expression not supported yet");
+            for (int i = 0; i < types.Length; i++)
+                if (!Unsafe.Equals(firstType, types[i]))
+                    Error(position, error);
         }
-        MugType ExpectNonVoidType(MugType type, Range position)
+        public void ExpectBoolType(LLVMTypeRef type, Range position)
+        {
+            ExpectSameTypes(type, position, "Expected `Bool` type", LLVMTypeRef.Int1Type());
+        }
+        public void ExpectIntType(LLVMTypeRef type, Range position)
+        {
+            ExpectSameTypes(type, position, "Expected `Int8`, `Int32`, `Int64` type", LLVMTypeRef.Int32Type());
+        }
+        public MugType ExpectNonVoidType(MugType type, Range position)
         {
             if (IsVoid(type))
                 Error(position, "In the current context `void` is not allowed");
             return type;
-        }
-        void RecognizeStatement(ref MugEmitter emitter, INode statement)
-        {
-            switch (statement)
-            {
-                case VariableStatement variable:
-                    if (emitter.IsDeclared(variable.Name))
-                        Error(variable.Position, "Already declared in the corrent context");
-                    emitter.DeclareVariable(variable.Name, TypeToLLVMType(ExpectNonVoidType(variable.Type, variable.Position), variable.Position));
-                    EvaluateExpression(ref emitter, variable.Body);
-                    emitter.StoreVariable(variable.Name);
-                    break;
-                case ReturnStatement @return:
-                    if (@return.Body is null)
-                        emitter.RetVoid();
-                    else
-                    {
-                        EvaluateExpression(ref emitter, @return.Body);
-                        emitter.Ret();
-                    }
-                    break;
-                default:
-                    Error(statement.Position, "Statement not supported yet");
-                    break;
-            }
-        }
-        void AllocParameters(ref MugEmitter emitter, LLVMValueRef function, ParameterListNode parameters)
-        {
-            for (int i = 0; i < parameters.Parameters.Length; i++)
-            {
-                emitter.DeclareVariable(parameters.Parameters[i].Name, TypeToLLVMType(parameters.Parameters[i].Type, parameters.Parameters[i].Position));
-                emitter.Load(LLVM.GetParam(function, (uint)i));
-                emitter.StoreVariable(parameters.Parameters[i].Name);
-            }
         }
         LLVMValueRef GetSymbol(string name, Range position)
         {
@@ -163,23 +116,22 @@ namespace Mug.Models.Generator
                 Error(position, "`", name, "` undeclared member");
             return member;
         }
-        void ProcessFunction(FunctionNode function)
+        void DefineFunction(FunctionNode function)
         {
             var entry = InstallFunction(function.Name, function.Type, function.Position, function.ParameterList);
-            MugEmitter emitter = new MugEmitter();
+            MugEmitter emitter = new MugEmitter(this);
             LLVM.PositionBuilderAtEnd(emitter.Builder, entry);
-            AllocParameters(ref emitter, GetSymbol(function.Name, function.Position), function.ParameterList);
-            foreach (var statement in function.Body.Statements)
-                RecognizeStatement(ref emitter, statement);
-            if (IsVoid(function.Type))
-                emitter.RetVoid();
+
+            var generator = new LocalGenerator(this, _symbols, ref function, ref emitter);
+            generator.AllocParameters(GetSymbol(function.Name, function.Position), function.ParameterList);
+            generator.Generate();
         }
         void RecognizeMember(INode member)
         {
             switch (member)
             {
                 case FunctionNode function:
-                    ProcessFunction(function);
+                    DefineFunction(function);
                     break;
                 default:
                     Error(member.Position, "Declaration not supported yet");

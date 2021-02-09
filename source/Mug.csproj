@@ -10,8 +10,4 @@
     <PackageReference Include="LLVMSharp" Version="5.0.0" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="IRGenerator\Evaluator\" />
-  </ItemGroup>
-
 </Project>
