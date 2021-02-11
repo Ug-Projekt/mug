@@ -1,8 +1,5 @@
 ﻿using Mug.Compilation;
-using System;
 using System.Collections.Generic;
-using System.Text;
-using System.Threading;
 
 namespace Mug.Models.Lexer
 {
@@ -10,13 +7,9 @@ namespace Mug.Models.Lexer
     {
         public readonly string Source;
         public readonly string ModuleName;
-        public readonly List<Token> TokenCollection = new();
-
-        private StringBuilder _currentSymbol { get; }
-        private int _currentIndex { get; set; }
-
-        private const char InlineCommentSymbol = '#';
-
+        public List<Token> TokenCollection;
+        private string CurrentSymbol = "";
+        private int CurrentIndex = 0;
         public int Length
         {
             get
@@ -40,7 +33,7 @@ namespace Mug.Models.Lexer
 
         private bool AddKeyword(TokenKind kind, int len)
         {
-            TokenCollection.Add(new(kind, null, new(_currentIndex - len, _currentIndex)));
+            TokenCollection.Add(new(kind, null, new(CurrentIndex - len, CurrentIndex)));
             return true;
         }
 
@@ -80,15 +73,15 @@ namespace Mug.Models.Lexer
 
         private TokenKind IllegalChar()
         {
-            this.Throw(_currentIndex, "Found illegal SpecialSymbol: mug's syntax does not use this character");
+            this.Throw(CurrentIndex, "Found illegal SpecialSymbol: mug's syntax does not use this character");
             return TokenKind.Bad;
         }
 
-        private bool MatchNext(char c)
+        private bool MatchNext(char next)
         {
-            var match = ThereIsANext(out var next) && next == c;
-            // same of if (match) CurrentIndex++;
-            _currentIndex += Convert.ToInt32(match);
+            var match = CurrentIndex + 1 < Source.Length && Source[CurrentIndex + 1] == next;
+            if (match)
+                CurrentIndex++;
             return match;
         }
 
@@ -124,39 +117,37 @@ namespace Mug.Models.Lexer
             if (kind == TokenKind.Identifier)
                 CheckValidIdentifier(value);
             if (isString)
-                TokenCollection.Add(new(kind, value, new(_currentIndex - value.ToString().Length + 1, _currentIndex + 1)));
+                TokenCollection.Add(new(kind, value, new(CurrentIndex - value.ToString().Length + 1, CurrentIndex + 1)));
             else if (value is not null)
-                TokenCollection.Add(new(kind, value, new(_currentIndex - value.ToString().Length, _currentIndex)));
+                TokenCollection.Add(new(kind, value, new(CurrentIndex - value.ToString().Length, CurrentIndex)));
             else
-                TokenCollection.Add(new(kind, null, new(_currentIndex, _currentIndex + 1)));
+                TokenCollection.Add(new(kind, null, new(CurrentIndex, CurrentIndex + 1)));
         }
 
         private void AddSpecial(TokenKind kind)
         {
             InsertCurrentSymbol();
-            TokenCollection.Add(new(kind, null, new(_currentIndex, _currentIndex + 1)));
+            TokenCollection.Add(new(kind, null, new(CurrentIndex, CurrentIndex + 1)));
         }
 
         private void AddDouble(TokenKind kind)
         {
             InsertCurrentSymbol();
-            TokenCollection.Add(new(kind, null, new(_currentIndex - 1, _currentIndex + 1)));
+            TokenCollection.Add(new(kind, null, new(CurrentIndex - 1, CurrentIndex + 1)));
         }
 
         private void InsertCurrentSymbol()
         {
-            if (!string.IsNullOrWhiteSpace(_currentSymbol.ToString()))
+            if (!string.IsNullOrWhiteSpace(CurrentSymbol))
             {
-                ProcessSymbol(_currentSymbol.ToString());
-                _currentSymbol.Clear();
+                ProcessSymbol(CurrentSymbol);
+                CurrentSymbol = "";
             }
         }
 
         private bool IsDigit(string s)
         {
-            if (string.IsNullOrWhiteSpace(s))
-                return false;
-            return long.TryParse(s, out long l);
+            return !string.IsNullOrWhiteSpace(s) && long.TryParse(s, out _);
         }
 
         private bool IsFloatDigit(ref string s)
@@ -165,7 +156,7 @@ namespace Mug.Models.Lexer
                 return false;
             if (s[0] == '.')
                 s = '0' + s;
-            return double.TryParse(s, out double d);
+            return double.TryParse(s, out _);
         }
 
         private bool InsertKeyword(string s)
@@ -175,7 +166,7 @@ namespace Mug.Models.Lexer
 
         private void CheckValidIdentifier(string identifier)
         {
-            var bad = new Token(TokenKind.Bad, null, new(_currentIndex - identifier.Length, _currentIndex));
+            var bad = new Token(TokenKind.Bad, null, new(CurrentIndex - identifier.Length, CurrentIndex));
             if (!char.IsLetter(identifier[0]) && identifier[0] != '_')
                 this.Throw(bad, "Invalid identifier, following the mug's syntax rules, an ident cannot start with `", identifier[0].ToString(), "`;");
             if (identifier.Contains('.'))
@@ -202,52 +193,43 @@ namespace Mug.Models.Lexer
             }
         }
 
-        private bool ThereIsANext(out char next)
-        {
-            next = (char)0;
-            if (_currentIndex + 1 >= Source.Length)
-                return false;
-            next = Source[_currentIndex + 1];
-            return true;
-        }
-
         private bool NextIsDigit()
         {
-            return ThereIsANext(out var next) && char.IsDigit(next);
+            return CurrentIndex + 1 < Source.Length && char.IsDigit(Source[CurrentIndex + 1]);
         }
 
         private bool MatchInlineComment()
         {
-            return Source[_currentIndex] == InlineCommentSymbol;
+            return Source[CurrentIndex] == '#';
         }
 
         private bool MatchEolEof()
         {
-            return _currentIndex == Source.Length || Source[_currentIndex] == '\n';
+            return CurrentIndex == Source.Length || Source[CurrentIndex] == '\n';
         }
 
         private bool MatchStartMultiLineComment()
         {
-            return MatchInlineComment() && MatchNext('[');
+            return CurrentIndex + 1 < Source.Length && Source[CurrentIndex] == '#' && Source[CurrentIndex + 1] == '[';
         }
 
         private bool MatchEndMultiLineComment()
         {
-            return ThereIsANext(out var next) && Source[_currentIndex] == ']' && Source[_currentIndex + 1] == '#';
+            return CurrentIndex + 1 < Source.Length && Source[CurrentIndex] == ']' && Source[CurrentIndex + 1] == '#';
         }
 
         private bool ConsumeComments()
         {
             if (MatchStartMultiLineComment())
             {
-                _currentIndex += 2;
+                CurrentIndex += 2;
                 while (!MatchEndMultiLineComment())
-                    _currentIndex++;
-                _currentIndex += 2;
+                    CurrentIndex++;
+                CurrentIndex += 2;
             }
             else if (MatchInlineComment())
                 while (!MatchEolEof())
-                    _currentIndex++;
+                    CurrentIndex++;
             else
                 return false;
             return true;
@@ -255,22 +237,22 @@ namespace Mug.Models.Lexer
 
         private void CollectChar()
         {
-            _currentSymbol.Append(Source[_currentIndex]);
-            while (_currentIndex++ < Source.Length && Source[_currentIndex] != '\'')
-                _currentSymbol.Append(Source[_currentIndex]);
-            AddToken(TokenKind.ConstantChar, _currentSymbol.Append( '\'').ToString(), true);
-            if (_currentSymbol.Length > 3 || _currentSymbol.Length < 3)
-                this.Throw(TokenCollection[^1], "Invalid characters in ConstantChar: it can only contain a character, not ", (_currentSymbol.Length - 2).ToString());
-            _currentSymbol.Clear();
+            CurrentSymbol += Source[CurrentIndex];
+            while (CurrentIndex++ < Source.Length && Source[CurrentIndex] != '\'')
+                CurrentSymbol += Source[CurrentIndex];
+            AddToken(TokenKind.ConstantChar, CurrentSymbol += '\'', true);
+            if (CurrentSymbol.Length > 3 || CurrentSymbol.Length < 3)
+                this.Throw(TokenCollection[^1], "Invalid characters in ConstantChar: it can only contain a character, not ", (CurrentSymbol.Length - 2).ToString());
+            CurrentSymbol = "";
         }
 
         private void CollectString()
         {
-            _currentSymbol.Append(Source[_currentIndex]);
-            while (_currentIndex++ < Source.Length && Source[_currentIndex] != '"')
-                _currentSymbol.Append(Source[_currentIndex]);
-            AddToken(TokenKind.ConstantString, _currentSymbol.Append('"').ToString(), true);
-            _currentSymbol.Clear();
+            CurrentSymbol += Source[CurrentIndex];
+            while (CurrentIndex++ < Source.Length && Source[CurrentIndex] != '"')
+                CurrentSymbol += Source[CurrentIndex];
+            AddToken(TokenKind.ConstantString, CurrentSymbol + '"', true);
+            CurrentSymbol = "";
         }
 
         private bool IsValidIdentifierChar(char current)
@@ -285,14 +267,14 @@ namespace Mug.Models.Lexer
 
         private bool MatchEol()
         {
-            return Source[_currentIndex] == '\n' || Source[_currentIndex] == '\r';
+            return Source[CurrentIndex] == '\n' || Source[CurrentIndex] == '\r';
         }
 
-        private bool MatchPart(char next, TokenKind token)
+        private bool MatchPart(char toMatch, TokenKind toInsert)
         {
-            var match = MatchNext(next);
+            var match = MatchNext(toMatch);
             if (match)
-                AddDouble(token);
+                AddDouble(toInsert);
             return match;
         }
 
@@ -301,36 +283,41 @@ namespace Mug.Models.Lexer
             switch (current)
             {
                 case '=':
-                    if (!MatchPart('=', TokenKind.BooleanEQ)) goto default;
-                    break;
+                    if (MatchPart('=', TokenKind.BooleanEQ))
+                        break;
+                    goto default;
                 case '!':
-                    if (!MatchPart('=', TokenKind.BooleanNEQ)) goto default;
-                    break;
+                    if (MatchPart('=', TokenKind.BooleanNEQ))
+                        break;
+                    goto default;
                 case '+':
-                    if (!MatchPart('+', TokenKind.OperatorIncrement) &&
-                        !MatchPart('=', TokenKind.AddAssignment))
-                        goto default;
-                    break;
+                    if (MatchPart('+', TokenKind.OperatorIncrement) || MatchPart('=', TokenKind.AddAssignment))
+                        break;
+                    goto default;
                 case '-':
-                    if (!MatchPart('-', TokenKind.OperatorDecrement) &&
-                        !MatchPart('=', TokenKind.SubAssignment))
-                        goto default;
-                    break;
+                    if (MatchPart('-', TokenKind.OperatorDecrement) || MatchPart('=', TokenKind.SubAssignment))
+                        break;
+                    goto default;
                 case '*':
-                    if (!MatchPart('=', TokenKind.MulAssignment)) goto default;
-                    break;
+                    if (MatchPart('=', TokenKind.MulAssignment))
+                        break;
+                    goto default;
                 case '/':
-                    if (!MatchPart('=', TokenKind.DivAssignment)) goto default;
-                    break;
+                    if (MatchPart('=', TokenKind.DivAssignment))
+                        break;
+                    goto default;
                 case '<':
-                    if (!MatchPart('=', TokenKind.BooleanMinEQ)) goto default;
-                    break;
+                    if (MatchPart('=', TokenKind.BooleanMinEQ))
+                        break;
+                    goto default;
                 case '>':
-                    if (!MatchPart('=', TokenKind.BooleanMajEQ)) goto default;
-                    break;
+                    if (MatchPart('=', TokenKind.BooleanMajEQ))
+                        break;
+                    goto default;
                 case '.':
-                    if (!MatchPart('=', TokenKind.RangeDots)) goto default;
-                    break;
+                    if (MatchPart('.', TokenKind.RangeDots))
+                        break;
+                    goto default;
                 default:
                     AddSpecial(GetSpecial(current));
                     break;
@@ -340,9 +327,9 @@ namespace Mug.Models.Lexer
         private void ProcessCurrentChar()
         {
             ConsumeComments();
-            var current = Source[_currentIndex];
+            char current = Source[CurrentIndex];
             if (current == '.' && NextIsDigit())
-                _currentSymbol.Append('.');
+                CurrentSymbol += '.';
             if (current == '"')
             {
                 CollectString();
@@ -353,27 +340,24 @@ namespace Mug.Models.Lexer
                 CollectChar();
                 return;
             }
+            else if (MatchEol())
+                return;
             if (IsControl(current))
                 InsertCurrentSymbol();
             else if (IsValidIdentifierChar(current))
-                _currentSymbol.Append(current);
+                CurrentSymbol += current;
             else
                 ProcessSpecial(current);
         }
-
-        private int Advance()
-        {
-            return _currentIndex++;
-        }
-
         public List<Token> Tokenize()
         {
+            if (TokenCollection is not null)
+                return TokenCollection;
+            TokenCollection = new();
             do
                 ProcessCurrentChar();
-            while (Advance() < Source.Length - 1);
-
+            while (CurrentIndex++ < Source.Length - 1);
             AddSpecial(TokenKind.EOF);
-
             return TokenCollection;
         }
     }
