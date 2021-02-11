@@ -16,7 +16,6 @@ func main(): i32 {
   return x;
 }";
 
-        //var lexer = new MugLexer(testPath, File.ReadAllText(testPath));
         var lexer = new MugLexer("test", test);
         lexer.Tokenize();
         var parser = new MugParser(lexer);
@@ -26,10 +25,6 @@ func main(): i32 {
 
         LLVM.DumpModule(generator.Module);
         LLVM.VerifyModule(generator.Module, LLVMVerifierFailureAction.LLVMPrintMessageAction, out string err);
-        //debug.print(parser.Module.Stringize());
-        //foreach (var member in generator.RedefinitionTable)
-        //debug.print(member.Key, " -> ", member.Value);
-        //File.WriteAllText(Path.ChangeExtension(testPath, "mast"), tree.Stringize());
     }
     else
     {
