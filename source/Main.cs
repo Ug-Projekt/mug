@@ -4,12 +4,13 @@ using Mug.Models.Generator;
 using Mug.Models.Lexer;
 using Mug.Models.Parser;
 using System;
+using System.IO;
 
 try
 {
     if (debug.isDebug())
     {
-        var testPath = $"C:/Users/{Environment.UserName}/Desktop/Mug/tests/.mug";
+        string testPath = Directory.GetParent(System.IO.Directory.GetCurrentDirectory()).Parent.Parent.Parent.FullName.Replace("\\", "/") + "/tests/.mug";
         var test = @"
 func main(): i32 {
   var x = 0;
