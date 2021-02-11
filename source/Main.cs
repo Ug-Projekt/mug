@@ -11,7 +11,7 @@ try
     {
         var testPath = $"C:/Users/{Environment.UserName}/Desktop/Mug/tests/.mug";
         var test = @"
-func main(): u32 {
+func main(): i32 {
   var x = 0;
   return x;
 }";
