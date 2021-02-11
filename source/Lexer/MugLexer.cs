@@ -14,7 +14,7 @@ namespace Mug.Models.Lexer
         {
             get
             {
-                return TokenCollection == null ? TokenCollection.Count : 0;
+                return TokenCollection == null ? 0 : TokenCollection.Count;
             }
         }
 
