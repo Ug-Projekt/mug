@@ -1,5 +1,4 @@
-*.exe 
-*.dll
+*.exe
 source/obj/
 source/bin/
 source/.vs/
