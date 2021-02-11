@@ -77,7 +77,8 @@ namespace Mug.Models.Generator
         {
             for (int i = 0; i < parameters.Parameters.Length; i++)
             {
-                _emitter.DeclareVariable(parameters.Parameters[i].Name, parameters.Parameters[i].Type, parameters.Parameters[i].Position);
+                var parameter = parameters.Parameters[i];
+                _emitter.DeclareVariable(parameter.Name, _generator.TypeToLLVMType(parameter.Type, parameter.Position), parameter.Position);
                 _emitter.Load(LLVM.GetParam(function, (uint)i));
                 _emitter.StoreVariable(parameters.Parameters[i].Name);
             }
@@ -87,13 +88,18 @@ namespace Mug.Models.Generator
             switch (statement)
             {
                 case VariableStatement variable:
-                    _emitter.DeclareVariable(variable);
                     EvaluateExpression(variable.Body);
-                    _generator.ExpectSameTypes(_generator.TypeToLLVMType(variable.Type, variable.Position), variable.Body.Position, "The expression type and the variable type are different", _emitter.PeekType());
+                    if (!variable.Type.IsAutomatic())
+                    {
+                        _emitter.DeclareVariable(variable);
+                        _generator.ExpectSameTypes(_generator.TypeToLLVMType(variable.Type, variable.Position), variable.Body.Position, "The expression type and the variable type are different", _emitter.PeekType());
+                    }
+                    else
+                        _emitter.DeclareVariable(variable.Name, _emitter.PeekType(), variable.Position);
                     _emitter.StoreVariable(variable.Name);
                     break;
                 case ReturnStatement @return:
-                    if (@return.Body is null)
+                    if (@return.IsVoid())
                     {
                         _generator.ExpectSameTypes(_generator.TypeToLLVMType(_function.Type, @return.Position), @return.Position, "Expected non-void expression", LLVM.VoidType());
                         _emitter.RetVoid();

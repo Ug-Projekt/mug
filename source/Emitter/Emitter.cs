@@ -73,13 +73,13 @@ namespace Mug.Models.Generator.Emitter
         }
         public void DeclareVariable(VariableStatement variable)
         {
-            DeclareVariable(variable.Name, variable.Type, variable.Position);
+            DeclareVariable(variable.Name, _generator.TypeToLLVMType(variable.Type, variable.Position), variable.Position);
         }
-        public void DeclareVariable(string name, MugType type, Range position)
+        public void DeclareVariable(string name, LLVMTypeRef type, Range position)
         {
             if (IsDeclared(name))
                 _generator.Error(position, "Variable already declared");
-            SetMemory(name, BuildAlloca(Builder, _generator.TypeToLLVMType(type, position), name));
+            SetMemory(name, BuildAlloca(Builder, type, name));
         }
         public void StoreVariable(string name)
         {

@@ -25,12 +25,5 @@ namespace Mug.Models.Parser.NodeKinds
         {
             _body.Add(element);
         }
-        public string Dump(string indent = "")
-        {
-            string nodes = "";
-            for (int i = 0; i < _body.Count; i++)
-                nodes += indent+"      ArrayElement["+i+"] {\n"+_body[i].Dump(indent+"         ")+"\n"+indent+"      },\n";
-            return indent+$"ArrayAllocationNode: {{\n{indent}   Size: {{\n{Size.Dump(indent+"      ")}\n{indent}   }},\n{indent}   Type: {{\n{Type.Dump(indent+"      ")}\n{indent}   }},\n{indent}   Body: {{\n{nodes}\n{indent}   }}\n{indent}}}";
-        }
     }
 }

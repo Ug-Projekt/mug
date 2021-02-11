@@ -20,12 +20,5 @@ namespace Mug.Models.Parser
         {
             nodes.Add(node);
         }
-        public string Dump(string indent = "")
-        {
-            string nodes = "";
-            for (int i = 0; i < this.nodes.Count; i++)
-                nodes += this.nodes[i].Dump(indent)+",\n";
-            return nodes;
-        }
     }
 }

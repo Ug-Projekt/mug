@@ -6,6 +6,7 @@ namespace Mug.TypeSystem
 {
     public enum TypeKind
     {
+        Auto,
         Pointer,
         String,
         Char,

@@ -527,14 +527,17 @@ namespace Mug.Models.Parser
             ExpectMultipleMute("`"+Current.Kind+"` is not a valid token in the current context;", end);
             return e;
         }
+        MugType ExpectVariableType()
+        {
+            return (MatchAdvance(TokenKind.Colon) ? ExpectType() : MugType.Automatic());
+        }
         bool VariableDefinition(out INode statement)
         {
             statement = null;
             if (!MatchAdvance(TokenKind.KeyVar))
                 return false;
             var name = Expect("Expected the variable id;", TokenKind.Identifier);
-            Expect("Expected a type, in variable definition, implicit type are not supported yet;", TokenKind.Colon);
-            var type = ExpectType();
+            var type = ExpectVariableType();
             if (MatchAdvance(TokenKind.Semicolon))
             {
                 statement = new VariableStatement() { Body = null, IsAssigned = false, Name = name.Value.ToString(), Position = name.Position, Type = type };
@@ -551,8 +554,7 @@ namespace Mug.Models.Parser
             if (!MatchAdvance(TokenKind.KeyConst))
                 return false;
             var name = Expect("Expected the constant id;", TokenKind.Identifier);
-            Expect("Expected a type, in constant definition, implicit type are not supported yet;", TokenKind.Colon);
-            var type = ExpectType();
+            var type = ExpectVariableType();
             if (Match(TokenKind.Semicolon))
                 ParseError("A constant cannot be declared without a body;");
             Expect("To define the value of a constant must open the body with `=`;", TokenKind.Equal);
@@ -878,7 +880,7 @@ namespace Mug.Models.Parser
         public NamespaceNode Parse()
         {
             var firstToken = Lexer.TokenCollection[_currentIndex];
-            Module.Name = new Token(0, TokenKind.Identifier, Lexer.ModuleName, new(0, Lexer.Source.Length-1));
+            Module.Name = new Token(TokenKind.Identifier, Lexer.ModuleName, new(0, Lexer.Source.Length-1));
             if (firstToken.Kind == TokenKind.EOF)
                 return Module;
             Module.Members = ExpectNamespaceMembers();

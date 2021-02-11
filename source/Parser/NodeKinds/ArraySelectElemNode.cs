@@ -12,9 +12,5 @@ namespace Mug.Models.Parser.NodeKinds
         public INode Left { get; set; }
         public INode IndexExpression { get; set; }
         public Range Position { get; set; }
-        public string Dump(string indent = "")
-        {
-            return indent+$"ArraySelectElemNode: {{\n{indent}   Left: {{\n{Left.Dump(indent+"      ")}\n{indent}   }},\n{indent}   IndexExpression: {{\n{IndexExpression.Dump(indent+"      ")}\n{indent}   }}\n{indent}}}";
-        }
     }
 }

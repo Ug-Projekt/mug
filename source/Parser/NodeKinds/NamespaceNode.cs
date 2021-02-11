@@ -1,7 +1,5 @@
-﻿using Mug.Models.Parser.NodeKinds;
+﻿using Newtonsoft.Json;
 using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace Mug.Models.Parser.NodeKinds
 {
@@ -15,9 +13,9 @@ namespace Mug.Models.Parser.NodeKinds
         {
             Members = new NodeBuilder();
         }
-        public string Dump(string indent = "")
+        public string Dump()
         {
-            return indent+$"NamespaceNode: {{\n{indent}   Name: {{\n{Name.Dump(indent+"     ")}\n{indent}   }},\n{Members.Dump(indent+"   ")}\n{indent}}}";
+            return JsonConvert.SerializeObject(Members.Nodes, Formatting.Indented);
         }
     }
 }

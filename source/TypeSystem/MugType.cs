@@ -38,13 +38,13 @@ namespace Mug.TypeSystem
             CompilationErrors.Throw("´", kind, "´ is not a type");
             return new();
         }
-        public string Dump(string indent = "")
+        public static MugType Automatic()
         {
-            return $"Type: {{\n{indent}   Kind: {Kind},\n{indent}   BaseType: {(BaseType is not null ? BaseType : "")}\n{indent}}}";
+            return new MugType(TypeKind.Auto);
         }
-        public override string ToString()
+        public bool IsAutomatic()
         {
-            return Dump();
+            return Kind == TypeKind.Auto;
         }
     }
 }

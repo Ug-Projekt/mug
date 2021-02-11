@@ -37,41 +37,46 @@ namespace Mug.Compilation
         void CompileModule(int optimizazioneLevel)
         {
             if (LLVM.VerifyModule(IRGenerator.Module, LLVMVerifierFailureAction.LLVMPrintMessageAction, out string error))
-                Exit($"\nImpossible to build due to a external compiler fail");
-            WriteFile(IRGenerator.Module, optimizazioneLevel,
+                exit($"\nImpossible to build due to a external compiler fail");
+            writeFile(IRGenerator.Module, optimizazioneLevel,
                 Path.ChangeExtension(IRGenerator.Parser.Lexer.ModuleName, "bc"));
 
-            static void Exit(string error)
+            static void exit(string error)
             {
                 CompilationErrors.Throw(error);
             }
 
-            static void Nothing()
+            static void nothing()
             {
 
             }
 
-            void WriteFile(LLVMModuleRef module, int optimizazioneLevel, string output, string clangFilename = "clang")
+            static void writeFile(LLVMModuleRef module, int optimizazioneLevel, string output, string clangFilename = "clang")
             {
                 if (File.Exists(output)) File.Delete(output);
 
                 if (LLVM.WriteBitcodeToFile(module, output) != 0)
-                    Exit("Error writing to file");
+                    exit("Error writing to file");
 
-                while (!File.Exists(output)) Nothing();
+                while (!File.Exists(output)) nothing();
 
-                CallClang(output, clangFilename, optimizazioneLevel);
+                callClang(output, clangFilename, optimizazioneLevel);
 
                 if (File.Exists(output)) File.Delete(output);
             }
 
-            void CallClang(string outputFilename, string clangFilename, int optimizazioneLevel)
+            static string getExecutableExtension()
+            {
+                return (Environment.OSVersion.Platform == PlatformID.Win32NT ? "exe" : null);
+            }
+
+            static void callClang(string outputFilename, string clangFilename, int optimizazioneLevel)
             {
                 var clang = Process.Start(
                     new ProcessStartInfo
                     {
                         FileName = clangFilename,
-                        Arguments = $"{outputFilename} -O{optimizazioneLevel} -o {Path.ChangeExtension(outputFilename, "exe")}",
+                        Arguments = $"{outputFilename} -O{optimizazioneLevel} -o {Path.ChangeExtension(outputFilename, getExecutableExtension())}",
                         CreateNoWindow = true,
                         UseShellExecute = false,
                         ErrorDialog = false,

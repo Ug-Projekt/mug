@@ -11,10 +11,5 @@ namespace Mug.Models.Parser.NodeKinds.Statements
         public INode Name { get; set; }
         public INode Body { get; set; }
         public Range Position { get; set; }
-
-        public string Dump(string indent = "")
-        {
-            return indent+ $"AssignmentStatement: {{\n{indent}   Name: {{\n{Name.Dump(indent+"      ")}\n{indent}   }},\n{indent}   Operator: {Operator},\n{indent}   Body: {{\n{(Body is not null ? Body.Dump(indent+"      ") : "")}\n{indent}   }}\n{indent}}}";
-        }
     }
 }

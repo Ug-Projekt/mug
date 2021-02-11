@@ -5,7 +5,6 @@ using Mug.Models.Lexer;
 using Mug.Models.Parser;
 using System;
 
-
 try
 {
     if (debug.isDebug())
@@ -13,15 +12,15 @@ try
         var testPath = $"C:/Users/{Environment.UserName}/Desktop/Mug/tests/.mug";
         var test = @"
 func main(): i32 {
-  var x: i32 = true;
+  var x = 0;
   return x;
 }";
-
+        
         //var lexer = new MugLexer(testPath, File.ReadAllText(testPath));
         var lexer = new MugLexer("test", test);
         lexer.Tokenize();
         var parser = new MugParser(lexer);
-        parser.Parse();
+        Console.WriteLine(parser.Parse().Dump());
         var generator = new IRGenerator(parser);
         generator.Generate();
         

@@ -17,7 +17,7 @@ namespace Mug.Compilation
             Console.WriteLine(": "+string.Join("", error));
             throw new CompilationException(null, new(), string.Join("", error));
         }
-        public static void Throw(this MugLexer Lexer, int pos, int lineAt, params string[] error)
+        public static void Throw(this MugLexer Lexer, int pos, params string[] error)
         {
             int start = pos;
             int end = pos+1;
@@ -26,7 +26,7 @@ namespace Mug.Compilation
             while (end < Lexer.Source.Length && Lexer.Source[end] != '\n')
                 end++;
             WriteModule(Lexer.ModuleName);
-            WriteSourceLine(pos - start - 1, (pos+1) - start - 1, lineAt + 1, Lexer.Source[(start + 1)..end], string.Join("", error));
+            WriteSourceLine(pos - start - 1, (pos+1) - start - 1, CountLines(Lexer.Source, pos) + 1, Lexer.Source[(start + 1)..end], string.Join("", error));
             throw new CompilationException(null, new(pos, pos), string.Join("", error));
         }
         public static void Throw(this MugLexer Lexer, Token token, params string[] error)
@@ -38,7 +38,7 @@ namespace Mug.Compilation
             while (end < Lexer.Source.Length && Lexer.Source[end] != '\n')
                 end++;
             WriteModule(Lexer.ModuleName);
-            WriteSourceLine(token.Position.Start.Value - start - 1, token.Position.End.Value - start - 1, token.LineAt+1, Lexer.Source[(start+1)..end], string.Join("", error));
+            WriteSourceLine(token.Position.Start.Value - start - 1, token.Position.End.Value - start - 1, CountLines(Lexer.Source, start+1), Lexer.Source[(start+1)..end], string.Join("", error));
             throw new CompilationException(null, token.Position, string.Join("", error));
         }
         public static void Throw(this MugParser Parser, INode node, params string[] error)

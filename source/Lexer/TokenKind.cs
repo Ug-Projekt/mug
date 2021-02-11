@@ -47,7 +47,6 @@ namespace Mug.Models.Lexer
         Minus,
         Star,
         KeyReturn,
-        Block,
         ConstantBoolean,
         KeyIf,
         KeyElif,

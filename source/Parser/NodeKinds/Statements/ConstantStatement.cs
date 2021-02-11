@@ -12,10 +12,5 @@ namespace Mug.Models.Parser.NodeKinds.Statements
         public MugType Type { get; set; }
         public INode Body { get; set; }
         public Range Position { get; set; }
-
-        public string Dump(string indent = "")
-        {
-            return indent+$"ConstantStatement: {{\n{indent}   Type: {{\n{Type.Dump(indent+"      ")}\n{indent}   }},\n{indent}   Name: {Name},\n{indent}   Body: {{\n{Body.Dump(indent+"      ")}\n{indent}   }}\n{indent}}}";
-        }
     }
 }

@@ -40,15 +40,5 @@ namespace Mug.Models.Parser.NodeKinds.Statements
         {
             _body.Add(field);
         }
-        public string Dump(string indent = "")
-        {
-            string nodes = "";
-            for (int i = 0; i < _body.Count; i++)
-                nodes += _body[i].Dump(indent + "      ") + ",\n";
-            string types = "";
-            for (int i = 0; i < _genericTypes.Count; i++)
-                types += indent + "      " + _genericTypes[i].Dump(indent + "      ") + ",\n";
-            return indent+ $"TypeStatement: {{\n{indent}   Name: {Name},\n{indent}   Body: {{\n{nodes}\n{indent}   }},\n{indent}   IsGeneric: {IsGeneric}{(IsGeneric ? $",\n{indent}   GenericType: {{\n{types}{indent}   }}" : "")}\n{indent}}}";
-        }
     }
 }

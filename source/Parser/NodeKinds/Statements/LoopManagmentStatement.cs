@@ -9,9 +9,5 @@ namespace Mug.Models.Parser.NodeKinds.Statements
     {
         public Token Managment { get; set; }
         public Range Position { get; set; }
-        public string Dump(string indent = "")
-        {
-            return indent + $"LoopManagmentStatement: {{\n{indent}   {Managment.Dump(indent+"   ")}\n{indent}   }}";
-        }
     }
 }

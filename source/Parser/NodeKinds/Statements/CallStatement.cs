@@ -37,12 +37,5 @@ namespace Mug.Models.Parser.NodeKinds.Statements
             _genericTypes = types;
         }
         public Range Position { get; set; }
-        public string Dump(string indent = "")
-        {
-            string types = "";
-            for (int i = 0; i < _genericTypes.Count; i++)
-                types += _genericTypes[i].Dump(indent + "      ") + ",\n";
-            return indent + $"CallStatement: {{\n{indent}   Name: {{\n{Name.Dump(indent + "      ")}\n{indent}   }},\n{indent}   Parameters: {{\n{(HasParameters ? Parameters.Dump(indent+"      ") : "")}\n{indent}   }},\n{indent}   IsGeneric: {IsGeneric}{(IsGeneric ? $",\n{indent}   GenericType: {{\n{types}{indent}   }}" : "")}\n{indent}}}";
-        }
     }
 }

@@ -15,10 +15,5 @@ namespace Mug.Models.Parser.NodeKinds.Directives
         public INode Member { get; set; }
         public ImportMode Mode { get; set; }
         public Range Position { get; set; }
-
-        public string Dump(string indent = "")
-        {
-            return indent + $"ImportDirective: {{\n{indent}   Mode: {Mode},\n{indent}   Member: {{\n{Member.Dump(indent+"      ")}\n{indent}   }}\n{indent}}}";
-        }
     }
 }

@@ -15,7 +15,6 @@ namespace Mug.Models.Lexer
         public List<Token> TokenCollection;
         string CurrentSymbol = "";
         int CurrentIndex = 0;
-        int CurrentLine = 0;
         public int Length
         {
             get
@@ -37,7 +36,7 @@ namespace Mug.Models.Lexer
         }
         bool AddKeyword(TokenKind kind, int len)
         {
-            TokenCollection.Add(new (CurrentLine, kind, null, new (CurrentIndex-len, CurrentIndex)));
+            TokenCollection.Add(new (kind, null, new (CurrentIndex-len, CurrentIndex)));
             return true;
         }
         bool GetKeyword(string s) => s switch
@@ -75,7 +74,7 @@ namespace Mug.Models.Lexer
         };
         TokenKind IllegalChar()
         {
-            this.Throw(CurrentIndex, CurrentLine, "Found illegal SpecialSymbol: mug's syntax does not use this character");
+            this.Throw(CurrentIndex, "Found illegal SpecialSymbol: mug's syntax does not use this character");
             return TokenKind.Bad;
         }
         bool MatchNext(char next)
@@ -117,21 +116,21 @@ namespace Mug.Models.Lexer
             if (kind == TokenKind.Identifier)
                 CheckValidIdentifier(value);
             if (isString)
-                TokenCollection.Add(new(CurrentLine, kind, value, new(CurrentIndex - value.ToString().Length+1, CurrentIndex+1)));
+                TokenCollection.Add(new(kind, value, new(CurrentIndex - value.ToString().Length+1, CurrentIndex+1)));
             else if (value is not null)
-                TokenCollection.Add(new(CurrentLine, kind, value, new(CurrentIndex - value.ToString().Length, CurrentIndex)));
+                TokenCollection.Add(new(kind, value, new(CurrentIndex - value.ToString().Length, CurrentIndex)));
             else
-                TokenCollection.Add(new(CurrentLine, kind, null, new(CurrentIndex, CurrentIndex + 1)));
+                TokenCollection.Add(new(kind, null, new(CurrentIndex, CurrentIndex + 1)));
         }
         void AddSpecial(TokenKind kind)
         {
             InsertCurrentSymbol();
-            TokenCollection.Add(new (CurrentLine, kind, null, new(CurrentIndex, CurrentIndex+1)));
+            TokenCollection.Add(new (kind, null, new(CurrentIndex, CurrentIndex+1)));
         }
         void AddMultiple(TokenKind kind, int count)
         {
             InsertCurrentSymbol();
-            TokenCollection.Add(new(CurrentLine, kind, null, new(CurrentIndex-1, CurrentIndex + count-1)));
+            TokenCollection.Add(new(kind, null, new(CurrentIndex-1, CurrentIndex + count-1)));
         }
         void InsertCurrentSymbol()
         {
@@ -161,7 +160,7 @@ namespace Mug.Models.Lexer
         }
         void CheckValidIdentifier(string identifier)
         {
-            var bad = new Token(CurrentLine, TokenKind.Bad, null, new(CurrentIndex - identifier.Length, CurrentIndex));
+            var bad = new Token(TokenKind.Bad, null, new(CurrentIndex - identifier.Length, CurrentIndex));
             if (!char.IsLetter(identifier[0]) && identifier[0] != '_')
                 this.Throw(bad, "Invalid identifier, following the mug's syntax rules, an ident cannot start with `", identifier[0].ToString(), "`;");
             if (identifier.Contains('.'))
@@ -275,9 +274,6 @@ namespace Mug.Models.Lexer
                 case '/':
                     if (MatchNext('=')) { AddMultiple(TokenKind.DivAssignment, 2); break; }
                     goto default;
-                case ':':
-                    if (MatchNext(':')) { AddMultiple(TokenKind.Block, 2); break; }
-                    goto default;
                 case '<':
                     if (MatchNext('=')) { AddMultiple(TokenKind.BooleanMinEQ, 2); break; }
                     goto default;
@@ -309,10 +305,7 @@ namespace Mug.Models.Lexer
                 return;
             }
             else if (MatchEol())
-            {
-                CurrentLine++;
                 return;
-            }
             if (IsControl(current))
                 InsertCurrentSymbol();
             else if (IsValidIdentifierChar(current))

@@ -13,10 +13,5 @@ namespace Mug.Models.Parser.NodeKinds
         public MugType Type { get; set; }
         public Modifier Modifier { get; set; }
         public Range Position { get; set; }
-
-        public string Dump(string indent = "")
-        {
-            return indent+$"FieldNode: {{\n{indent}   Name: {Name},\n{indent}   Modifier: {Modifier},\n{indent}   Type: {{\n{Type.Dump(indent+"      ")}\n{indent}   }}\n{indent}}}";
-        }
     }
 }
