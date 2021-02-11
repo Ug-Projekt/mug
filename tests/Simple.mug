@@ -1,4 +1,0 @@
-func main(): ?
-{
-   io::println("Hello, World!");
-}
