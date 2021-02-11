@@ -12,10 +12,10 @@ namespace Mug.Models.Generator
 {
     public class LocalGenerator
     {
-        readonly MugEmitter _emitter;
-        readonly Dictionary<string, LLVMValueRef> _symbols;
-        readonly FunctionNode _function;
-        readonly IRGenerator _generator;
+        private readonly MugEmitter _emitter;
+        private readonly Dictionary<string, LLVMValueRef> _symbols;
+        private readonly FunctionNode _function;
+        private readonly IRGenerator _generator;
         public LocalGenerator(IRGenerator errorHandler, Dictionary<string, LLVMValueRef> symbols, ref FunctionNode function, ref MugEmitter emitter)
         {
             _generator = errorHandler;
@@ -23,11 +23,13 @@ namespace Mug.Models.Generator
             _emitter = emitter;
             _function = function;
         }
-        void Error(Range position, params string[] error)
+
+        private void Error(Range position, params string[] error)
         {
             _generator.Parser.Lexer.Throw(position, error);
         }
-        void EmitOperator(OperatorKind kind)
+
+        private void EmitOperator(OperatorKind kind)
         {
             switch (kind)
             {
@@ -38,9 +40,11 @@ namespace Mug.Models.Generator
                 case OperatorKind.Range: break;
             }
         }
-        void EvaluateExpression(INode expression)
+
+        private void EvaluateExpression(INode expression)
         {
-            switch (expression) {
+            switch (expression)
+            {
                 case ExpressionNode e:
                     EvaluateExpression(e.Left);
                     var ft = _emitter.PeekType();
@@ -83,7 +87,8 @@ namespace Mug.Models.Generator
                 _emitter.StoreVariable(parameters.Parameters[i].Name);
             }
         }
-        void RecognizeStatement(INode statement)
+
+        private void RecognizeStatement(INode statement)
         {
             switch (statement)
             {

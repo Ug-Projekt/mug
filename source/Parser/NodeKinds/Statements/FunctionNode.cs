@@ -2,8 +2,6 @@
 using Mug.TypeSystem;
 using System;
 using System.Collections.Generic;
-using System.Text;
-using System.Text.Json.Serialization;
 
 namespace Mug.Models.Parser.NodeKinds.Statements
 {
@@ -19,7 +17,7 @@ namespace Mug.Models.Parser.NodeKinds.Statements
         public MugType Type { get; set; }
         public Modifier Modifier { get; set; }
         public ParameterListNode ParameterList { get; set; } = new();
-        List<Token> _genericTypes { get; set; } = new();
+        private List<Token> _genericTypes { get; set; } = new();
         public Token[] GenericTypes
         {
             get

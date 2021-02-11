@@ -1,17 +1,13 @@
-﻿using Mug.Models.Lexer;
-using Mug.Models.Parser;
-using Mug.Models.Parser.NodeKinds.Statements;
-using Mug.TypeSystem;
+﻿using Mug.TypeSystem;
 using System;
 using System.Collections.Generic;
-using System.Text;
 
 namespace Mug.Models.Parser.NodeKinds
 {
     public class TypeAllocationNode : INode
     {
         public MugType Name { get; set; }
-        List<FieldAssignmentNode> _body { get; set; } = new();
+        private List<FieldAssignmentNode> _body { get; set; } = new();
         public FieldAssignmentNode[] Body
         {
             get

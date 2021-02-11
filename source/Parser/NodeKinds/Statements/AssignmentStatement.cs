@@ -1,11 +1,9 @@
 ﻿using Mug.Models.Lexer;
 using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace Mug.Models.Parser.NodeKinds.Statements
 {
-    public class AssignmentStatement : INode 
+    public class AssignmentStatement : INode
     {
         public TokenKind Operator { get; set; }
         public INode Name { get; set; }

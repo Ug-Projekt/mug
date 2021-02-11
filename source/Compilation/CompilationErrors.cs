@@ -1,9 +1,6 @@
 ﻿using Mug.Models.Lexer;
 using Mug.Models.Parser;
 using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Text;
 
 namespace Mug.Compilation
 {
@@ -14,19 +11,19 @@ namespace Mug.Compilation
             Console.ForegroundColor = ConsoleColor.DarkRed;
             Console.Write("Error");
             Console.ResetColor();
-            Console.WriteLine(": "+string.Join("", error));
+            Console.WriteLine(": " + string.Join("", error));
             throw new CompilationException(null, new(), string.Join("", error));
         }
         public static void Throw(this MugLexer Lexer, int pos, params string[] error)
         {
             int start = pos;
-            int end = pos+1;
+            int end = pos + 1;
             while (start >= 0 && Lexer.Source[start] != '\n')
                 start--;
             while (end < Lexer.Source.Length && Lexer.Source[end] != '\n')
                 end++;
             WriteModule(Lexer.ModuleName);
-            WriteSourceLine(pos - start - 1, (pos+1) - start - 1, CountLines(Lexer.Source, pos) + 1, Lexer.Source[(start + 1)..end], string.Join("", error));
+            WriteSourceLine(pos - start - 1, (pos + 1) - start - 1, CountLines(Lexer.Source, pos) + 1, Lexer.Source[(start + 1)..end], string.Join("", error));
             throw new CompilationException(null, new(pos, pos), string.Join("", error));
         }
         public static void Throw(this MugLexer Lexer, Token token, params string[] error)
@@ -38,7 +35,7 @@ namespace Mug.Compilation
             while (end < Lexer.Source.Length && Lexer.Source[end] != '\n')
                 end++;
             WriteModule(Lexer.ModuleName);
-            WriteSourceLine(token.Position.Start.Value - start - 1, token.Position.End.Value - start - 1, CountLines(Lexer.Source, start+1), Lexer.Source[(start+1)..end], string.Join("", error));
+            WriteSourceLine(token.Position.Start.Value - start - 1, token.Position.End.Value - start - 1, CountLines(Lexer.Source, start + 1), Lexer.Source[(start + 1)..end], string.Join("", error));
             throw new CompilationException(null, token.Position, string.Join("", error));
         }
         public static void Throw(this MugParser Parser, INode node, params string[] error)
@@ -65,7 +62,8 @@ namespace Mug.Compilation
             WriteSourceLine(position.Start.Value - start - 1, position.End.Value - start - 1, CountLines(Lexer.Source, start), Lexer.Source[(start + 1)..end], string.Join("", error));
             throw new CompilationException(null, position, string.Join("", error));
         }
-        static void WriteModule(string moduleName)
+
+        private static void WriteModule(string moduleName)
         {
             Console.ForegroundColor = ConsoleColor.DarkMagenta;
             Console.Write("[");
@@ -75,7 +73,8 @@ namespace Mug.Compilation
             Console.WriteLine("]");
             Console.ResetColor();
         }
-        static int CountLines(string source, int posStart)
+
+        private static int CountLines(string source, int posStart)
         {
             int count = 1;
             for (; posStart >= 0; posStart--)
@@ -83,7 +82,8 @@ namespace Mug.Compilation
                     count++;
             return count;
         }
-        static void WriteSourceLine(int start, int end, int lineAt, string line, string error)
+
+        private static void WriteSourceLine(int start, int end, int lineAt, string line, string error)
         {
             Console.WriteLine($"@Raw(Line: {lineAt}, Position: ({start}..{end}))");
             Console.Write(lineAt);
@@ -95,7 +95,7 @@ namespace Mug.Compilation
             Console.Write(line[start..end].Replace("\t", " "));
             Console.ResetColor();
             Console.Write("{0}\n{1} ", line[end..].Replace("\t", " "), new string(' ', lineAt.ToString().Length + 3 + line[..start].Length)
-                + "^" + new string('~', line[start..end].Length-1));
+                + "^" + new string('~', line[start..end].Length - 1));
             Console.ForegroundColor = ConsoleColor.DarkYellow;
             Console.WriteLine(error);
             Console.ResetColor();

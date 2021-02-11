@@ -1,12 +1,9 @@
-﻿using Mug.Models.Lexer;
-using Mug.TypeSystem;
+﻿using Mug.TypeSystem;
 using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace Mug.Models.Parser.NodeKinds.Statements
 {
-    public struct ConstantStatement : INode 
+    public struct ConstantStatement : INode
     {
         public String Name { get; set; }
         public MugType Type { get; set; }

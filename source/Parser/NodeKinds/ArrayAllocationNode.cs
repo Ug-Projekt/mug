@@ -1,10 +1,6 @@
-﻿using Mug.Models.Lexer;
-using Mug.Models.Parser;
-using Mug.Models.Parser.NodeKinds.Statements;
-using Mug.TypeSystem;
+﻿using Mug.TypeSystem;
 using System;
 using System.Collections.Generic;
-using System.Text;
 
 namespace Mug.Models.Parser.NodeKinds
 {
@@ -12,7 +8,7 @@ namespace Mug.Models.Parser.NodeKinds
     {
         public MugType Type { get; set; }
         public INode Size { get; set; }
-        List<INode> _body { get; set; } = new();
+        private List<INode> _body { get; set; } = new();
         public INode[] Body
         {
             get

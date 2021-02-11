@@ -16,7 +16,8 @@ namespace Mug.Models.Generator
     {
         public readonly MugParser Parser;
         public readonly LLVMModuleRef Module;
-        readonly Dictionary<string, LLVMValueRef> _symbols = new();
+        private readonly Dictionary<string, LLVMValueRef> _symbols = new();
+
         public IRGenerator(string moduleName, string source)
         {
             Parser = new(moduleName, source);
@@ -47,19 +48,22 @@ namespace Mug.Models.Generator
                 _ => NotSupportedType<LLVMTypeRef>(type.Kind.ToString(), position)
             };
         }
-        void DeclareSymbol(string name, LLVMValueRef value, Range position)
+
+        private void DeclareSymbol(string name, LLVMValueRef value, Range position)
         {
             if (!_symbols.TryAdd(name, value))
                 Error(position, "`", name, "` member already declared");
         }
-        LLVMTypeRef[] ParameterTypesToLLVMTypes(ParameterNode[] parameterTypes)
+
+        private LLVMTypeRef[] ParameterTypesToLLVMTypes(ParameterNode[] parameterTypes)
         {
             var result = new LLVMTypeRef[parameterTypes.Length];
             for (int i = 0; i < parameterTypes.Length; i++)
                 result[i] = TypeToLLVMType(parameterTypes[i].Type, parameterTypes[i].Position);
             return result;
         }
-        LLVMBasicBlockRef InstallFunction(string name, MugType type, Range position, ParameterListNode paramTypes)
+
+        private LLVMBasicBlockRef InstallFunction(string name, MugType type, Range position, ParameterListNode paramTypes)
         {
             var ft = LLVM.FunctionType(
                     TypeToLLVMType(type, position),
@@ -72,11 +76,13 @@ namespace Mug.Models.Generator
 
             return LLVM.AppendBasicBlock(f, "");
         }
-        bool IsVoid(MugType type)
+
+        private bool IsVoid(MugType type)
         {
             return type.Kind == TypeKind.Void;
         }
-        ulong StringBoolToIntBool(string value)
+
+        private ulong StringBoolToIntBool(string value)
         {
             return Convert.ToUInt64(Convert.ToBoolean(value));
         }
@@ -109,13 +115,15 @@ namespace Mug.Models.Generator
                 Error(position, "In the current context `void` is not allowed");
             return type;
         }
-        LLVMValueRef GetSymbol(string name, Range position)
+
+        private LLVMValueRef GetSymbol(string name, Range position)
         {
             if (!_symbols.TryGetValue(name, out var member))
                 Error(position, "`", name, "` undeclared member");
             return member;
         }
-        void DefineFunction(FunctionNode function)
+
+        private void DefineFunction(FunctionNode function)
         {
             var entry = InstallFunction(function.Name, function.Type, function.Position, function.ParameterList);
             MugEmitter emitter = new MugEmitter(this);
@@ -125,7 +133,8 @@ namespace Mug.Models.Generator
             generator.AllocParameters(GetSymbol(function.Name, function.Position), function.ParameterList);
             generator.Generate();
         }
-        void RecognizeMember(INode member)
+
+        private void RecognizeMember(INode member)
         {
             switch (member)
             {

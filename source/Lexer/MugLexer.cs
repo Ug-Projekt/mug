@@ -1,10 +1,5 @@
 ﻿using Mug.Compilation;
-using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Runtime.InteropServices;
-using System.Text;
-using System.Text.Encodings.Web;
 
 namespace Mug.Models.Lexer
 {
@@ -13,8 +8,8 @@ namespace Mug.Models.Lexer
         public readonly string Source;
         public readonly string ModuleName;
         public List<Token> TokenCollection;
-        string CurrentSymbol = "";
-        int CurrentIndex = 0;
+        private string CurrentSymbol = "";
+        private int CurrentIndex = 0;
         public int Length
         {
             get
@@ -22,7 +17,8 @@ namespace Mug.Models.Lexer
                 return TokenCollection == null ? TokenCollection.Count : 0;
             }
         }
-        bool IsValidModuleName(string moduleName)
+
+        private bool IsValidModuleName(string moduleName)
         {
             for (int i = 0; i < moduleName.Length; i++)
                 if (!IsValidIdentifierChar(moduleName[i]))
@@ -34,12 +30,14 @@ namespace Mug.Models.Lexer
             ModuleName = moduleName;
             Source = source;
         }
-        bool AddKeyword(TokenKind kind, int len)
+
+        private bool AddKeyword(TokenKind kind, int len)
         {
-            TokenCollection.Add(new (kind, null, new (CurrentIndex-len, CurrentIndex)));
+            TokenCollection.Add(new(kind, null, new(CurrentIndex - len, CurrentIndex)));
             return true;
         }
-        bool GetKeyword(string s) => s switch
+
+        private bool GetKeyword(string s) => s switch
         {
             "return" => AddKeyword(TokenKind.KeyReturn, s.Length),
             "continue" => AddKeyword(TokenKind.KeyContinue, s.Length),
@@ -72,19 +70,22 @@ namespace Mug.Models.Lexer
             "unknown" => AddKeyword(TokenKind.KeyTunknown, s.Length),
             _ => false
         };
-        TokenKind IllegalChar()
+
+        private TokenKind IllegalChar()
         {
             this.Throw(CurrentIndex, "Found illegal SpecialSymbol: mug's syntax does not use this character");
             return TokenKind.Bad;
         }
-        bool MatchNext(char next)
+
+        private bool MatchNext(char next)
         {
             var match = CurrentIndex + 1 < Source.Length && Source[CurrentIndex + 1] == next;
             if (match)
                 CurrentIndex++;
             return match;
         }
-        TokenKind GetSpecial(char c) => c switch
+
+        private TokenKind GetSpecial(char c) => c switch
         {
             '(' => TokenKind.OpenPar,
             ')' => TokenKind.ClosePar,
@@ -111,28 +112,31 @@ namespace Mug.Models.Lexer
             _ => IllegalChar()
         };
 
-        void AddToken(TokenKind kind, string value, bool isString = false)
+        private void AddToken(TokenKind kind, string value, bool isString = false)
         {
             if (kind == TokenKind.Identifier)
                 CheckValidIdentifier(value);
             if (isString)
-                TokenCollection.Add(new(kind, value, new(CurrentIndex - value.ToString().Length+1, CurrentIndex+1)));
+                TokenCollection.Add(new(kind, value, new(CurrentIndex - value.ToString().Length + 1, CurrentIndex + 1)));
             else if (value is not null)
                 TokenCollection.Add(new(kind, value, new(CurrentIndex - value.ToString().Length, CurrentIndex)));
             else
                 TokenCollection.Add(new(kind, null, new(CurrentIndex, CurrentIndex + 1)));
         }
-        void AddSpecial(TokenKind kind)
+
+        private void AddSpecial(TokenKind kind)
         {
             InsertCurrentSymbol();
-            TokenCollection.Add(new (kind, null, new(CurrentIndex, CurrentIndex+1)));
+            TokenCollection.Add(new(kind, null, new(CurrentIndex, CurrentIndex + 1)));
         }
-        void AddMultiple(TokenKind kind, int count)
+
+        private void AddMultiple(TokenKind kind, int count)
         {
             InsertCurrentSymbol();
-            TokenCollection.Add(new(kind, null, new(CurrentIndex-1, CurrentIndex + count-1)));
+            TokenCollection.Add(new(kind, null, new(CurrentIndex - 1, CurrentIndex + count - 1)));
         }
-        void InsertCurrentSymbol()
+
+        private void InsertCurrentSymbol()
         {
             if (!string.IsNullOrWhiteSpace(CurrentSymbol))
             {
@@ -140,13 +144,15 @@ namespace Mug.Models.Lexer
                 CurrentSymbol = "";
             }
         }
-        bool IsDigit(string s)
+
+        private bool IsDigit(string s)
         {
             if (string.IsNullOrWhiteSpace(s))
                 return false;
             return long.TryParse(s, out long l);
         }
-        bool IsFloatDigit(ref string s)
+
+        private bool IsFloatDigit(ref string s)
         {
             if (string.IsNullOrWhiteSpace(s))
                 return false;
@@ -154,11 +160,13 @@ namespace Mug.Models.Lexer
                 s = '0' + s;
             return double.TryParse(s, out double d);
         }
-        bool InsertKeyword(string s)
+
+        private bool InsertKeyword(string s)
         {
             return GetKeyword(s);
         }
-        void CheckValidIdentifier(string identifier)
+
+        private void CheckValidIdentifier(string identifier)
         {
             var bad = new Token(TokenKind.Bad, null, new(CurrentIndex - identifier.Length, CurrentIndex));
             if (!char.IsLetter(identifier[0]) && identifier[0] != '_')
@@ -166,11 +174,13 @@ namespace Mug.Models.Lexer
             if (identifier.Contains('.'))
                 this.Throw(bad, "Invalid identifier, following the mug's syntax rules, an ident cannot contain `.`;");
         }
-        bool IsBoolean(string value)
+
+        private bool IsBoolean(string value)
         {
             return value == "true" || value == "false";
         }
-        void ProcessSymbol(string value)
+
+        private void ProcessSymbol(string value)
         {
             if (IsDigit(value))
                 AddToken(TokenKind.ConstantDigit, value);
@@ -184,31 +194,37 @@ namespace Mug.Models.Lexer
                 AddToken(TokenKind.Identifier, value);
             }
         }
-        bool NextIsDigit()
+
+        private bool NextIsDigit()
         {
-            return CurrentIndex+1 < Source.Length && char.IsDigit(Source[CurrentIndex+1]);
+            return CurrentIndex + 1 < Source.Length && char.IsDigit(Source[CurrentIndex + 1]);
         }
-        bool MatchInlineComment()
+
+        private bool MatchInlineComment()
         {
             return Source[CurrentIndex] == '#';
         }
-        bool MatchEolEof()
+
+        private bool MatchEolEof()
         {
             return CurrentIndex == Source.Length || Source[CurrentIndex] == '\n';
         }
-        bool MatchStartMultiLineComment()
+
+        private bool MatchStartMultiLineComment()
         {
-            return CurrentIndex + 1 < Source.Length && Source[CurrentIndex] == '#' && Source[CurrentIndex+1] == '[';
+            return CurrentIndex + 1 < Source.Length && Source[CurrentIndex] == '#' && Source[CurrentIndex + 1] == '[';
         }
-        bool MatchEndMultiLineComment()
+
+        private bool MatchEndMultiLineComment()
         {
-            return CurrentIndex + 1 < Source.Length && Source[CurrentIndex] == ']' && Source[CurrentIndex+1] == '#';
+            return CurrentIndex + 1 < Source.Length && Source[CurrentIndex] == ']' && Source[CurrentIndex + 1] == '#';
         }
-        bool ConsumeComments()
+
+        private bool ConsumeComments()
         {
             if (MatchStartMultiLineComment())
             {
-                CurrentIndex+=2;
+                CurrentIndex += 2;
                 while (!MatchEndMultiLineComment())
                     CurrentIndex++;
                 CurrentIndex += 2;
@@ -220,7 +236,8 @@ namespace Mug.Models.Lexer
                 return false;
             return true;
         }
-        void CollectChar()
+
+        private void CollectChar()
         {
             CurrentSymbol += Source[CurrentIndex];
             while (CurrentIndex++ < Source.Length && Source[CurrentIndex] != '\'')
@@ -230,7 +247,8 @@ namespace Mug.Models.Lexer
                 this.Throw(TokenCollection[^1], "Invalid characters in ConstantChar: it can only contain a character, not ", (CurrentSymbol.Length - 2).ToString());
             CurrentSymbol = "";
         }
-        void CollectString()
+
+        private void CollectString()
         {
             CurrentSymbol += Source[CurrentIndex];
             while (CurrentIndex++ < Source.Length && Source[CurrentIndex] != '"')
@@ -238,19 +256,23 @@ namespace Mug.Models.Lexer
             AddToken(TokenKind.ConstantString, CurrentSymbol + '"', true);
             CurrentSymbol = "";
         }
-        bool IsValidIdentifierChar(char current)
+
+        private bool IsValidIdentifierChar(char current)
         {
             return char.IsLetterOrDigit(current) || current == '_';
         }
-        bool IsControl(char current)
+
+        private bool IsControl(char current)
         {
             return char.IsControl(current) || char.IsWhiteSpace(current);
         }
-        bool MatchEol()
+
+        private bool MatchEol()
         {
             return Source[CurrentIndex] == '\n' || Source[CurrentIndex] == '\r';
         }
-        void ProcessSpecial(char current)
+
+        private void ProcessSpecial(char current)
         {
             switch (current)
             {
@@ -288,7 +310,8 @@ namespace Mug.Models.Lexer
                     break;
             }
         }
-        void ProcessCurrentChar()
+
+        private void ProcessCurrentChar()
         {
             ConsumeComments();
             char current = Source[CurrentIndex];
@@ -317,10 +340,10 @@ namespace Mug.Models.Lexer
         {
             if (TokenCollection is not null)
                 return TokenCollection;
-            TokenCollection = new ();
+            TokenCollection = new();
             do
                 ProcessCurrentChar();
-            while (CurrentIndex++ < Source.Length-1);
+            while (CurrentIndex++ < Source.Length - 1);
             AddSpecial(TokenKind.EOF);
             return TokenCollection;
         }

@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace Mug.Models.Lexer
+﻿namespace Mug.Models.Lexer
 {
     public enum TokenKind
     {

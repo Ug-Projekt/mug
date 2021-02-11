@@ -1,5 +1,4 @@
 ﻿using LLVMSharp;
-using Mug.Models;
 using Mug.Models.Generator;
 using Mug.Models.Lexer;
 using Mug.Models.Parser;
@@ -8,7 +7,6 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Text;
 
 namespace Mug.Compilation
 {
@@ -17,11 +15,11 @@ namespace Mug.Compilation
         public IRGenerator IRGenerator;
         public CompilationUnit(string moduleName, string source)
         {
-            IRGenerator = new (moduleName, source);
+            IRGenerator = new(moduleName, source);
         }
         public CompilationUnit(string path)
         {
-            IRGenerator = new (Path.GetFileNameWithoutExtension(path), File.ReadAllText(path));
+            IRGenerator = new(Path.GetFileNameWithoutExtension(path), File.ReadAllText(path));
         }
         public void Compile(int optimizazioneLevel)
         {
@@ -31,10 +29,11 @@ namespace Mug.Compilation
 
             if (LLVM.VerifyModule(IRGenerator.Module, LLVMVerifierFailureAction.LLVMReturnStatusAction, out string err))
                 CompilationErrors.Throw(err);
-            
+
             CompileModule(optimizazioneLevel);
         }
-        void CompileModule(int optimizazioneLevel)
+
+        private void CompileModule(int optimizazioneLevel)
         {
             if (LLVM.VerifyModule(IRGenerator.Module, LLVMVerifierFailureAction.LLVMPrintMessageAction, out string error))
                 exit($"\nImpossible to build due to a external compiler fail");

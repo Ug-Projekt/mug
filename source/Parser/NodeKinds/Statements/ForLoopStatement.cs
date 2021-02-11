@@ -1,11 +1,9 @@
 ﻿using Mug.Models.Lexer;
 using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace Mug.Models.Parser.NodeKinds.Statements
 {
-    public struct ForLoopStatement : INode 
+    public struct ForLoopStatement : INode
     {
         public TokenKind Operator { get; set; }
         // VariableStatement, AssignStatement, ForCounterReference

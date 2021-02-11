@@ -15,7 +15,7 @@ func main(): i32 {
   var x = 0;
   return x;
 }";
-        
+
         //var lexer = new MugLexer(testPath, File.ReadAllText(testPath));
         var lexer = new MugLexer("test", test);
         lexer.Tokenize();
@@ -23,7 +23,7 @@ func main(): i32 {
         Console.WriteLine(parser.Parse().Dump());
         var generator = new IRGenerator(parser);
         generator.Generate();
-        
+
         LLVM.DumpModule(generator.Module);
         LLVM.VerifyModule(generator.Module, LLVMVerifierFailureAction.LLVMPrintMessageAction, out string err);
         //debug.print(parser.Module.Stringize());

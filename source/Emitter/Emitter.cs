@@ -1,6 +1,5 @@
 ﻿using LLVMSharp;
 using Mug.Models.Parser.NodeKinds.Statements;
-using Mug.TypeSystem;
 using System;
 using System.Collections.Generic;
 using static LLVMSharp.LLVM;
@@ -11,9 +10,9 @@ namespace Mug.Models.Generator.Emitter
     {
         public LLVMBuilderRef Builder { get; private set; } = CreateBuilder();
 
-        readonly Stack<LLVMValueRef> _stack = new();
-        readonly Dictionary<string, LLVMValueRef> _memory = new();
-        readonly IRGenerator _generator;
+        private readonly Stack<LLVMValueRef> _stack = new();
+        private readonly Dictionary<string, LLVMValueRef> _memory = new();
+        private readonly IRGenerator _generator;
 
         public static readonly LLVMBool ConstLLVMFalse = new LLVMBool(0);
         public static readonly LLVMBool ConstLLVMTrue = new LLVMBool(1);
@@ -63,11 +62,13 @@ namespace Mug.Models.Generator.Emitter
             var second = Pop();
             Load(BuildSDiv(Builder, Pop(), second, ""));
         }
-        LLVMValueRef GetFromMemory(string name)
+
+        private LLVMValueRef GetFromMemory(string name)
         {
             return _memory[name];
         }
-        void SetMemory(string name, LLVMValueRef value)
+
+        private void SetMemory(string name, LLVMValueRef value)
         {
             _memory.TryAdd(name, value);
         }
@@ -85,7 +86,8 @@ namespace Mug.Models.Generator.Emitter
         {
             BuildStore(Builder, Pop(), GetFromMemory(name));
         }
-        bool IsDeclared(string name)
+
+        private bool IsDeclared(string name)
         {
             return _memory.ContainsKey(name);
         }

@@ -3,12 +3,13 @@
 /// <summary>
 ///  use it to print debug informations; in release it will not work
 /// </summary>
-class debug
+internal class debug
 {
-    public static bool isDebug() {
-    #if DEBUG
+    public static bool isDebug()
+    {
+#if DEBUG
         return true;
-    #endif
+#endif
         return false;
     }
 
@@ -40,7 +41,7 @@ class debug
     }
     public static bool askfast(params string[] msg)
     {
-        Console.Write(string.Join("", msg)+"? [y/..]: ");
+        Console.Write(string.Join("", msg) + "? [y/..]: ");
         var x = Console.ReadKey().KeyChar == 'y';
         Console.Write('\n');
         return x;

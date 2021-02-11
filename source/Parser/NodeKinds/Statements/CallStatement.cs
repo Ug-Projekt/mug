@@ -1,8 +1,6 @@
-﻿using Mug.Models.Lexer;
-using Mug.TypeSystem;
+﻿using Mug.TypeSystem;
 using System;
 using System.Collections.Generic;
-using System.Text;
 
 namespace Mug.Models.Parser.NodeKinds.Statements
 {
@@ -17,7 +15,8 @@ namespace Mug.Models.Parser.NodeKinds.Statements
                 return Parameters != null;
             }
         }
-        List<MugType> _genericTypes { get; set; } = new();
+
+        private List<MugType> _genericTypes { get; set; } = new();
         public MugType[] GenericTypes
         {
             get

@@ -1,8 +1,5 @@
 ﻿using Mug.Compilation;
 using Mug.Models.Lexer;
-using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace Mug.TypeSystem
 {
@@ -33,7 +30,8 @@ namespace Mug.TypeSystem
                 _ => Error(t.Kind.ToString())
             };
         }
-        static MugType Error(string kind)
+
+        private static MugType Error(string kind)
         {
             CompilationErrors.Throw("´", kind, "´ is not a type");
             return new();

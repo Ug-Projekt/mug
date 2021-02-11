@@ -1,12 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
 
 namespace Mug.Models.Parser
 {
     public class NodeBuilder : INode
     {
-        List<INode> nodes = new();
+        private readonly List<INode> nodes = new();
         public INode[] Nodes
         {
             get

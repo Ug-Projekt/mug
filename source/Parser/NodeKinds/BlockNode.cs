@@ -1,7 +1,5 @@
-﻿using Mug.Models.Parser.NodeKinds.Statements;
-using System;
+﻿using System;
 using System.Collections.Generic;
-using System.Text;
 
 namespace Mug.Models.Parser.NodeKinds
 {
@@ -17,7 +15,7 @@ namespace Mug.Models.Parser.NodeKinds
 
         public Range Position { get; set; }
 
-        List<INode> statements = new();
+        private readonly List<INode> statements = new();
         public void Add(INode node)
         {
             statements.Add(node);

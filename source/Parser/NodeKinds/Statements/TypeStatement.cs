@@ -1,14 +1,13 @@
 ﻿using Mug.Models.Lexer;
 using System;
 using System.Collections.Generic;
-using System.Text;
 
 namespace Mug.Models.Parser.NodeKinds.Statements
 {
-    public class TypeStatement : INode 
+    public class TypeStatement : INode
     {
         public String Name { get; set; }
-        List<Token> _genericTypes { get; set; } = new();
+        private List<Token> _genericTypes { get; set; } = new();
         public Token[] GenericTypes
         {
             get
@@ -23,7 +22,8 @@ namespace Mug.Models.Parser.NodeKinds.Statements
                 return GenericTypes.Length > 0;
             }
         }
-        List<FieldNode> _body { get; set; } = new();
+
+        private List<FieldNode> _body { get; set; } = new();
         public FieldNode[] Body
         {
             get

@@ -2,7 +2,6 @@
 using Mug.TypeSystem;
 using System;
 using System.Collections.Generic;
-using System.Text;
 
 namespace Mug.Models.Parser.NodeKinds
 {
@@ -41,7 +40,7 @@ namespace Mug.Models.Parser.NodeKinds
 
         public Range Position { get; set; }
 
-        List<ParameterNode> parameters = new();
+        private readonly List<ParameterNode> parameters = new();
         public void Add(ParameterNode parameter)
         {
             parameters.Add(parameter);
