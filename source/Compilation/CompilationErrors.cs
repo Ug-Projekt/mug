@@ -6,49 +6,30 @@ namespace Mug.Compilation
 {
     public static class CompilationErrors
     {
+        public static bool PrintErrors { get; set; } = true;
+
         public static void Throw(params string[] error)
         {
-            Console.ForegroundColor = ConsoleColor.DarkRed;
-            Console.Write("Error");
-            Console.ResetColor();
-            Console.WriteLine(": " + string.Join("", error));
+            if (PrintErrors)
+            {
+                Console.ForegroundColor = ConsoleColor.DarkRed;
+                Console.Write("Error");
+                Console.ResetColor();
+                Console.WriteLine(": " + string.Join("", error));
+            }
             throw new CompilationException(null, new(), string.Join("", error));
         }
         public static void Throw(this MugLexer Lexer, int pos, params string[] error)
         {
-            int start = pos;
-            int end = pos + 1;
-            while (start >= 0 && Lexer.Source[start] != '\n')
-                start--;
-            while (end < Lexer.Source.Length && Lexer.Source[end] != '\n')
-                end++;
-            WriteModule(Lexer.ModuleName);
-            WriteSourceLine(pos - start - 1, (pos + 1) - start - 1, CountLines(Lexer.Source, pos) + 1, Lexer.Source[(start + 1)..end], string.Join("", error));
-            throw new CompilationException(null, new(pos, pos), string.Join("", error));
+            Lexer.Throw(pos..(pos+1), error);
         }
         public static void Throw(this MugLexer Lexer, Token token, params string[] error)
         {
-            int start = token.Position.Start.Value;
-            int end = token.Position.End.Value;
-            while (start >= 0 && Lexer.Source[start] != '\n')
-                start--;
-            while (end < Lexer.Source.Length && Lexer.Source[end] != '\n')
-                end++;
-            WriteModule(Lexer.ModuleName);
-            WriteSourceLine(token.Position.Start.Value - start - 1, token.Position.End.Value - start - 1, CountLines(Lexer.Source, start + 1), Lexer.Source[(start + 1)..end], string.Join("", error));
-            throw new CompilationException(null, token.Position, string.Join("", error));
+            Lexer.Throw(token.Position, error);
         }
         public static void Throw(this MugParser Parser, INode node, params string[] error)
         {
-            int start = node.Position.Start.Value;
-            int end = node.Position.End.Value;
-            while (start >= 0 && Parser.Lexer.Source[start] != '\n')
-                start--;
-            while (end < Parser.Lexer.Source.Length && Parser.Lexer.Source[end] != '\n')
-                end++;
-            WriteModule(Parser.Lexer.ModuleName);
-            WriteSourceLine(node.Position.Start.Value - start - 1, node.Position.End.Value - start - 1, CountLines(Parser.Lexer.Source, start), Parser.Lexer.Source[(start + 1)..end], string.Join("", error));
-            throw new CompilationException(null, node.Position, string.Join("", error));
+            Parser.Lexer.Throw(node.Position, error);
         }
         public static void Throw(this MugLexer Lexer, Range position, params string[] error)
         {
@@ -58,9 +39,13 @@ namespace Mug.Compilation
                 start--;
             while (end < Lexer.Source.Length && Lexer.Source[end] != '\n')
                 end++;
-            WriteModule(Lexer.ModuleName);
-            WriteSourceLine(position.Start.Value - start - 1, position.End.Value - start - 1, CountLines(Lexer.Source, start), Lexer.Source[(start + 1)..end], string.Join("", error));
-            throw new CompilationException(null, position, string.Join("", error));
+            var err = string.Join("", error);
+            if (PrintErrors)
+            {
+                WriteModule(Lexer.ModuleName);
+                WriteSourceLine(position.Start.Value - start - 1, position.End.Value - start - 1, CountLines(Lexer.Source, start), Lexer.Source[(start + 1)..end], err);
+            }
+            throw new CompilationException(Lexer, position, err);
         }
 
         private static void WriteModule(string moduleName)
