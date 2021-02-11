@@ -43,35 +43,35 @@ namespace Mug.Models.Lexer
 
         private bool GetKeyword(string s) => s switch
         {
-            "return" => AddKeyword(TokenKind.KeyReturn, s.Length),
-            "continue" => AddKeyword(TokenKind.KeyContinue, s.Length),
-            "break" => AddKeyword(TokenKind.KeyBreak, s.Length),
-            "while" => AddKeyword(TokenKind.KeyWhile, s.Length),
-            "pub" => AddKeyword(TokenKind.KeyPub, s.Length),
-            "use" => AddKeyword(TokenKind.KeyUse, s.Length),
-            "import" => AddKeyword(TokenKind.KeyImport, s.Length),
-            "new" => AddKeyword(TokenKind.KeyNew, s.Length),
-            "for" => AddKeyword(TokenKind.KeyFor, s.Length),
-            "type" => AddKeyword(TokenKind.KeyType, s.Length),
-            "as" => AddKeyword(TokenKind.KeyAs, s.Length),
-            "in" => AddKeyword(TokenKind.KeyIn, s.Length),
-            "to" => AddKeyword(TokenKind.KeyTo, s.Length),
-            "if" => AddKeyword(TokenKind.KeyIf, s.Length),
-            "elif" => AddKeyword(TokenKind.KeyElif, s.Length),
-            "else" => AddKeyword(TokenKind.KeyElse, s.Length),
-            "func" => AddKeyword(TokenKind.KeyFunc, s.Length),
-            "var" => AddKeyword(TokenKind.KeyVar, s.Length),
-            "const" => AddKeyword(TokenKind.KeyConst, s.Length),
-            "str" => AddKeyword(TokenKind.KeyTstr, s.Length),
-            "chr" => AddKeyword(TokenKind.KeyTchr, s.Length),
-            "bit" => AddKeyword(TokenKind.KeyTbool, s.Length),
-            "i8" => AddKeyword(TokenKind.KeyTi8, s.Length),
-            "i32" => AddKeyword(TokenKind.KeyTi32, s.Length),
-            "i64" => AddKeyword(TokenKind.KeyTi64, s.Length),
-            "u8" => AddKeyword(TokenKind.KeyTu8, s.Length),
-            "u32" => AddKeyword(TokenKind.KeyTu32, s.Length),
-            "u64" => AddKeyword(TokenKind.KeyTu64, s.Length),
-            "unknown" => AddKeyword(TokenKind.KeyTunknown, s.Length),
+            "return" =>     AddKeyword(TokenKind.KeyReturn,     s.Length),
+            "continue" =>   AddKeyword(TokenKind.KeyContinue,   s.Length),
+            "break" =>      AddKeyword(TokenKind.KeyBreak,      s.Length),
+            "while" =>      AddKeyword(TokenKind.KeyWhile,      s.Length),
+            "pub" =>        AddKeyword(TokenKind.KeyPub,        s.Length),
+            "use" =>        AddKeyword(TokenKind.KeyUse,        s.Length),
+            "import" =>     AddKeyword(TokenKind.KeyImport,     s.Length),
+            "new" =>        AddKeyword(TokenKind.KeyNew,        s.Length),
+            "for" =>        AddKeyword(TokenKind.KeyFor,        s.Length),
+            "type" =>       AddKeyword(TokenKind.KeyType,       s.Length),
+            "as" =>         AddKeyword(TokenKind.KeyAs,         s.Length),
+            "in" =>         AddKeyword(TokenKind.KeyIn,         s.Length),
+            "to" =>         AddKeyword(TokenKind.KeyTo,         s.Length),
+            "if" =>         AddKeyword(TokenKind.KeyIf,         s.Length),
+            "elif" =>       AddKeyword(TokenKind.KeyElif,       s.Length),
+            "else" =>       AddKeyword(TokenKind.KeyElse,       s.Length),
+            "func" =>       AddKeyword(TokenKind.KeyFunc,       s.Length),
+            "var" =>        AddKeyword(TokenKind.KeyVar,        s.Length),
+            "const" =>      AddKeyword(TokenKind.KeyConst,      s.Length),
+            "str" =>        AddKeyword(TokenKind.KeyTstr,       s.Length),
+            "chr" =>        AddKeyword(TokenKind.KeyTchr,       s.Length),
+            "bit" =>        AddKeyword(TokenKind.KeyTbool,      s.Length),
+            "i8" =>         AddKeyword(TokenKind.KeyTi8,        s.Length),
+            "i32" =>        AddKeyword(TokenKind.KeyTi32,       s.Length),
+            "i64" =>        AddKeyword(TokenKind.KeyTi64,       s.Length),
+            "u8" =>         AddKeyword(TokenKind.KeyTu8,        s.Length),
+            "u32" =>        AddKeyword(TokenKind.KeyTu32,       s.Length),
+            "u64" =>        AddKeyword(TokenKind.KeyTu64,       s.Length),
+            "unknown" =>    AddKeyword(TokenKind.KeyTunknown,   s.Length),
             _ => false
         };
 
@@ -83,10 +83,15 @@ namespace Mug.Models.Lexer
 
         private bool MatchNext(char next)
         {
-            var match = _currentIndex + 1 < Source.Length && Source[_currentIndex + 1] == next;
+            var match = HasNext() && GetNext() == next;
             if (match)
                 _currentIndex++;
             return match;
+        }
+
+        private bool HasNext()
+        {
+            return _currentIndex + 1 < Source.Length;
         }
 
         private TokenKind GetSpecial(char c) => c switch
@@ -128,16 +133,16 @@ namespace Mug.Models.Lexer
                 TokenCollection.Add(new(kind, null, new(_currentIndex, _currentIndex + 1)));
         }
 
-        private void AddSpecial(TokenKind kind)
+        private void AddSpecial(TokenKind kind, string value)
         {
             InsertCurrentSymbol();
-            TokenCollection.Add(new(kind, null, new(_currentIndex, _currentIndex + 1)));
+            TokenCollection.Add(new(kind, value, new(_currentIndex, _currentIndex + 1)));
         }
 
-        private void AddDouble(TokenKind kind)
+        private void AddDouble(TokenKind kind, string value)
         {
             InsertCurrentSymbol();
-            TokenCollection.Add(new(kind, null, new(_currentIndex - 1, _currentIndex + 1)));
+            TokenCollection.Add(new(kind, value, new(_currentIndex - 1, _currentIndex + 1)));
         }
 
         private void InsertCurrentSymbol()
@@ -274,55 +279,37 @@ namespace Mug.Models.Lexer
         private bool MatchPart(char toMatch, TokenKind toInsert)
         {
             var match = MatchNext(toMatch);
-            if (match)
-                AddDouble(toInsert);
+            //if (match)
+                //AddDouble(toInsert);
             return match;
+        }
+
+        private char GetNext() {
+            return Source[_currentIndex + 1];
         }
 
         private void ProcessSpecial(char current)
         {
-            switch (current)
+            if (!HasNext())
             {
-                case '=':
-                    if (MatchPart('=', TokenKind.BooleanEQ))
-                        break;
-                    goto default;
-                case '!':
-                    if (MatchPart('=', TokenKind.BooleanNEQ))
-                        break;
-                    goto default;
-                case '+':
-                    if (MatchPart('+', TokenKind.OperatorIncrement) || MatchPart('=', TokenKind.AddAssignment))
-                        break;
-                    goto default;
-                case '-':
-                    if (MatchPart('-', TokenKind.OperatorDecrement) || MatchPart('=', TokenKind.SubAssignment))
-                        break;
-                    goto default;
-                case '*':
-                    if (MatchPart('=', TokenKind.MulAssignment))
-                        break;
-                    goto default;
-                case '/':
-                    if (MatchPart('=', TokenKind.DivAssignment))
-                        break;
-                    goto default;
-                case '<':
-                    if (MatchPart('=', TokenKind.BooleanMinEQ))
-                        break;
-                    goto default;
-                case '>':
-                    if (MatchPart('=', TokenKind.BooleanMajEQ))
-                        break;
-                    goto default;
-                case '.':
-                    if (MatchPart('.', TokenKind.RangeDots))
-                        break;
-                    goto default;
-                default:
-                    AddSpecial(GetSpecial(current));
-                    break;
+                AddSpecial(GetSpecial(current), current.ToString());
+                return;
             }
+
+            string doubleToken = current.ToString() + GetNext();
+
+            if (doubleToken == "==") AddDouble(TokenKind.BooleanEQ, doubleToken);
+            else if (doubleToken == "!=") AddDouble(TokenKind.BooleanNEQ, doubleToken);
+            else if (doubleToken == "++") AddDouble(TokenKind.OperatorIncrement, doubleToken);
+            else if (doubleToken == "+=") AddDouble(TokenKind.AddAssignment, doubleToken);
+            else if (doubleToken == "--") AddDouble(TokenKind.OperatorDecrement, doubleToken);
+            else if (doubleToken == "-=") AddDouble(TokenKind.SubAssignment, doubleToken);
+            else if (doubleToken == "*=") AddDouble(TokenKind.MulAssignment, doubleToken);
+            else if (doubleToken == "/=") AddDouble(TokenKind.DivAssignment, doubleToken);
+            else if (doubleToken == "<=") AddDouble(TokenKind.BooleanMinEQ, doubleToken);
+            else if (doubleToken == ">=") AddDouble(TokenKind.BooleanMajEQ, doubleToken);
+            else if (doubleToken == "..") AddDouble(TokenKind.RangeDots, doubleToken);
+            else AddSpecial(GetSpecial(current), current.ToString());
         }
 
         private void ProcessCurrentChar()
@@ -355,7 +342,7 @@ namespace Mug.Models.Lexer
                 ProcessCurrentChar();
             while (_currentIndex++ < Source.Length - 1);
 
-            AddSpecial(TokenKind.EOF);
+            AddSpecial(TokenKind.EOF, "<EOF>");
 
             return TokenCollection;
         }
