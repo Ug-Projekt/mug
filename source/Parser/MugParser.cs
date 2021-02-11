@@ -37,16 +37,6 @@ namespace Mug.Models.Parser
             Lexer.Tokenize();
         }
 
-        private Token Next
-        {
-            get
-            {
-                if (_currentIndex + 1 < Lexer.TokenCollection.Count)
-                    return Lexer.TokenCollection[_currentIndex + 1];
-                return new Token();
-            }
-        }
-
         private Token Current
         {
             get
@@ -920,12 +910,12 @@ namespace Mug.Models.Parser
             //
             while (!Match(end))
             {
-                if (!FunctionDefinition(out INode statement))
-                    if (!VariableDefinition(out statement))
-                        if (!TypeDefinition(out statement))
-                            if (!DirectiveDefinition(out statement))
-                                if (!NamespaceDefinition(out statement))
-                                    ParseError("In the current global context, this is not a valid global statement;");
+                if (!(FunctionDefinition(out INode statement) ||
+                    VariableDefinition(out statement) ||
+                    TypeDefinition(out statement) ||
+                    DirectiveDefinition(out statement) ||
+                    NamespaceDefinition(out statement)))
+                        ParseError("In the current global context, this is not a valid global statement;");
                 nodes.Add(statement);
             }
             return nodes;

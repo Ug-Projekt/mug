@@ -20,7 +20,7 @@ func main(): i32 {
         var lexer = new MugLexer("test", test);
         lexer.Tokenize();
         var parser = new MugParser(lexer);
-        Console.WriteLine(parser.Parse().Dump());
+        parser.Parse();
         var generator = new IRGenerator(parser);
         generator.Generate();
 
@@ -34,6 +34,7 @@ func main(): i32 {
         for (int i = 0; i < args.Length; i++)
         {
             var unit = new CompilationUnit(args[i]);
+            unit.DisableErrorPrint();
             unit.Compile(0);
         }
     }

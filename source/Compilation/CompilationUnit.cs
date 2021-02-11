@@ -33,6 +33,15 @@ namespace Mug.Compilation
             CompileModule(optimizazioneLevel);
         }
 
+        public void DisableErrorPrint()
+        {
+            CompilationErrors.PrintErrors = false;
+        }
+        public void EnableErrorPrint()
+        {
+            CompilationErrors.PrintErrors = true;
+        }
+
         private void CompileModule(int optimizazioneLevel)
         {
             if (LLVM.VerifyModule(IRGenerator.Module, LLVMVerifierFailureAction.LLVMPrintMessageAction, out string error))
