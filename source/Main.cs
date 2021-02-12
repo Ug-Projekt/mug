@@ -14,10 +14,10 @@ if (!debug.isDebug())
             unit.Compile(0);
         }
     }
-    catch (CompilationException)
+    catch (CompilationException e)
     {
-        Console.WriteLine("Cannot build due to previous errors");
-        Environment.Exit(1);
+        CompilationErrors.WriteModule(e.Lexer.ModuleName);
+        CompilationErrors.WriteSourceLine(e.Bad, e.LineAt, e.Source, e.Message);
     }
 
 }

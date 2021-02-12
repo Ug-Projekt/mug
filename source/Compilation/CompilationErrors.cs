@@ -6,17 +6,8 @@ namespace Mug.Compilation
 {
     public static class CompilationErrors
     {
-        public static bool PrintErrors { get; set; } = true;
-
         public static void Throw(params string[] error)
         {
-            if (PrintErrors)
-            {
-                Console.ForegroundColor = ConsoleColor.DarkRed;
-                Console.Write("Error");
-                Console.ResetColor();
-                Console.WriteLine(": " + string.Join("", error));
-            }
             throw new CompilationException(null, new(), string.Join("", error));
         }
         public static void Throw(this MugLexer Lexer, int pos, params string[] error)
@@ -40,15 +31,11 @@ namespace Mug.Compilation
             while (end < Lexer.Source.Length && Lexer.Source[end] != '\n')
                 end++;
             var err = string.Join("", error);
-            if (PrintErrors)
-            {
-                WriteModule(Lexer.ModuleName);
-                WriteSourceLine(position.Start.Value - start - 1, position.End.Value - start - 1, CountLines(Lexer.Source, start), Lexer.Source[(start + 1)..end], err);
-            }
+
             throw new CompilationException(Lexer, position, err);
         }
 
-        private static void WriteModule(string moduleName)
+        public static void WriteModule(string moduleName)
         {
             Console.ForegroundColor = ConsoleColor.DarkMagenta;
             Console.Write("[");
@@ -59,7 +46,7 @@ namespace Mug.Compilation
             Console.ResetColor();
         }
 
-        private static int CountLines(string source, int posStart)
+        public static int CountLines(string source, int posStart)
         {
             int count = 1;
             for (; posStart >= 0; posStart--)
@@ -68,19 +55,19 @@ namespace Mug.Compilation
             return count;
         }
 
-        private static void WriteSourceLine(int start, int end, int lineAt, string line, string error)
+        public static void WriteSourceLine(Range position, int lineAt, string source, string error)
         {
-            Console.WriteLine($"@Raw(Line: {lineAt}, Position: ({start}..{end}))");
+            Console.WriteLine($"@Raw(Line: {lineAt}, Position: ({position.Start}..{position.End}))");
             Console.Write(lineAt);
             Console.ForegroundColor = ConsoleColor.DarkGreen;
             Console.Write(" | ");
             Console.ResetColor();
-            Console.Write(line[..start].Replace("\t", " "));
+            Console.Write(source[..position.Start].Replace("\t", " "));
             Console.ForegroundColor = ConsoleColor.DarkRed;
-            Console.Write(line[start..end].Replace("\t", " "));
+            Console.Write(source[position.Start..position.End].Replace("\t", " "));
             Console.ResetColor();
-            Console.Write("{0}\n{1} ", line[end..].Replace("\t", " "), new string(' ', lineAt.ToString().Length + 3 + line[..start].Length)
-                + "^" + new string('~', line[start..end].Length - 1));
+            Console.Write("{0}\n{1} ", source[position.End..].Replace("\t", " "), new string(' ', lineAt.ToString().Length + 3 + source[..position.Start].Length)
+                + "^" + new string('~', source[position.Start..position.End].Length - 1));
             Console.ForegroundColor = ConsoleColor.DarkYellow;
             Console.WriteLine(error);
             Console.ResetColor();

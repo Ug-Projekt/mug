@@ -31,15 +31,6 @@ namespace Mug.Compilation
             CompileModule(optimizazioneLevel);
         }
 
-        public void DisableErrorPrint()
-        {
-            CompilationErrors.PrintErrors = false;
-        }
-        public void EnableErrorPrint()
-        {
-            CompilationErrors.PrintErrors = true;
-        }
-
         private void CompileModule(int optimizazioneLevel)
         {
             writeFile(IRGenerator.Module, optimizazioneLevel,

@@ -63,7 +63,7 @@ namespace Mug.Models.Parser
                     _currentIndex++;
                     return Back;
                 }
-            ParseError("Expected `", string.Join("`, `", kinds), "`, found ", Current.Kind.ToString(), (error != "" ? "`: " + error : "`"));
+            ParseError("Expected `", string.Join("`, `", kinds), "`, found ", Current.Value, (error != "" ? "`: " + error : "`"));
             return new();
         }
 
@@ -82,7 +82,7 @@ namespace Mug.Models.Parser
         private Token Expect(string error, TokenKind kind)
         {
             if (Current.Kind != kind)
-                ParseError("Expected `", kind.ToString(), "`, found `", Current.Kind.ToString(), (error != "" ? "`: " + error : "`"));
+                ParseError("Expected `", kind.ToString(), "`, found `", Current.Value, (error != "" ? "`: " + error : "`"));
             _currentIndex++;
             return Back;
         }
@@ -105,7 +105,7 @@ namespace Mug.Models.Parser
             if (MatchAdvance(TokenKind.OpenBracket))
             {
                 var type = ExpectType();
-                Expect("An array type definition must end with `CloseBracket`;", TokenKind.CloseBracket);
+                Expect("An array type definition must end by `]`;", TokenKind.CloseBracket);
                 return new MugType(TypeKind.Array, type);
             }
             MugType find;
@@ -528,7 +528,7 @@ namespace Mug.Models.Parser
                 }
             }
             if (e is null)
-                ParseError("Missing expression: `", Current.Kind.ToString(), "` is not a valid symbol in expression;");
+                ParseError("Missing expression: `", Current.Value.ToString(), "` is not a valid symbol in expression;");
             if (MatchBooleanOperator(out Token boolOP))
             {
                 if (!isFirst)
@@ -544,7 +544,7 @@ namespace Mug.Models.Parser
                 _currentIndex++;
                 return e;
             }
-            ExpectMultipleMute("`" + Current.Kind + "` is not a valid token in the current context;", end);
+            ExpectMultipleMute("`" + Current.Value + "` is not a valid token in the current context;", end);
             return e;
         }
 

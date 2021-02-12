@@ -3,7 +3,6 @@ using Mug.Models.Lexer;
 using System;
 using System.Collections.Generic;
 using Mug.Compilation;
-using LLVMSharp;
 
 namespace MugTests
 {
@@ -13,9 +12,9 @@ namespace MugTests
         private const string variable1 = "var x = 0;";
         private const string variable2 = "var number: i32 = 5;";
         private const string returni32 = @"
-func main() {
-  var i: i32 = 1;
-  return i;
+func main(): u32 {
+  var _: i32 = 1;
+  return _;
 }
 ";
 
@@ -89,7 +88,6 @@ func main() {
             {
                 var unit = new CompilationUnit("test", returni32);
 
-                unit.DisableErrorPrint();
                 unit.Generate();
             }
             catch (CompilationException e)
