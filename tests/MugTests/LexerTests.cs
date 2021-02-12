@@ -14,17 +14,24 @@ namespace MugTests
 
         private const string COMMENTS01 = "# This is a comment";
         private const string COMMENTS02 = "#[ This is a  multi-line comment ]#";
-        private const string COMMENTS03 = "#[ This is a non closed multi-line comment";
-        private const string COMMENTS04 = "#[ This is a nested ]# multi-line comment ]#";
-        private const string COMMENTS05 = "#[ This is a #[ nested ]# multi-line comment ]#";
+        
+
+        private const string STRINGS01 = "\"This is a string\"";
 
         //Ill-constructed code strings
         private const string EMPTYSTRING = "";
 
+        private const string STRINGS02 = "\"This is a non-closed string";
+        private const string STRINGS03 = "\"This is a \" nested \"string\"";
+
         private const string VARIABLE03 = ";50 = i32 :number var";
         private const string VARIABLE04 = "varnumber";
         private const string VARIABLE05 = "i33";
-        
+
+        private const string COMMENTS03 = "#[ This is a non closed multi-line comment";
+        private const string COMMENTS04 = "#[ This is a nested ]# multi-line comment ]#";
+        private const string COMMENTS05 = "#[ This is a #[ nested ]# multi-line comment ]#";
+
         [SetUp]
         public void Setup()
         {
@@ -283,6 +290,51 @@ namespace MugTests
             List<Token> expected = new List<Token>
             {
                 new Token(TokenKind.EOF, "<EOF>", 0..1)
+            };
+
+            AreListEqual(expected, tokens);
+        }
+
+        [Test]
+        public void TestStrings01_CorrectTokenization()
+        {
+            MugLexer lexer = new MugLexer("test", STRINGS01);
+            lexer.Tokenize();
+
+            List<Token> tokens = lexer.TokenCollection;
+
+            List<Token> expected = new List<Token>
+            {
+                new Token(TokenKind.ConstantString, "\"This is a string\"", 0..18),
+                new Token(TokenKind.EOF, "<EOF>", 18..19)
+            };
+
+            AreListEqual(expected, tokens);
+        }
+
+        [Test]
+        public void TestStrings02_ExceptionCaught()
+        {
+            MugLexer lexer = new MugLexer("test", STRINGS02);
+            var ex = Assert.Throws<Mug.Compilation.CompilationException>(() => lexer.Tokenize());
+
+            Assert.AreEqual("String has not been correctly enclosed", ex.Message);
+        }
+
+        [Test]
+        public void TestStrings03_CorrectTokenization()
+        {
+            MugLexer lexer = new MugLexer("test", STRINGS03);
+            lexer.Tokenize();
+
+            List<Token> tokens = lexer.TokenCollection;
+
+            List<Token> expected = new List<Token>
+            {
+                new Token(TokenKind.ConstantString, "\"This is a \"", 0..12),
+                new Token(TokenKind.Identifier, "nested", 13..19),
+                new Token(TokenKind.ConstantString, "\"string\"", 20..28),
+                new Token(TokenKind.EOF, "<EOF>", 28..29)
             };
 
             AreListEqual(expected, tokens);

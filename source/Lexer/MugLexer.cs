@@ -123,7 +123,7 @@ namespace Mug.Models.Lexer
             if (kind == TokenKind.Identifier)
                 CheckValidIdentifier(value);
             if (isString)
-                TokenCollection.Add(new(kind, value, new(_currentIndex - value.ToString().Length + 1, _currentIndex + 1)));
+                TokenCollection.Add(new(kind, value, new(_currentIndex - value.Length + 1, _currentIndex + 1)));
             else if (value is not null)
                 TokenCollection.Add(new(kind, value, new(_currentIndex - value.ToString().Length, _currentIndex)));
             else
@@ -255,9 +255,20 @@ namespace Mug.Models.Lexer
 
         private void CollectString()
         {
-            _currentSymbol.Append(Source[_currentIndex]);
-            while (_currentIndex++ < Source.Length && Source[_currentIndex] != '"')
-                _currentSymbol.Append(Source[_currentIndex]);
+            //add initial " and check next character
+            _currentSymbol.Append(Source[_currentIndex++]);
+
+            //consume string until EOF or closed " is found
+            while (_currentIndex < Source.Length && Source[_currentIndex] != '"')
+            {
+                _currentSymbol.Append(Source[_currentIndex++]);
+            }
+
+            //if you found an EOF, throw
+            if (_currentIndex == Source.Length && Source[_currentIndex-1] != '"')
+                this.Throw(_currentIndex-1, $"String has not been correctly enclosed");
+
+            //else add closing simbol
             AddToken(TokenKind.ConstantString, _currentSymbol.Append('"').ToString(), true);
             _currentSymbol.Clear();
         }
