@@ -23,9 +23,7 @@ namespace Mug.Compilation
         }
         public void Compile(int optimizazioneLevel)
         {
-            IRGenerator.Parser.Lexer.Tokenize();
-            IRGenerator.Parser.Parse();
-            IRGenerator.Generate();
+            Generate();
 
             if (LLVM.VerifyModule(IRGenerator.Module, LLVMVerifierFailureAction.LLVMReturnStatusAction, out string err))
                 CompilationErrors.Throw(err);
@@ -44,8 +42,6 @@ namespace Mug.Compilation
 
         private void CompileModule(int optimizazioneLevel)
         {
-            if (LLVM.VerifyModule(IRGenerator.Module, LLVMVerifierFailureAction.LLVMPrintMessageAction, out string error))
-                exit($"\nImpossible to build due to a external compiler fail");
             writeFile(IRGenerator.Module, optimizazioneLevel,
                 Path.ChangeExtension(IRGenerator.Parser.Lexer.ModuleName, "bc"));
 
@@ -95,6 +91,17 @@ namespace Mug.Compilation
                 clang.WaitForExit();
             }
         }
+
+        public void Generate()
+        {
+            IRGenerator.Parser.Lexer.Tokenize();
+            IRGenerator.Parser.Parse();
+            IRGenerator.Generate();
+
+            if (LLVM.VerifyModule(IRGenerator.Module, LLVMVerifierFailureAction.LLVMPrintMessageAction, out string error))
+                CompilationErrors.Throw($"External compiler error: {error}");
+        }
+
         public string GetStringAST()
         {
             return GetNodeCollection().Dump();

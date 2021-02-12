@@ -12,7 +12,12 @@ namespace MugTests
         private const string operation1 = "1 + 2";
         private const string variable1 = "var x = 0;";
         private const string variable2 = "var number: i32 = 5;";
-        private const int ClangOptimizationLevel = 0;
+        private const string returni32 = @"
+func main() {
+  var i: i32 = 1;
+  return i;
+}
+";
 
         [SetUp]
         public void Setup()
@@ -82,15 +87,14 @@ namespace MugTests
         {
             try
             {
-                var unit = new CompilationUnit("test", variable1);
-                if (LLVM.VerifyModule(unit.IRGenerator.Module, LLVMVerifierFailureAction.LLVMReturnStatusAction, out string error))
-                    Assert.Fail(error);
-                else
-                    Assert.Pass();
+                var unit = new CompilationUnit("test", returni32);
+
+                unit.DisableErrorPrint();
+                unit.Generate();
             }
-            catch (CompilationException)
+            catch (CompilationException e)
             {
-                Assert.Fail("Cannot build due to previous errors");
+                Assert.Fail($"Error(`{e.Lexer.Source[e.Bad]}`): {e.Message}");
             }
         }
     }
