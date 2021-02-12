@@ -16,17 +16,12 @@ namespace Mug.Models.Lexer
             Position = position;
         }
 
-        public override bool Equals(Object other)
+        public override bool Equals(object other)
         {
-            if(!(other is Token)) return false;
-
-            Token otherToken = (Token)other;
-
-            if (!otherToken.Kind.Equals(this.Kind)) return false;
-            if (!otherToken.Value.Equals(this.Value)) return false;
-            if (!otherToken.Position.Equals(this.Position)) return false;
-
-            return true;
+            return other is Token token &&
+                   token.Kind.Equals(this.Kind) &&
+                   token.Value.Equals(this.Value) &&
+                   token.Position.Equals(this.Position);
         }
     }
 }
