@@ -10,7 +10,6 @@ try
 {
     if (debug.isDebug())
     {
-        string testPath = Directory.GetParent(System.IO.Directory.GetCurrentDirectory()).Parent.Parent.Parent.FullName.Replace("\\", "/") + "/tests/.mug";
         var test = @"
 func main(): i32 {
   var x = 0;
@@ -34,7 +33,6 @@ func main(): i32 {
         for (int i = 0; i < args.Length; i++)
         {
             var unit = new CompilationUnit(args[i]);
-            unit.DisableErrorPrint();
             unit.Compile(0);
         }
     }
