@@ -1,5 +1,6 @@
 ﻿using LLVMSharp;
 using Mug.Compilation;
+using System;
 
 try
 {
@@ -7,12 +8,12 @@ try
     {
         var test = @"
 func add(a: i32, b: i32): i32 {
-  return a+b;
+  return 1;
 }
-func main(): i32 {
-  return add(2, 2);
-}
-";
+func main()
+{
+  return 0;
+}";
 
         var unit = new CompilationUnit("test", test);
         unit.Generate();
@@ -33,11 +34,12 @@ func main(): i32 {
 }
 catch (CompilationException e)
 {
-    if (e.Lexer is not null)
+    Console.WriteLine($"(`{e.Lexer.Source[e.Bad]}`): {e.Message}");
+    /*if (e.Lexer is not null)
     {
         CompilationErrors.WriteModule(e.Lexer.ModuleName);
         CompilationErrors.WriteSourceLine(e.Bad, e.LineAt, e.Lexer.Source, e.Message);
     }
     else
-        CompilationErrors.WriteFail(e.Message);
+        CompilationErrors.WriteFail(e.Message);*/
 }

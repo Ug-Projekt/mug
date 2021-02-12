@@ -32,7 +32,7 @@ namespace Mug.Compilation
             const string clangStandardPath = "C:/Program Files/LLVM/bin/clang.exe";
 
             if (!File.Exists(clangStandardPath))
-                exit($"Cannot find the clang executable at: {clangStandardPath}");
+                exit($"Cannot find the clang executable at: `{clangStandardPath}`");
 
             writeFile(IRGenerator.Module, optimizazioneLevel,
                 Path.ChangeExtension(IRGenerator.Parser.Lexer.ModuleName, "bc"), clangStandardPath);
@@ -90,7 +90,7 @@ namespace Mug.Compilation
             IRGenerator.Parser.Parse();
             IRGenerator.Generate();
 
-            if (LLVM.VerifyModule(IRGenerator.Module, LLVMVerifierFailureAction.LLVMPrintMessageAction, out string error))
+            if (LLVM.VerifyModule(IRGenerator.Module, LLVMVerifierFailureAction.LLVMReturnStatusAction, out string error))
                 CompilationErrors.Throw($"External compiler error: {error}");
         }
     }

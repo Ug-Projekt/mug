@@ -122,7 +122,7 @@ namespace Mug.Models.Generator
         public void ExpectNonVoidType(LLVMTypeRef type, Range position)
         {
             if (type.TypeKind == LLVMTypeKind.LLVMVoidTypeKind)
-                Error(position, "In the current context `Void` is not allowed");
+                Error(position, "Expected a non-void type");
         }
 
         private LLVMValueRef GetSymbol(string name, Range position)

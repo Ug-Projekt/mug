@@ -57,6 +57,23 @@ namespace Mug.Models.Generator
             }
         }
 
+        private void EmitCallStatement(CallStatement c)
+        {
+            foreach (var parameter in c.Parameters.Nodes)
+                EvaluateExpression(parameter);
+
+            EvaluateInstanceName(c.Name);
+
+            if (_emitter.PeekType().GetElementType().GetParamTypes().Length != c.Parameters.Lenght)
+                Error(c.Position, "Wrong number of parameters");
+
+            _generator.ExpectNonVoidType(
+                _emitter.PeekType().GetElementType().GetElementType(),
+                c.Position);
+
+            _emitter.Call(c.Parameters.Lenght, false);
+        }
+
         private void EvaluateExpression(INode expression)
         {
             switch (expression)
@@ -89,11 +106,7 @@ namespace Mug.Models.Generator
                     }
                     break;
                 case CallStatement c:
-                    foreach (var parameter in c.Parameters.Nodes)
-                        EvaluateExpression(parameter);
-                    EvaluateInstanceName(c.Name);
-                    _generator.ExpectNonVoidType(_emitter.PeekType(), c.Position);
-                    _emitter.Call(c.Parameters.Lenght, false);
+                    EmitCallStatement(c);
                     break;
                 default:
                     Error(expression.Position, "expression not supported yet");
