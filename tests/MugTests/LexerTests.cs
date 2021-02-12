@@ -1,22 +1,15 @@
-using NUnit.Framework;
 using Mug.Models.Lexer;
+using NUnit.Framework;
 using System;
 using System.Collections.Generic;
-using Mug.Compilation;
 
 namespace MugTests
 {
-    public class Tests
+    public class LexerTests
     {
         private const string operation1 = "1 + 2";
         private const string variable1 = "var x = 0;";
         private const string variable2 = "var number: i32 = 5;";
-        private const string returni32 = @"
-func main(): u32 {
-  var _: i32 = 1;
-  return _;
-}
-";
 
         [SetUp]
         public void Setup()
@@ -37,9 +30,9 @@ func main(): u32 {
         {
             MugLexer lexer = new MugLexer("test", variable1);
             lexer.Tokenize();
-            
+
             Assert.AreEqual(lexer.Length, 6);
-            
+
             Console.WriteLine($"0: {lexer.TokenCollection[0].Value}");
             Console.WriteLine($"1: {lexer.TokenCollection[1].Value}");
             Console.WriteLine($"2: {lexer.TokenCollection[2].Value}");
@@ -52,8 +45,8 @@ func main(): u32 {
         {
             if (reals.Count != expected.Count)
                 Assert.Fail($"Assert different lenghts:\n   - expected {expected.Count} tokens\n   - found {reals.Count} tokens");
-                
-            for(int i = 0; i < reals.Count; i++)
+
+            for (int i = 0; i < reals.Count; i++)
                 if (!reals[i].Equals(expected[i]))
                     Assert.Fail($"Assert different values:\n   - expected: {expected[i]}\n   - found: {reals[i]}");
 
@@ -65,7 +58,7 @@ func main(): u32 {
         {
             MugLexer lexer = new MugLexer("test", variable1);
             lexer.Tokenize();
-            
+
             List<Token> tokens = lexer.TokenCollection;
 
             List<Token> expected = new List<Token>
@@ -79,21 +72,6 @@ func main(): u32 {
             };
 
             AreListEqual(expected, tokens);
-        }
-
-        [Test]
-        public void Test01_CodeGenerator()
-        {
-            try
-            {
-                var unit = new CompilationUnit("test", returni32);
-
-                unit.Generate();
-            }
-            catch (CompilationException e)
-            {
-                Assert.Fail($"Error(`{e.Lexer.Source[e.Bad]}`): {e.Message}");
-            }
         }
     }
 }

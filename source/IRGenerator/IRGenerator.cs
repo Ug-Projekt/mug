@@ -95,25 +95,34 @@ namespace Mug.Models.Generator
                 _ => NotSupportedType<LLVMValueRef>(constant.Kind.ToString(), position)
             };
         }
+
         public void ExpectSameTypes(LLVMTypeRef firstType, Range position, string error, params LLVMTypeRef[] types)
         {
             for (int i = 0; i < types.Length; i++)
                 if (!Unsafe.Equals(firstType, types[i]))
                     Error(position, error);
         }
+
         public void ExpectBoolType(LLVMTypeRef type, Range position)
         {
             ExpectSameTypes(type, position, "Expected `Bool` type", LLVMTypeRef.Int1Type());
         }
+
         public void ExpectIntType(LLVMTypeRef type, Range position)
         {
             ExpectSameTypes(type, position, "Expected `Int8`, `Int32`, `Int64` type", LLVMTypeRef.Int32Type());
         }
-        public MugType ExpectNonVoidType(MugType type, Range position)
+
+        public void ExpectNonVoidType(MugType type, Range position)
         {
             if (IsVoid(type))
-                Error(position, "In the current context `void` is not allowed");
-            return type;
+                Error(position, "In the current context `Void` is not allowed");
+        }
+
+        public void ExpectNonVoidType(LLVMTypeRef type, Range position)
+        {
+            if (type.TypeKind == LLVMTypeKind.LLVMVoidTypeKind)
+                Error(position, "In the current context `Void` is not allowed");
         }
 
         private LLVMValueRef GetSymbol(string name, Range position)
@@ -146,19 +155,11 @@ namespace Mug.Models.Generator
                     break;
             }
         }
+
         public void Generate()
         {
             foreach (var member in Parser.Module.Members.Nodes)
                 RecognizeMember(member);
-        }
-        public List<Token> GetTokenCollection() => Parser.GetTokenCollection();
-        public List<Token> GetTokenCollection(out MugLexer lexer) => Parser.GetTokenCollection(out lexer);
-        public NamespaceNode GetNodeCollection() => Parser.Parse();
-        public NamespaceNode GetNodeCollection(out MugParser parser)
-        {
-            var nodes = Parser.Parse();
-            parser = Parser;
-            return nodes;
         }
     }
 }

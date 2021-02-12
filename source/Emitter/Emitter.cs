@@ -117,5 +117,19 @@ namespace Mug.Models.Generator.Emitter
         {
             Load(BuildNot(Builder, Pop(), ""));
         }
+
+        public void Call(int paramCount, bool isVoid)
+        {
+            var function = Pop();
+            var parameters = new LLVMValueRef[paramCount];
+
+            for (int i = 0; i < paramCount; i++)
+                parameters[i] = Pop();
+
+            var result = BuildCall(Builder, function, parameters, "");
+
+            if (!isVoid)
+                Load(result);
+        }
     }
 }

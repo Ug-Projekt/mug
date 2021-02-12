@@ -915,7 +915,7 @@ namespace Mug.Models.Parser
                     TypeDefinition(out statement) ||
                     DirectiveDefinition(out statement) ||
                     NamespaceDefinition(out statement)))
-                        ParseError("In the current global context, this is not a valid global statement;");
+                    ParseError("In the current global context, this is not a valid global statement;");
                 nodes.Add(statement);
             }
             return nodes;
@@ -929,7 +929,5 @@ namespace Mug.Models.Parser
             Module.Members = ExpectNamespaceMembers();
             return Module;
         }
-        public List<Token> GetTokenCollection() => Lexer.Tokenize();
-        public List<Token> GetTokenCollection(out MugLexer lexer) { lexer = Lexer; return Lexer.Tokenize(); }
     }
 }

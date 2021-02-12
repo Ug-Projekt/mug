@@ -43,35 +43,35 @@ namespace Mug.Models.Lexer
 
         private bool CheckAndSetKeyword(string s) => s switch
         {
-            "return" =>     AddKeyword(TokenKind.KeyReturn,     s),
-            "continue" =>   AddKeyword(TokenKind.KeyContinue,   s),
-            "break" =>      AddKeyword(TokenKind.KeyBreak,      s),
-            "while" =>      AddKeyword(TokenKind.KeyWhile,      s),
-            "pub" =>        AddKeyword(TokenKind.KeyPub,        s),
-            "use" =>        AddKeyword(TokenKind.KeyUse,        s),
-            "import" =>     AddKeyword(TokenKind.KeyImport,     s),
-            "new" =>        AddKeyword(TokenKind.KeyNew,        s),
-            "for" =>        AddKeyword(TokenKind.KeyFor,        s),
-            "type" =>       AddKeyword(TokenKind.KeyType,       s),
-            "as" =>         AddKeyword(TokenKind.KeyAs,         s),
-            "in" =>         AddKeyword(TokenKind.KeyIn,         s),
-            "to" =>         AddKeyword(TokenKind.KeyTo,         s),
-            "if" =>         AddKeyword(TokenKind.KeyIf,         s),
-            "elif" =>       AddKeyword(TokenKind.KeyElif,       s),
-            "else" =>       AddKeyword(TokenKind.KeyElse,       s),
-            "func" =>       AddKeyword(TokenKind.KeyFunc,       s),
-            "var" =>        AddKeyword(TokenKind.KeyVar,        s),
-            "const" =>      AddKeyword(TokenKind.KeyConst,      s),
-            "str" =>        AddKeyword(TokenKind.KeyTstr,       s),
-            "chr" =>        AddKeyword(TokenKind.KeyTchr,       s),
-            "bit" =>        AddKeyword(TokenKind.KeyTbool,      s),
-            "i8" =>         AddKeyword(TokenKind.KeyTi8,        s),
-            "i32" =>        AddKeyword(TokenKind.KeyTi32,       s),
-            "i64" =>        AddKeyword(TokenKind.KeyTi64,       s),
-            "u8" =>         AddKeyword(TokenKind.KeyTu8,        s),
-            "u32" =>        AddKeyword(TokenKind.KeyTu32,       s),
-            "u64" =>        AddKeyword(TokenKind.KeyTu64,       s),
-            "unknown" =>    AddKeyword(TokenKind.KeyTunknown,   s),
+            "return" => AddKeyword(TokenKind.KeyReturn, s),
+            "continue" => AddKeyword(TokenKind.KeyContinue, s),
+            "break" => AddKeyword(TokenKind.KeyBreak, s),
+            "while" => AddKeyword(TokenKind.KeyWhile, s),
+            "pub" => AddKeyword(TokenKind.KeyPub, s),
+            "use" => AddKeyword(TokenKind.KeyUse, s),
+            "import" => AddKeyword(TokenKind.KeyImport, s),
+            "new" => AddKeyword(TokenKind.KeyNew, s),
+            "for" => AddKeyword(TokenKind.KeyFor, s),
+            "type" => AddKeyword(TokenKind.KeyType, s),
+            "as" => AddKeyword(TokenKind.KeyAs, s),
+            "in" => AddKeyword(TokenKind.KeyIn, s),
+            "to" => AddKeyword(TokenKind.KeyTo, s),
+            "if" => AddKeyword(TokenKind.KeyIf, s),
+            "elif" => AddKeyword(TokenKind.KeyElif, s),
+            "else" => AddKeyword(TokenKind.KeyElse, s),
+            "func" => AddKeyword(TokenKind.KeyFunc, s),
+            "var" => AddKeyword(TokenKind.KeyVar, s),
+            "const" => AddKeyword(TokenKind.KeyConst, s),
+            "str" => AddKeyword(TokenKind.KeyTstr, s),
+            "chr" => AddKeyword(TokenKind.KeyTchr, s),
+            "bit" => AddKeyword(TokenKind.KeyTbool, s),
+            "i8" => AddKeyword(TokenKind.KeyTi8, s),
+            "i32" => AddKeyword(TokenKind.KeyTi32, s),
+            "i64" => AddKeyword(TokenKind.KeyTi64, s),
+            "u8" => AddKeyword(TokenKind.KeyTu8, s),
+            "u32" => AddKeyword(TokenKind.KeyTu32, s),
+            "u64" => AddKeyword(TokenKind.KeyTu64, s),
+            "unknown" => AddKeyword(TokenKind.KeyTunknown, s),
             _ => false
         };
 
@@ -280,11 +280,12 @@ namespace Mug.Models.Lexer
         {
             var match = MatchNext(toMatch);
             //if (match)
-                //AddDouble(toInsert);
+            //AddDouble(toInsert);
             return match;
         }
 
-        private char GetNext() {
+        private char GetNext()
+        {
             return Source[_currentIndex + 1];
         }
 

@@ -41,6 +41,22 @@ namespace Mug.Models.Generator
             }
         }
 
+        private void EvaluateInstanceName(INode instance)
+        {
+            switch (instance)
+            {
+                case Token t:
+                    var sym = _symbols.TryGetValue(t.Value, out var symbol);
+                    if (!sym)
+                        Error(instance.Position, "Undeclared member");
+                    _emitter.Load(symbol);
+                    break;
+                default:
+                    Error(instance.Position, "Not supported yet");
+                    break;
+            }
+        }
+
         private void EvaluateExpression(INode expression)
         {
             switch (expression)
@@ -71,6 +87,13 @@ namespace Mug.Models.Generator
                         _generator.ExpectIntType(_emitter.PeekType(), p.Position);
                         _emitter.NegInt();
                     }
+                    break;
+                case CallStatement c:
+                    foreach (var parameter in c.Parameters.Nodes)
+                        EvaluateExpression(parameter);
+                    EvaluateInstanceName(c.Name);
+                    _generator.ExpectNonVoidType(_emitter.PeekType(), c.Position);
+                    _emitter.Call(c.Parameters.Lenght, false);
                     break;
                 default:
                     Error(expression.Position, "expression not supported yet");

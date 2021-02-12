@@ -1,10 +1,6 @@
 ﻿using LLVMSharp;
 using Mug.Models.Generator;
-using Mug.Models.Lexer;
-using Mug.Models.Parser;
-using Mug.Models.Parser.NodeKinds;
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 
@@ -33,8 +29,13 @@ namespace Mug.Compilation
 
         private void CompileModule(int optimizazioneLevel)
         {
+            const string clangStandardPath = "C:/Program Files/LLVM/bin/clang.exe";
+
+            if (!File.Exists(clangStandardPath))
+                exit($"Cannot find the clang executable at: {clangStandardPath}");
+
             writeFile(IRGenerator.Module, optimizazioneLevel,
-                Path.ChangeExtension(IRGenerator.Parser.Lexer.ModuleName, "bc"));
+                Path.ChangeExtension(IRGenerator.Parser.Lexer.ModuleName, "bc"), clangStandardPath);
 
             static void exit(string error)
             {
@@ -92,14 +93,5 @@ namespace Mug.Compilation
             if (LLVM.VerifyModule(IRGenerator.Module, LLVMVerifierFailureAction.LLVMPrintMessageAction, out string error))
                 CompilationErrors.Throw($"External compiler error: {error}");
         }
-
-        public string GetStringAST()
-        {
-            return GetNodeCollection().Dump();
-        }
-        public List<Token> GetTokenCollection() => IRGenerator.GetTokenCollection();
-        public List<Token> GetTokenCollection(out MugLexer lexer) => IRGenerator.GetTokenCollection(out lexer);
-        public NamespaceNode GetNodeCollection() => IRGenerator.GetNodeCollection();
-        public NamespaceNode GetNodeCollection(out MugParser parser) => IRGenerator.GetNodeCollection(out parser);
     }
 }

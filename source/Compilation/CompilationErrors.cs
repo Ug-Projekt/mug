@@ -12,7 +12,7 @@ namespace Mug.Compilation
         }
         public static void Throw(this MugLexer Lexer, int pos, params string[] error)
         {
-            Lexer.Throw(pos..(pos+1), error);
+            Lexer.Throw(pos..(pos + 1), error);
         }
         public static void Throw(this MugLexer Lexer, Token token, params string[] error)
         {
@@ -71,6 +71,14 @@ namespace Mug.Compilation
             Console.ForegroundColor = ConsoleColor.DarkYellow;
             Console.WriteLine(error);
             Console.ResetColor();
+        }
+
+        public static void WriteFail(string error)
+        {
+            Console.ForegroundColor = ConsoleColor.DarkRed;
+            Console.Write("Error");
+            Console.ResetColor();
+            Console.WriteLine(": " + string.Join("", error));
         }
     }
 }

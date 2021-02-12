@@ -14,6 +14,13 @@ namespace Mug.Models.Parser
             }
         }
         public Range Position { get; set; }
+        public int Lenght
+        {
+            get
+            {
+                return nodes.Count;
+            }
+        }
 
         public void Add(INode node)
         {
