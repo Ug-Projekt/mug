@@ -45,6 +45,7 @@ namespace Mug.Models.Generator
                 TypeKind.Int32 => LLVMTypeRef.Int32Type(),
                 TypeKind.Bool => LLVMTypeRef.Int1Type(),
                 TypeKind.Void => LLVMTypeRef.VoidType(),
+                TypeKind.Char => LLVMTypeRef.Int8Type(),
                 _ => NotSupportedType<LLVMTypeRef>(type.Kind.ToString(), position)
             };
         }
@@ -122,7 +123,7 @@ namespace Mug.Models.Generator
         public void ExpectNonVoidType(LLVMTypeRef type, Range position)
         {
             if (type.TypeKind == LLVMTypeKind.LLVMVoidTypeKind)
-                Error(position, "In the current context `Void` is not allowed");
+                Error(position, "Expected a non-void type");
         }
 
         private LLVMValueRef GetSymbol(string name, Range position)
@@ -149,6 +150,17 @@ namespace Mug.Models.Generator
             {
                 case FunctionNode function:
                     DefineFunction(function);
+                    break;
+                case FunctionPrototypeNode prototype:
+
+
+                    DeclareSymbol(prototype.Name,
+                        LLVM.AddFunction(Module, prototype.Name,
+                            LLVMTypeRef.FunctionType(
+                                TypeToLLVMType(prototype.Type, prototype.Position),
+                                ParameterTypesToLLVMTypes(prototype.ParameterList.Parameters),
+                                false)),
+                        prototype.Position);
                     break;
                 default:
                     Error(member.Position, "Declaration not supported yet");

@@ -1,4 +1,5 @@
 ﻿using Mug.Compilation;
+using System;
 using System.Collections.Generic;
 using System.Text;
 using System;
@@ -174,7 +175,7 @@ namespace Mug.Models.Lexer
         {
             var bad = new Token(TokenKind.Bad, null, new(_currentIndex - identifier.Length, _currentIndex));
             if (!char.IsLetter(identifier[0]) && identifier[0] != '_')
-                this.Throw(bad, "Invalid identifier, following the mug's syntax rules, an ident cannot start with `", identifier[0].ToString(), "`;");
+                this.Throw(bad, "Invalid identifier, following the mug's syntax rules, an ident cannot start by `", identifier[0].ToString(), "`;");
             if (identifier.Contains('.'))
                 this.Throw(bad, "Invalid identifier, following the mug's syntax rules, an ident cannot contain `.`;");
         }
@@ -291,7 +292,7 @@ namespace Mug.Models.Lexer
                 return;
             }
 
-            string doubleToken = current.ToString() + GetNext();
+            var doubleToken = current.ToString() + GetNext();
 
             if      (doubleToken == "==") AddDouble(TokenKind.BooleanEQ, doubleToken);
             else if (doubleToken == "!=") AddDouble(TokenKind.BooleanNEQ, doubleToken);
@@ -304,7 +305,12 @@ namespace Mug.Models.Lexer
             else if (doubleToken == "<=") AddDouble(TokenKind.BooleanMinEQ, doubleToken);
             else if (doubleToken == ">=") AddDouble(TokenKind.BooleanMajEQ, doubleToken);
             else if (doubleToken == "..") AddDouble(TokenKind.RangeDots, doubleToken);
-            else AddSpecial(GetSpecial(current), current.ToString());
+            else
+            {
+                AddSpecial(GetSpecial(current), current.ToString());
+                return;
+            }
+            _currentIndex++;
         }
 
         private void ProcessCurrentChar()

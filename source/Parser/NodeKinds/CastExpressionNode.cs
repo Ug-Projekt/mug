@@ -1,12 +1,11 @@
-﻿using Mug.Models.Parser.NodeKinds.Statements;
-using Mug.TypeSystem;
+﻿using Mug.TypeSystem;
 using System;
 
 namespace Mug.Models.Parser.NodeKinds
 {
-    public class FieldNode : INode
+    public class CastExpressionNode : INode
     {
-        public String Name { get; set; }
+        public INode Expression { get; set; }
         public MugType Type { get; set; }
         public Range Position { get; set; }
     }

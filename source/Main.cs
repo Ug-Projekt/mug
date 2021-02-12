@@ -1,21 +1,25 @@
 ﻿using LLVMSharp;
 using Mug.Compilation;
+using System;
 
 try
 {
     if (debug.isDebug())
     {
         var test = @"
-func add(a: i32, b: i32): i32 {
-  return a+b;
+func putchar(char: chr);
+
+func add(a: i32, b: i32): chr {
+  return (a + b) as chr;
 }
-func main(): i32 {
-  return add(2, 2);
-}
-";
+func main()
+{
+  putchar(add(2, 2));
+  return;
+}";
 
         var unit = new CompilationUnit("test", test);
-        unit.Generate();
+        unit.Generate(true);
 
         LLVM.DumpModule(unit.IRGenerator.Module);
     }
@@ -33,11 +37,12 @@ func main(): i32 {
 }
 catch (CompilationException e)
 {
-    if (e.Lexer is not null)
+    Console.WriteLine($"{(e.Lexer is not null ? $"(`{e.Lexer.Source[e.Bad]}`): " : "")}{e.Message}");
+    /*if (e.Lexer is not null)
     {
         CompilationErrors.WriteModule(e.Lexer.ModuleName);
         CompilationErrors.WriteSourceLine(e.Bad, e.LineAt, e.Lexer.Source, e.Message);
     }
     else
-        CompilationErrors.WriteFail(e.Message);
+        CompilationErrors.WriteFail(e.Message);*/
 }

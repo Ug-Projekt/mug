@@ -5,8 +5,10 @@ using Mug.Models.Lexer;
 using Mug.Models.Parser;
 using Mug.Models.Parser.NodeKinds;
 using Mug.Models.Parser.NodeKinds.Statements;
+using Mug.TypeSystem;
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 
 namespace Mug.Models.Generator
 {
@@ -29,15 +31,57 @@ namespace Mug.Models.Generator
             _generator.Parser.Lexer.Throw(position, error);
         }
 
-        private void EmitOperator(OperatorKind kind)
+        private void ExpectOperatorImplementation(LLVMTypeRef type, OperatorKind kind, Range position, params LLVMTypeRef[] supportedOperators)
         {
+            for (int i = 0; i < supportedOperators.Length; i++)
+                if (Unsafe.Equals(type, supportedOperators[i]))
+                    return;
+            Error(position, "The expression type does not implement the operator `", kind.ToString(), "`");
+        }
+
+        private void EmitOperator(OperatorKind kind, LLVMTypeRef ft, LLVMTypeRef st, Range position)
+        {
+            _generator.ExpectSameTypes(ft, position, $"Unsupported operator `{kind}` between different types", st);
+
             switch (kind)
             {
-                case OperatorKind.Sum: _emitter.Add(); break;
-                case OperatorKind.Subtract: _emitter.Sub(); break;
-                case OperatorKind.Multiply: _emitter.Mul(); break;
-                case OperatorKind.Divide: _emitter.Div(); break;
+                case OperatorKind.Sum:
+                    ExpectOperatorImplementation(ft, kind, position,
+                        LLVMTypeRef.Int32Type(),
+                        LLVMTypeRef.Int8Type());
+                    _emitter.Add();
+                    break;
+                case OperatorKind.Subtract:
+                    ExpectOperatorImplementation(ft, kind, position,
+                        LLVMTypeRef.Int32Type(),
+                        LLVMTypeRef.Int8Type());
+                    _emitter.Sub();
+                    break;
+                case OperatorKind.Multiply:
+                    ExpectOperatorImplementation(ft, kind, position,
+                        LLVMTypeRef.Int32Type(),
+                        LLVMTypeRef.Int8Type());
+                    break;
+                case OperatorKind.Divide:
+                    ExpectOperatorImplementation(ft, kind, position,
+                        LLVMTypeRef.Int32Type(),
+                        LLVMTypeRef.Int8Type());
+                    _emitter.Div();
+                    break;
                 case OperatorKind.Range: break;
+            }
+        }
+
+        private void EmitCastInstruction(MugType type, Range position)
+        {
+            var expressionType = _emitter.PeekType();
+            switch (expressionType.TypeKind) {
+                case LLVMTypeKind.LLVMIntegerTypeKind:
+                    _emitter.Cast(_generator.TypeToLLVMType(type, position));
+                    break;
+                default:
+                    Error(position, "Cast does not support this type yet");
+                    break;
             }
         }
 
@@ -57,6 +101,29 @@ namespace Mug.Models.Generator
             }
         }
 
+        private void EmitCallStatement(CallStatement c, bool expectedNonVoid)
+        {
+            EvaluateInstanceName(c.Name);
+            var function = _emitter.PeekType().GetElementType();
+            var parameterTypes = function.GetParamTypes();
+
+            if (parameterTypes.Length != c.Parameters.Lenght)
+                Error(c.Position, "Expected ", parameterTypes.Length.ToString(), " parameters, but given ", c.Parameters.Lenght.ToString());
+
+            for (int i = 0; i < c.Parameters.Lenght; i++)
+            {
+                EvaluateExpression(c.Parameters.Nodes[i]);
+                _generator.ExpectSameTypes(_emitter.PeekType(), c.Parameters.Nodes[i].Position, "The type of the parameter passed does not match with the expected", parameterTypes[i]);
+            }
+
+            if (expectedNonVoid)
+                _generator.ExpectNonVoidType(
+                    function.GetElementType(),
+                    c.Position);
+
+            _emitter.Call(c.Parameters.Lenght, function.GetElementType().TypeKind == LLVMTypeKind.LLVMVoidTypeKind);
+        }
+
         private void EvaluateExpression(INode expression)
         {
             switch (expression)
@@ -66,8 +133,7 @@ namespace Mug.Models.Generator
                     var ft = _emitter.PeekType();
                     EvaluateExpression(e.Right);
                     var st = _emitter.PeekType();
-                    _generator.ExpectSameTypes(ft, e.Position, $"Unsupported operator `{e.Operator}` between different types", st);
-                    EmitOperator(e.Operator);
+                    EmitOperator(e.Operator, ft, st, e.Position);
                     break;
                 case Token t:
                     if (t.Kind == TokenKind.Identifier)
@@ -89,11 +155,11 @@ namespace Mug.Models.Generator
                     }
                     break;
                 case CallStatement c:
-                    foreach (var parameter in c.Parameters.Nodes)
-                        EvaluateExpression(parameter);
-                    EvaluateInstanceName(c.Name);
-                    _generator.ExpectNonVoidType(_emitter.PeekType(), c.Position);
-                    _emitter.Call(c.Parameters.Lenght, false);
+                    EmitCallStatement(c, true);
+                    break;
+                case CastExpressionNode ce:
+                    EvaluateExpression(ce.Expression);
+                    EmitCastInstruction(ce.Type, ce.Position);
                     break;
                 default:
                     Error(expression.Position, "expression not supported yet");
@@ -138,6 +204,9 @@ namespace Mug.Models.Generator
                         _generator.ExpectSameTypes(_generator.TypeToLLVMType(_function.Type, @return.Position), @return.Position, "The function return type and the expression type are different", _emitter.PeekType());
                         _emitter.Ret();
                     }
+                    break;
+                case CallStatement c:
+                    EmitCallStatement(c, false);
                     break;
                 default:
                     Error(statement.Position, "Statement not supported yet");

@@ -1,6 +1,7 @@
 ﻿using Mug.Models.Lexer;
 using Mug.Models.Parser;
 using System;
+using System.Text;
 
 namespace Mug.Compilation
 {
@@ -10,29 +11,34 @@ namespace Mug.Compilation
         {
             throw new CompilationException(null, new(), string.Join("", error));
         }
+
         public static void Throw(this MugLexer Lexer, int pos, params string[] error)
         {
             Lexer.Throw(pos..(pos + 1), error);
         }
+
         public static void Throw(this MugLexer Lexer, Token token, params string[] error)
         {
             Lexer.Throw(token.Position, error);
         }
+
         public static void Throw(this MugParser Parser, INode node, params string[] error)
         {
             Parser.Lexer.Throw(node.Position, error);
         }
+
         public static void Throw(this MugLexer Lexer, Range position, params string[] error)
         {
-            int start = position.Start.Value;
-            int end = position.End.Value;
-            while (start >= 0 && Lexer.Source[start] != '\n')
-                start--;
-            while (end < Lexer.Source.Length && Lexer.Source[end] != '\n')
-                end++;
-            var err = string.Join("", error);
+            throw new CompilationException(Lexer, position, string.Join("", error));
+        }
 
-            throw new CompilationException(Lexer, position, err);
+        public static int CountLines(string source, int posStart)
+        {
+            int count = 1;
+            for (; posStart >= 0; posStart--)
+                if (source[posStart] == '\n')
+                    count++;
+            return count;
         }
 
         public static void WriteModule(string moduleName)
@@ -46,17 +52,35 @@ namespace Mug.Compilation
             Console.ResetColor();
         }
 
-        public static int CountLines(string source, int posStart)
+        private static string GetLine(string source, int index)
         {
-            int count = 1;
-            for (; posStart >= 0; posStart--)
-                if (source[posStart] == '\n')
-                    count++;
-            return count;
+            var i = 0;
+            for (; index > 0; i++)
+                if (source[i] == '\n')
+                    index--;
+
+            var builder = new StringBuilder();
+
+            do
+                builder.Append(source[i]);
+            while (++i < source.Length && source[i] != '\n');
+
+            return builder.ToString();
         }
 
         public static void WriteSourceLine(Range position, int lineAt, string source, string error)
         {
+            int start = position.Start.Value;
+            int end = position.End.Value;
+
+            while (start >= 0 && source[start] != '\n')
+                start--;
+            while (end < source.Length && source[end] != '\n')
+                end++;
+
+            position = new(position.Start.Value- start-4, end-position.End.Value-4);
+            source = GetLine(source, lineAt-1);
+
             Console.WriteLine($"@Raw(Line: {lineAt}, Position: ({position.Start}..{position.End}))");
             Console.Write(lineAt);
             Console.ForegroundColor = ConsoleColor.DarkGreen;

@@ -63,6 +63,11 @@ namespace Mug.Models.Generator.Emitter
             Load(BuildSDiv(Builder, Pop(), second, ""));
         }
 
+        public void Cast(LLVMTypeRef type)
+        {
+            Load(BuildIntCast(Builder, Pop(), type, ""));
+        }
+
         private LLVMValueRef GetFromMemory(string name)
         {
             return _memory[name];
@@ -120,11 +125,12 @@ namespace Mug.Models.Generator.Emitter
 
         public void Call(int paramCount, bool isVoid)
         {
-            var function = Pop();
             var parameters = new LLVMValueRef[paramCount];
 
             for (int i = 0; i < paramCount; i++)
                 parameters[i] = Pop();
+
+            var function = Pop();
 
             var result = BuildCall(Builder, function, parameters, "");
 
