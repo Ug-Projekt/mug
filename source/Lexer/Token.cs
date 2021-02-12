@@ -15,5 +15,18 @@ namespace Mug.Models.Lexer
             Value = value;
             Position = position;
         }
+        
+        public override string ToString()
+        {
+            return $"{Position} {Kind}: {Value}";
+        }
+        
+        public override bool Equals(object other)
+        {
+            return other is Token token &&
+                   token.Kind.Equals(this.Kind) &&
+                   token.Value.Equals(this.Value) &&
+                   token.Position.Equals(this.Position);
+        }
     }
 }
