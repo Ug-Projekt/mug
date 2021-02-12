@@ -2,14 +2,17 @@ using NUnit.Framework;
 using Mug.Models.Lexer;
 using System;
 using System.Collections.Generic;
+using Mug.Compilation;
+using LLVMSharp;
 
 namespace MugTests
 {
     public class Tests
     {
-        private readonly string operation1 = "1 + 2";
-        private readonly string variable1 = "var x = 0;";
-        private readonly string variable2 = "var number: i32 = 5;";
+        private const string operation1 = "1 + 2";
+        private const string variable1 = "var x = 0;";
+        private const string variable2 = "var number: i32 = 5;";
+        private const int ClangOptimizationLevel = 0;
 
         [SetUp]
         public void Setup()
@@ -64,14 +67,31 @@ namespace MugTests
             List<Token> expected = new List<Token>
             {
                 new Token(TokenKind.KeyVar, "var", 0..3),
-                new Token(TokenKind.Identifier, "x", 3..4),
-                new Token(TokenKind.Equal, "=", 5..6),
-                new Token(TokenKind.KeyTi32, "0", 7..8),
-                new Token(TokenKind.Colon, ";", 9..10),
+                new Token(TokenKind.Identifier, "x", 4..5),
+                new Token(TokenKind.Equal, "=", 6..7),
+                new Token(TokenKind.ConstantDigit, "0", 8..9),
+                new Token(TokenKind.Semicolon, ";", 9..10),
                 new Token(TokenKind.EOF, "<EOF>", 10..11)
             };
 
             AreListEqual(expected, tokens);
+        }
+
+        [Test]
+        public void Test01_CodeGenerator()
+        {
+            try
+            {
+                var unit = new CompilationUnit("test", variable1);
+                if (LLVM.VerifyModule(unit.IRGenerator.Module, LLVMVerifierFailureAction.LLVMReturnStatusAction, out string error))
+                    Assert.Fail(error);
+                else
+                    Assert.Pass();
+            }
+            catch (CompilationException)
+            {
+                Assert.Fail("Cannot build due to previous errors");
+            }
         }
     }
 }

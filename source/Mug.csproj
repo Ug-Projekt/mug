@@ -4,6 +4,7 @@
     <OutputType>Exe</OutputType>
     <LangVersion>9.0</LangVersion>
     <TargetFramework>netcoreapp3.1</TargetFramework>
+    <Platforms>AnyCPU;x64</Platforms>
   </PropertyGroup>
 
   <ItemGroup>
