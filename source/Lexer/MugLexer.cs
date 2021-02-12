@@ -43,35 +43,35 @@ namespace Mug.Models.Lexer
 
         private bool CheckAndSetKeyword(string s) => s switch
         {
-            "return" => AddKeyword(TokenKind.KeyReturn, s),
-            "continue" => AddKeyword(TokenKind.KeyContinue, s),
-            "break" => AddKeyword(TokenKind.KeyBreak, s),
-            "while" => AddKeyword(TokenKind.KeyWhile, s),
-            "pub" => AddKeyword(TokenKind.KeyPub, s),
-            "use" => AddKeyword(TokenKind.KeyUse, s),
-            "import" => AddKeyword(TokenKind.KeyImport, s),
-            "new" => AddKeyword(TokenKind.KeyNew, s),
-            "for" => AddKeyword(TokenKind.KeyFor, s),
-            "type" => AddKeyword(TokenKind.KeyType, s),
-            "as" => AddKeyword(TokenKind.KeyAs, s),
-            "in" => AddKeyword(TokenKind.KeyIn, s),
-            "to" => AddKeyword(TokenKind.KeyTo, s),
-            "if" => AddKeyword(TokenKind.KeyIf, s),
-            "elif" => AddKeyword(TokenKind.KeyElif, s),
-            "else" => AddKeyword(TokenKind.KeyElse, s),
-            "func" => AddKeyword(TokenKind.KeyFunc, s),
-            "var" => AddKeyword(TokenKind.KeyVar, s),
-            "const" => AddKeyword(TokenKind.KeyConst, s),
-            "str" => AddKeyword(TokenKind.KeyTstr, s),
-            "chr" => AddKeyword(TokenKind.KeyTchr, s),
-            "bit" => AddKeyword(TokenKind.KeyTbool, s),
-            "i8" => AddKeyword(TokenKind.KeyTi8, s),
-            "i32" => AddKeyword(TokenKind.KeyTi32, s),
-            "i64" => AddKeyword(TokenKind.KeyTi64, s),
-            "u8" => AddKeyword(TokenKind.KeyTu8, s),
-            "u32" => AddKeyword(TokenKind.KeyTu32, s),
-            "u64" => AddKeyword(TokenKind.KeyTu64, s),
-            "unknown" => AddKeyword(TokenKind.KeyTunknown, s),
+            "return" =>     AddKeyword(TokenKind.KeyReturn,     s),
+            "continue" =>   AddKeyword(TokenKind.KeyContinue,   s),
+            "break" =>      AddKeyword(TokenKind.KeyBreak,      s),
+            "while" =>      AddKeyword(TokenKind.KeyWhile,      s),
+            "pub" =>        AddKeyword(TokenKind.KeyPub,        s),
+            "use" =>        AddKeyword(TokenKind.KeyUse,        s),
+            "import" =>     AddKeyword(TokenKind.KeyImport,     s),
+            "new" =>        AddKeyword(TokenKind.KeyNew,        s),
+            "for" =>        AddKeyword(TokenKind.KeyFor,        s),
+            "type" =>       AddKeyword(TokenKind.KeyType,       s),
+            "as" =>         AddKeyword(TokenKind.KeyAs,         s),
+            "in" =>         AddKeyword(TokenKind.KeyIn,         s),
+            "to" =>         AddKeyword(TokenKind.KeyTo,         s),
+            "if" =>         AddKeyword(TokenKind.KeyIf,         s),
+            "elif" =>       AddKeyword(TokenKind.KeyElif,       s),
+            "else" =>       AddKeyword(TokenKind.KeyElse,       s),
+            "func" =>       AddKeyword(TokenKind.KeyFunc,       s),
+            "var" =>        AddKeyword(TokenKind.KeyVar,        s),
+            "const" =>      AddKeyword(TokenKind.KeyConst,      s),
+            "str" =>        AddKeyword(TokenKind.KeyTstr,       s),
+            "chr" =>        AddKeyword(TokenKind.KeyTchr,       s),
+            "bit" =>        AddKeyword(TokenKind.KeyTbool,      s),
+            "i8" =>         AddKeyword(TokenKind.KeyTi8,        s),
+            "i32" =>        AddKeyword(TokenKind.KeyTi32,       s),
+            "i64" =>        AddKeyword(TokenKind.KeyTi64,       s),
+            "u8" =>         AddKeyword(TokenKind.KeyTu8,        s),
+            "u32" =>        AddKeyword(TokenKind.KeyTu32,       s),
+            "u64" =>        AddKeyword(TokenKind.KeyTu64,       s),
+            "unknown" =>    AddKeyword(TokenKind.KeyTunknown,   s),
             _ => false
         };
 
@@ -81,17 +81,13 @@ namespace Mug.Models.Lexer
             return TokenKind.Bad;
         }
 
-        private bool MatchNext(char next)
-        {
-            var match = HasNext() && GetNext() == next;
-            if (match)
-                _currentIndex++;
-            return match;
-        }
-
         private bool HasNext()
         {
             return _currentIndex + 1 < Source.Length;
+        }
+        private char GetNext()
+        {
+            return Source[_currentIndex + 1];
         }
 
         private TokenKind GetSpecial(char c) => c switch
@@ -130,7 +126,7 @@ namespace Mug.Models.Lexer
             else if (value is not null)
                 TokenCollection.Add(new(kind, value, new(_currentIndex - value.ToString().Length, _currentIndex)));
             else
-                TokenCollection.Add(new(kind, null, new(_currentIndex, _currentIndex + 1)));
+                TokenCollection.Add(new(kind, value, new(_currentIndex, _currentIndex + 1)));
         }
 
         private void AddSpecial(TokenKind kind, string value)
@@ -204,7 +200,7 @@ namespace Mug.Models.Lexer
 
         private bool NextIsDigit()
         {
-            return _currentIndex + 1 < Source.Length && char.IsDigit(Source[_currentIndex + 1]);
+            return HasNext() && char.IsDigit(GetNext());
         }
 
         private bool MatchInlineComment()
@@ -219,12 +215,12 @@ namespace Mug.Models.Lexer
 
         private bool MatchStartMultiLineComment()
         {
-            return _currentIndex + 1 < Source.Length && Source[_currentIndex] == '#' && Source[_currentIndex + 1] == '[';
+            return HasNext() && Source[_currentIndex] == '#' && GetNext() == '[';
         }
 
         private bool MatchEndMultiLineComment()
         {
-            return _currentIndex + 1 < Source.Length && Source[_currentIndex] == ']' && Source[_currentIndex + 1] == '#';
+            return HasNext() && Source[_currentIndex] == ']' && GetNext() == '#';
         }
 
         private void ConsumeComments()
@@ -271,24 +267,6 @@ namespace Mug.Models.Lexer
             return char.IsControl(current) || char.IsWhiteSpace(current);
         }
 
-        private bool MatchEol()
-        {
-            return Source[_currentIndex] == '\n' || Source[_currentIndex] == '\r';
-        }
-
-        private bool MatchPart(char toMatch, TokenKind toInsert)
-        {
-            var match = MatchNext(toMatch);
-            //if (match)
-            //AddDouble(toInsert);
-            return match;
-        }
-
-        private char GetNext()
-        {
-            return Source[_currentIndex + 1];
-        }
-
         private void ProcessSpecial(char current)
         {
             if (!HasNext())
@@ -299,7 +277,7 @@ namespace Mug.Models.Lexer
 
             string doubleToken = current.ToString() + GetNext();
 
-            if (doubleToken == "==") AddDouble(TokenKind.BooleanEQ, doubleToken);
+            if      (doubleToken == "==") AddDouble(TokenKind.BooleanEQ, doubleToken);
             else if (doubleToken == "!=") AddDouble(TokenKind.BooleanNEQ, doubleToken);
             else if (doubleToken == "++") AddDouble(TokenKind.OperatorIncrement, doubleToken);
             else if (doubleToken == "+=") AddDouble(TokenKind.AddAssignment, doubleToken);
@@ -315,7 +293,13 @@ namespace Mug.Models.Lexer
 
         private void ProcessCurrentChar()
         {
+            //remove useless comments
             ConsumeComments();
+
+            //check if the newly stripped code is empty
+            if (_currentIndex == Source.Length)
+                return;
+
             char current = Source[_currentIndex];
             if (current == '.' && NextIsDigit())
                 _currentSymbol.Append('.');
@@ -339,9 +323,11 @@ namespace Mug.Models.Lexer
         public List<Token> Tokenize()
         {
             Reset();
-            do
+            while (_currentIndex < Source.Length)
+            {
                 ProcessCurrentChar();
-            while (_currentIndex++ < Source.Length - 1);
+                _currentIndex++;
+            }
 
             AddSpecial(TokenKind.EOF, "<EOF>");
 
