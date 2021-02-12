@@ -5,17 +5,10 @@ using System.Collections.Generic;
 
 namespace Mug.Models.Parser.NodeKinds.Statements
 {
-    public enum Modifier
-    {
-        Private,
-        Public,
-        Instance
-    }
     public class FunctionNode : INode
     {
         public String Name { get; set; }
         public MugType Type { get; set; }
-        public Modifier Modifier { get; set; }
         public ParameterListNode ParameterList { get; set; } = new();
         private List<Token> _genericTypes { get; set; } = new();
         public Token[] GenericTypes

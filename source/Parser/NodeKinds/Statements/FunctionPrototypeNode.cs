@@ -1,16 +1,17 @@
-﻿using Mug.TypeSystem;
+﻿using Mug.Models.Lexer;
+using Mug.TypeSystem;
 using System;
 using System.Collections.Generic;
 
 namespace Mug.Models.Parser.NodeKinds.Statements
 {
-    public class CallStatement : INode
+    public class FunctionPrototypeNode : INode
     {
-        public NodeBuilder Parameters { get; set; } = new();
-        public INode Name { get; set; }
-
-        private List<MugType> _genericTypes { get; set; } = new();
-        public MugType[] GenericTypes
+        public String Name { get; set; }
+        public MugType Type { get; set; }
+        public ParameterListNode ParameterList { get; set; } = new();
+        private List<Token> _genericTypes { get; set; } = new();
+        public Token[] GenericTypes
         {
             get
             {
@@ -24,7 +25,7 @@ namespace Mug.Models.Parser.NodeKinds.Statements
                 return GenericTypes.Length > 0;
             }
         }
-        public void SetGenericTypes(List<MugType> types)
+        public void SetGenericTypes(List<Token> types)
         {
             _genericTypes = types;
         }

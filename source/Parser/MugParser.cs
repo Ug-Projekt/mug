@@ -281,7 +281,7 @@ namespace Mug.Models.Parser
             }
             if (Current.Kind == TokenKind.ClosePar)
             {
-                var c1 = new CallStatement() { Name = name, Parameters = null, Position = name.Position };
+                var c1 = new CallStatement() { Name = name, Position = name.Position };
                 c1.SetGenericTypes(generics);
                 e = c1;
                 _currentIndex++;
@@ -357,7 +357,7 @@ namespace Mug.Models.Parser
                     }
                 if (Match(TokenKind.ClosePar))
                 {
-                    var c1 = new CallStatement() { Name = e, Parameters = null, Position = e.Position };
+                    var c1 = new CallStatement() { Name = e, Position = e.Position };
                     c1.SetGenericTypes(generics);
                     e = c1;
                     _currentIndex++;
@@ -544,6 +544,8 @@ namespace Mug.Models.Parser
                 _currentIndex++;
                 return e;
             }
+            else if (MatchAdvance(TokenKind.KeyAs, out var asToken))
+                e = new CastExpressionNode() { Expression = e, Type = ExpectType(), Position = asToken.Position };
             ExpectMultipleMute("`" + Current.Value + "` is not a valid token in the current context;", end);
             return e;
         }
@@ -703,13 +705,13 @@ namespace Mug.Models.Parser
 
         private INode ExpectStatement()
         {
-            if (!VariableDefinition(out INode statement))
-                if (!ReturnDeclaration(out statement))
-                    if (!ConstantDefinition(out statement))
-                        if (!ConditionDefinition(out statement))
-                            if (!ForLoopDefinition(out statement))
-                                if (!OtherwiseConditionDefinition(out statement))
-                                    if (!LoopManagerDefintion(out statement))
+            if (!(VariableDefinition(out INode statement) ||
+                ReturnDeclaration(out statement) ||
+                    ConstantDefinition(out statement) ||
+                        ConditionDefinition(out statement) ||
+                            ForLoopDefinition(out statement) ||
+                                OtherwiseConditionDefinition(out statement) ||
+                                    LoopManagerDefintion(out statement)))
                                         if (MatchCallStatement(out statement))
                                             _currentIndex++;
                                         else
@@ -722,7 +724,7 @@ namespace Mug.Models.Parser
 
         private BlockNode ExpectBlock()
         {
-            Expect("A block statement must start with `{` token;", TokenKind.OpenBrace);
+            Expect("A block statement must start by `{` token;", TokenKind.OpenBrace);
             var block = new BlockNode();
             while (!Match(TokenKind.CloseBrace))
                 block.Add(ExpectStatement());
@@ -762,18 +764,27 @@ namespace Mug.Models.Parser
                 }
             }
             var parameters = ExpectParameterListDeclaration();
+
             MugType type;
-            if (Match(TokenKind.OpenBrace))
+            if (MatchAdvance(TokenKind.Colon))
+                type = ExpectType();
+            else
                 type = new MugType(TypeKind.Void);
+
+            if (Match(TokenKind.OpenBrace))
+            {
+                var body = ExpectBlock();
+                var f = new FunctionNode() { Body = body, Name = name.Value.ToString(), ParameterList = parameters, Type = type, Position = name.Position };
+                f.SetGenericTypes(generics);
+                node = f;
+            }
             else
             {
-                Expect("In function definition must specify the type, or if it returns void the type can by omitted;", TokenKind.Colon);
-                type = ExpectType();
+                Expect("", TokenKind.Semicolon);
+                var f = new FunctionPrototypeNode() { Name = name.Value.ToString(), ParameterList = parameters, Type = type, Position = name.Position };
+                f.SetGenericTypes(generics);
+                node = f;
             }
-            var body = ExpectBlock();
-            var f = new FunctionNode() { Body = body, Modifier = Modifier.Public, Name = name.Value.ToString(), ParameterList = parameters, Type = type, Position = name.Position };
-            f.SetGenericTypes(generics);
-            node = f;
             return true;
         }
 
@@ -858,21 +869,12 @@ namespace Mug.Models.Parser
             return Expect("In generic type definition, expected ident after `type` keyword;", TokenKind.Identifier);
         }
 
-        private Modifier FindModifiers()
-        {
-            var modifier = Modifier.Private;
-            if (MatchAdvance(TokenKind.KeyPub))
-                modifier = Modifier.Public;
-            return modifier;
-        }
-
         private FieldNode ExpectFieldDefinition()
         {
-            var modifier = FindModifiers();
             var name = Expect("Expected field name;", TokenKind.Identifier);
             Expect("Expected `:` after field name, then the field type;", TokenKind.Colon);
             var type = ExpectType();
-            return new FieldNode() { Name = name.Value.ToString(), Type = type, Modifier = modifier };
+            return new FieldNode() { Name = name.Value.ToString(), Type = type };
         }
 
         private bool TypeDefinition(out INode node)

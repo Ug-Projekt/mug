@@ -1,25 +1,11 @@
-import std.err.*;
-import std.io.*;
+type Person {
+	name: string,
+	age: u8
+}
 
-var io: IO = IO();
-
-func main()
-{
-	const prompt: str = "Index of char to print in the text 'ciao': ";
-
-	var arr: [chr] = new [chr, 4] { 'c', 'i', 'a', 'o' };
-	var index: Err[u32] = io.readu32(prompt);
-
-	while index.is_err()
-	{
-		io.println("Invalid number");
-		index = io.readu32(prompt);
-	}
-
-	var c: Err[chr] = arr[index.discard()];
-
-	if c.is_err()
-		{ io.println("Invalid index"); }
-	else
-		{ io.println("Char: "+c.discard().to_str()); }
+func main() {
+	var me = new Person {
+		name: "sto cazzo",
+		age: 15
+	};
 }

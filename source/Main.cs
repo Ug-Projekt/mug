@@ -7,16 +7,19 @@ try
     if (debug.isDebug())
     {
         var test = @"
-func add(a: i32, b: i32): i32 {
-  return 1;
+func putchar(char: chr);
+
+func add(a: i32, b: i32): chr {
+  return (a + b) as chr;
 }
 func main()
 {
-  return 0;
+  putchar(add(2, 2));
+  return;
 }";
 
         var unit = new CompilationUnit("test", test);
-        unit.Generate();
+        unit.Generate(true);
 
         LLVM.DumpModule(unit.IRGenerator.Module);
     }
@@ -34,7 +37,7 @@ func main()
 }
 catch (CompilationException e)
 {
-    Console.WriteLine($"(`{e.Lexer.Source[e.Bad]}`): {e.Message}");
+    Console.WriteLine($"{(e.Lexer is not null ? $"(`{e.Lexer.Source[e.Bad]}`): " : "")}{e.Message}");
     /*if (e.Lexer is not null)
     {
         CompilationErrors.WriteModule(e.Lexer.ModuleName);

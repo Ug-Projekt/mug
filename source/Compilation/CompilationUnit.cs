@@ -84,14 +84,15 @@ namespace Mug.Compilation
             }
         }
 
-        public void Generate()
+        public void Generate(bool verifyLLVMModule = true)
         {
             IRGenerator.Parser.Lexer.Tokenize();
             IRGenerator.Parser.Parse();
             IRGenerator.Generate();
 
-            if (LLVM.VerifyModule(IRGenerator.Module, LLVMVerifierFailureAction.LLVMReturnStatusAction, out string error))
-                CompilationErrors.Throw($"External compiler error: {error}");
+            if (verifyLLVMModule)
+                if (LLVM.VerifyModule(IRGenerator.Module, LLVMVerifierFailureAction.LLVMReturnStatusAction, out string error))
+                    CompilationErrors.Throw($"External compiler error: {error}");
         }
     }
 }
