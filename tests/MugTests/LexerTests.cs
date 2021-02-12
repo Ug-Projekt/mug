@@ -14,13 +14,17 @@ namespace MugTests
 
         private const string COMMENTS01 = "# This is a comment";
         private const string COMMENTS02 = "#[ This is a  multi-line comment ]#";
+        private const string COMMENTS03 = "#[ This is a non closed multi-line comment";
+        private const string COMMENTS04 = "#[ This is a nested ]# multi-line comment ]#";
+        private const string COMMENTS05 = "#[ This is a #[ nested ]# multi-line comment ]#";
 
         //Ill-constructed code strings
         private const string EMPTYSTRING = "";
+
         private const string VARIABLE03 = ";50 = i32 :number var";
         private const string VARIABLE04 = "varnumber";
         private const string VARIABLE05 = "i33";
-
+        
         [SetUp]
         public void Setup()
         {
@@ -54,7 +58,15 @@ namespace MugTests
         public void AreListEqual(List<Token> expected, List<Token> reals)
         {
             if (reals.Count != expected.Count)
+            {
+                Console.WriteLine("expected contained:");
+                for (int i = 0; i < expected.Count; i++)
+                    Console.WriteLine($"i:{i}, contained:{expected[i]}");
+                Console.WriteLine("reals contained:");
+                for (int i = 0; i < reals.Count; i++)
+                    Console.WriteLine($"i:{i}, contained:{reals[i]}");
                 Assert.Fail($"Assert different lenghts:\n   - expected {expected.Count} tokens\n   - found {reals.Count} tokens");
+            }
 
             for (int i = 0; i < reals.Count; i++)
                 if (!reals[i].Equals(expected[i]))
@@ -193,6 +205,67 @@ namespace MugTests
             List<Token> expected = new List<Token>
             {
                 new Token(TokenKind.EOF, "<EOF>", 36..37)
+            };
+
+            AreListEqual(expected, tokens);
+        }
+
+        [Test]
+        public void TestComments03_CorrectTokenization()
+        {
+            // A comments gets consumed, turning it into an empty string
+            MugLexer lexer = new MugLexer("test", COMMENTS03);
+            lexer.Tokenize();
+
+            List<Token> tokens = lexer.TokenCollection;
+
+            List<Token> expected = new List<Token>
+            {
+                new Token(TokenKind.EOF, "<EOF>", 43..44)
+            };
+
+            AreListEqual(expected, tokens);
+        }
+
+        [Test]
+        public void TestComments04_CorrectTokenization()
+        {
+            // A comments gets consumed, turning it into an empty string
+            MugLexer lexer = new MugLexer("test", COMMENTS04);
+            lexer.Tokenize();
+
+            List<Token> tokens = lexer.TokenCollection;
+
+            List<Token> expected = new List<Token>
+            {
+                new Token(TokenKind.Identifier, "multi", 23..28),
+                new Token(TokenKind.Minus, "-", 28..29),
+                new Token(TokenKind.Identifier, "line", 29..33),
+                new Token(TokenKind.Identifier, "comment", 34..41),
+                new Token(TokenKind.CloseBracket, "]", 42..43),
+                new Token(TokenKind.EOF, "<EOF>", 45..46)
+            };
+
+            AreListEqual(expected, tokens);
+        }
+
+        [Test]
+        public void TestComments05_CorrectTokenization()
+        {
+            // A comments gets consumed, turning it into an empty string
+            MugLexer lexer = new MugLexer("test", COMMENTS05);
+            lexer.Tokenize();
+
+            List<Token> tokens = lexer.TokenCollection;
+
+            List<Token> expected = new List<Token>
+            {
+                new Token(TokenKind.Identifier, "multi", 26..31),
+                new Token(TokenKind.Minus, "-", 31..32),
+                new Token(TokenKind.Identifier, "line", 32..36),
+                new Token(TokenKind.Identifier, "comment", 37..44),
+                new Token(TokenKind.CloseBracket, "]", 45..46),
+                new Token(TokenKind.EOF, "<EOF>", 48..49)
             };
 
             AreListEqual(expected, tokens);

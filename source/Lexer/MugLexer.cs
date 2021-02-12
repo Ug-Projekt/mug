@@ -1,6 +1,7 @@
 ﻿using Mug.Compilation;
 using System.Collections.Generic;
 using System.Text;
+using System;
 
 namespace Mug.Models.Lexer
 {
@@ -228,9 +229,13 @@ namespace Mug.Models.Lexer
             if (MatchStartMultiLineComment())
             {
                 _currentIndex += 2;
-                while (!MatchEndMultiLineComment())
+                while (!MatchEndMultiLineComment() && _currentIndex != Source.Length)
+                {
+                    Console.WriteLine($"current index: {_currentIndex}");
                     _currentIndex++;
-                _currentIndex += 2;
+                }
+                if(MatchEndMultiLineComment())
+                    _currentIndex += 2;
             }
             else if (MatchInlineComment())
                 while (!MatchEolEof())
@@ -323,6 +328,7 @@ namespace Mug.Models.Lexer
         public List<Token> Tokenize()
         {
             Reset();
+
             while (_currentIndex < Source.Length)
             {
                 ProcessCurrentChar();
