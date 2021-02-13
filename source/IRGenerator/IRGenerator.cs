@@ -9,6 +9,7 @@ using Mug.TypeSystem;
 using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using System.Text;
 
 namespace Mug.Models.Generator
 {
@@ -17,6 +18,8 @@ namespace Mug.Models.Generator
         public readonly MugParser Parser;
         public readonly LLVMModuleRef Module;
         private readonly Dictionary<string, LLVMValueRef> _symbols = new();
+
+        private const string EntryPointName = "main";
 
         public IRGenerator(string moduleName, string source)
         {
@@ -66,11 +69,15 @@ namespace Mug.Models.Generator
 
         private void InstallFunction(string name, MugType type, Range position, ParameterListNode paramTypes)
         {
+            var parameterTypes = ParameterTypesToLLVMTypes(paramTypes.Parameters);
             var ft = LLVM.FunctionType(
                     TypeToLLVMType(type, position),
-                    ParameterTypesToLLVMTypes(paramTypes.Parameters),
+                    parameterTypes,
                     false
                 );
+
+            name = BuildFunctionName(name, parameterTypes);
+
             var f = LLVM.AddFunction(Module, name, ft);
 
             DeclareSymbol(name, f, position);
@@ -124,7 +131,7 @@ namespace Mug.Models.Generator
                 Error(position, "Expected a non-void type");
         }
 
-        private LLVMValueRef GetSymbol(string name, Range position)
+        public LLVMValueRef GetSymbol(string name, Range position)
         {
             if (!_symbols.TryGetValue(name, out var member))
                 Error(position, "`", name, "` undeclared member");
@@ -134,12 +141,26 @@ namespace Mug.Models.Generator
         private void DefineFunction(FunctionNode function)
         {
             MugEmitter emitter = new MugEmitter(this);
+
             var entry = LLVM.AppendBasicBlock(_symbols[function.Name], "");
+
             LLVM.PositionBuilderAtEnd(emitter.Builder, entry);
 
-            var generator = new LocalGenerator(this, _symbols, ref function, ref emitter);
+            var generator = new LocalGenerator(this, ref function, ref emitter);
             generator.AllocParameters(GetSymbol(function.Name, function.Position), function.ParameterList);
             generator.Generate();
+        }
+
+        private bool IsEntryPoint(string name, LLVMTypeRef[] types)
+        {
+            return
+                name == EntryPointName && types.Length == 0;
+        }
+
+        private string BuildFunctionName(string name, LLVMTypeRef[] types)
+        {
+            return
+                IsEntryPoint(name, types) ? name : $"{name}({string.Join(", ", types)})";
         }
 
         private void RecognizeMember(INode member, bool declareOnly)
@@ -150,7 +171,10 @@ namespace Mug.Models.Generator
                     if (declareOnly)
                         InstallFunction(function.Name, function.Type, function.Position, function.ParameterList);
                     else
+                    {
+                        function.Name = BuildFunctionName(function.Name, ParameterTypesToLLVMTypes(function.ParameterList.Parameters));
                         DefineFunction(function);
+                    }
                     break;
                 case FunctionPrototypeNode prototype:
                     DeclareSymbol(prototype.Name,

@@ -15,13 +15,11 @@ namespace Mug.Models.Generator
     public class LocalGenerator
     {
         private readonly MugEmitter _emitter;
-        private readonly Dictionary<string, LLVMValueRef> _symbols;
         private readonly FunctionNode _function;
         private readonly IRGenerator _generator;
-        public LocalGenerator(IRGenerator errorHandler, Dictionary<string, LLVMValueRef> symbols, ref FunctionNode function, ref MugEmitter emitter)
+        public LocalGenerator(IRGenerator errorHandler, ref FunctionNode function, ref MugEmitter emitter)
         {
             _generator = errorHandler;
-            _symbols = new Dictionary<string, LLVMValueRef>(symbols);
             _emitter = emitter;
             _function = function;
         }
@@ -85,43 +83,44 @@ namespace Mug.Models.Generator
             }
         }
 
-        private void EvaluateInstanceName(INode instance)
+        private string EvaluateInstanceName(INode instance)
         {
             switch (instance)
             {
                 case Token t:
-                    var sym = _symbols.TryGetValue(t.Value, out var symbol);
-                    if (!sym)
-                        Error(instance.Position, "Undeclared member");
-                    _emitter.Load(symbol);
-                    break;
+                    return t.Value;
                 default:
                     Error(instance.Position, "Not supported yet");
-                    break;
+                    return null;
             }
+        }
+
+        private string BuildName(string name, LLVMTypeRef[] parameters)
+        {
+            return $"{name}({string.Join(", ", parameters)})";
         }
 
         private void EmitCallStatement(CallStatement c, bool expectedNonVoid)
         {
-            EvaluateInstanceName(c.Name);
-            var function = _emitter.PeekType().GetElementType();
-            var parameterTypes = function.GetParamTypes();
-
-            if (parameterTypes.Length != c.Parameters.Lenght)
-                Error(c.Position, "Expected ", parameterTypes.Length.ToString(), " parameters, but given ", c.Parameters.Lenght.ToString());
+            var parameters = new LLVMTypeRef[c.Parameters.Lenght];
 
             for (int i = 0; i < c.Parameters.Lenght; i++)
             {
                 EvaluateExpression(c.Parameters.Nodes[i]);
-                _generator.ExpectSameTypes(_emitter.PeekType(), c.Parameters.Nodes[i].Position, "The type of the parameter passed does not match with the expected", parameterTypes[i]);
+                parameters[i] = _emitter.PeekType();
+                // _generator.ExpectSameTypes(_emitter.PeekType(), c.Parameters.Nodes[i].Position, "The type of the parameter passed does not match with the expected", parameterTypes[i]);
             }
+
+            // function type: <ret_type> <param_types>
+            var function = _generator.GetSymbol(BuildName(EvaluateInstanceName(c.Name), parameters), c.Position);
+            var functionType = function.TypeOf().GetElementType();
 
             if (expectedNonVoid)
                 _generator.ExpectNonVoidType(
-                    function.GetElementType(),
+                    functionType.GetElementType(),
                     c.Position);
 
-            _emitter.Call(c.Parameters.Lenght, function.GetElementType().TypeKind == LLVMTypeKind.LLVMVoidTypeKind);
+            _emitter.Call(function, c.Parameters.Lenght, functionType.GetElementType().TypeKind == LLVMTypeKind.LLVMVoidTypeKind);
         }
 
         private void EvaluateExpression(INode expression)

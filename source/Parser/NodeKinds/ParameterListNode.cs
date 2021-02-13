@@ -39,6 +39,13 @@ namespace Mug.Models.Parser.NodeKinds
         }
 
         public Range Position { get; set; }
+        public int Lenght
+        {
+            get
+            {
+                return parameters.Count;
+            }
+        }
 
         private readonly List<ParameterNode> parameters = new();
         public void Add(ParameterNode parameter)

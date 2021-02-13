@@ -8,10 +8,13 @@ try
     {
         var test = @"
 func main(): i32 {
-  return add(1, 2);
+  return add(1, 3);
 }
 func add(a: i32, b: i32): i32 {
  return a+b;
+}
+func add(a: i32): i32 {
+ return a;
 }
 ";
 
