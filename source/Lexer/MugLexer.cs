@@ -172,17 +172,24 @@ namespace Mug.Models.Lexer
         private void CheckValidIdentifier(string identifier)
         {
             var bad = new Token(TokenKind.Bad, null, new(_currentIndex - identifier.Length, _currentIndex));
+            
             if (!char.IsLetter(identifier[0]) && identifier[0] != '_')
                 this.Throw(bad, "Invalid identifier, following the mug's syntax rules, an ident cannot start by `", identifier[0].ToString(), "`;");
             if (identifier.Contains('.'))
                 this.Throw(bad, "Invalid identifier, following the mug's syntax rules, an ident cannot contain `.`;");
         }
 
+        /// <summary>
+        /// tests if value is a boolean constant
+        /// </summary>
         private bool IsBoolean(string value)
         {
             return value == "true" || value == "false";
         }
 
+        /// <summary>
+        /// adds a new token with the recognized kind (based on the symbol format)
+        /// </summary>
         private void ProcessSymbol(string value)
         {
             if (IsDigit(value))
@@ -191,13 +198,18 @@ namespace Mug.Models.Lexer
                 AddToken(TokenKind.ConstantFloatDigit, value);
             else if (IsBoolean(value))
                 AddToken(TokenKind.ConstantBoolean, value);
-            else if (!InsertKeyword(value))
+            else if (!InsertKeyword(value)) // if value is a keyword InsertKeyword will add a new token and will return true, otherwise false
             {
+                // value is an identifier
+                // the identifier must follow the language rules
                 CheckValidIdentifier(value);
                 AddToken(TokenKind.Identifier, value);
             }
         }
 
+        /// <summary>
+        /// checks if next char is a digit
+        /// </summary>
         private bool NextIsDigit()
         {
             return HasNext() && char.IsDigit(GetNext());
