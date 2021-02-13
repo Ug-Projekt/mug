@@ -7,11 +7,19 @@ namespace Mug.TypeSystem
     {
         public TypeKind Kind { get; set; }
         public object BaseType { get; set; }
+
+        /// <summary>
+        /// basetype is used when kind is a non primitive type, a pointer or an array
+        /// </summary>
         public MugType(TypeKind type, object baseType = null)
         {
             Kind = type;
             BaseType = baseType;
         }
+
+        /// <summary>
+        /// converts a keyword token into a type
+        /// </summary>
         public static MugType FromToken(Token t)
         {
             return t.Kind switch
@@ -36,10 +44,18 @@ namespace Mug.TypeSystem
             CompilationErrors.Throw("´", kind, "´ is not a type");
             return new();
         }
+
+        /// <summary>
+        /// a short way of allocating with new operator
+        /// </summary>
         public static MugType Automatic()
         {
             return new MugType(TypeKind.Auto);
         }
+
+        /// <summary>
+        /// used for implicit type specification in var, const declarations
+        /// </summary>
         public bool IsAutomatic()
         {
             return Kind == TypeKind.Auto;

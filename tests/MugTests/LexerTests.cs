@@ -1,5 +1,3 @@
-using LLVMSharp;
-using Mug.Compilation;
 using Mug.Models.Lexer;
 using NUnit.Framework;
 using System;

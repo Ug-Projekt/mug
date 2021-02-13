@@ -7,7 +7,6 @@ using Mug.Models.Parser.NodeKinds;
 using Mug.Models.Parser.NodeKinds.Statements;
 using Mug.TypeSystem;
 using System;
-using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 
 namespace Mug.Models.Generator
@@ -90,7 +89,8 @@ namespace Mug.Models.Generator
             // the expression type to cast
             var expressionType = _emitter.PeekType();
 
-            switch (expressionType.TypeKind) {
+            switch (expressionType.TypeKind)
+            {
                 case LLVMTypeKind.LLVMIntegerTypeKind: // LLVM has different instructions for each type convertion
                     _emitter.CastInt(_generator.TypeToLLVMType(type, position));
                     break;

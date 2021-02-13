@@ -1,5 +1,4 @@
-﻿using Mug.Models.Parser.NodeKinds.Statements;
-using Mug.TypeSystem;
+﻿using Mug.TypeSystem;
 using System;
 
 namespace Mug.Models.Parser.NodeKinds

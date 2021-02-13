@@ -1,8 +1,6 @@
 ﻿using Mug.Compilation;
-using System;
 using System.Collections.Generic;
 using System.Text;
-using System;
 
 namespace Mug.Models.Lexer
 {
@@ -45,35 +43,35 @@ namespace Mug.Models.Lexer
 
         private bool CheckAndSetKeyword(string s) => s switch
         {
-            "return" =>     AddKeyword(TokenKind.KeyReturn,     s),
-            "continue" =>   AddKeyword(TokenKind.KeyContinue,   s),
-            "break" =>      AddKeyword(TokenKind.KeyBreak,      s),
-            "while" =>      AddKeyword(TokenKind.KeyWhile,      s),
-            "pub" =>        AddKeyword(TokenKind.KeyPub,        s),
-            "use" =>        AddKeyword(TokenKind.KeyUse,        s),
-            "import" =>     AddKeyword(TokenKind.KeyImport,     s),
-            "new" =>        AddKeyword(TokenKind.KeyNew,        s),
-            "for" =>        AddKeyword(TokenKind.KeyFor,        s),
-            "type" =>       AddKeyword(TokenKind.KeyType,       s),
-            "as" =>         AddKeyword(TokenKind.KeyAs,         s),
-            "in" =>         AddKeyword(TokenKind.KeyIn,         s),
-            "to" =>         AddKeyword(TokenKind.KeyTo,         s),
-            "if" =>         AddKeyword(TokenKind.KeyIf,         s),
-            "elif" =>       AddKeyword(TokenKind.KeyElif,       s),
-            "else" =>       AddKeyword(TokenKind.KeyElse,       s),
-            "func" =>       AddKeyword(TokenKind.KeyFunc,       s),
-            "var" =>        AddKeyword(TokenKind.KeyVar,        s),
-            "const" =>      AddKeyword(TokenKind.KeyConst,      s),
-            "str" =>        AddKeyword(TokenKind.KeyTstr,       s),
-            "chr" =>        AddKeyword(TokenKind.KeyTchr,       s),
-            "bit" =>        AddKeyword(TokenKind.KeyTbool,      s),
-            "i8" =>         AddKeyword(TokenKind.KeyTi8,        s),
-            "i32" =>        AddKeyword(TokenKind.KeyTi32,       s),
-            "i64" =>        AddKeyword(TokenKind.KeyTi64,       s),
-            "u8" =>         AddKeyword(TokenKind.KeyTu8,        s),
-            "u32" =>        AddKeyword(TokenKind.KeyTu32,       s),
-            "u64" =>        AddKeyword(TokenKind.KeyTu64,       s),
-            "unknown" =>    AddKeyword(TokenKind.KeyTunknown,   s),
+            "return" => AddKeyword(TokenKind.KeyReturn, s),
+            "continue" => AddKeyword(TokenKind.KeyContinue, s),
+            "break" => AddKeyword(TokenKind.KeyBreak, s),
+            "while" => AddKeyword(TokenKind.KeyWhile, s),
+            "pub" => AddKeyword(TokenKind.KeyPub, s),
+            "use" => AddKeyword(TokenKind.KeyUse, s),
+            "import" => AddKeyword(TokenKind.KeyImport, s),
+            "new" => AddKeyword(TokenKind.KeyNew, s),
+            "for" => AddKeyword(TokenKind.KeyFor, s),
+            "type" => AddKeyword(TokenKind.KeyType, s),
+            "as" => AddKeyword(TokenKind.KeyAs, s),
+            "in" => AddKeyword(TokenKind.KeyIn, s),
+            "to" => AddKeyword(TokenKind.KeyTo, s),
+            "if" => AddKeyword(TokenKind.KeyIf, s),
+            "elif" => AddKeyword(TokenKind.KeyElif, s),
+            "else" => AddKeyword(TokenKind.KeyElse, s),
+            "func" => AddKeyword(TokenKind.KeyFunc, s),
+            "var" => AddKeyword(TokenKind.KeyVar, s),
+            "const" => AddKeyword(TokenKind.KeyConst, s),
+            "str" => AddKeyword(TokenKind.KeyTstr, s),
+            "chr" => AddKeyword(TokenKind.KeyTchr, s),
+            "bit" => AddKeyword(TokenKind.KeyTbool, s),
+            "i8" => AddKeyword(TokenKind.KeyTi8, s),
+            "i32" => AddKeyword(TokenKind.KeyTi32, s),
+            "i64" => AddKeyword(TokenKind.KeyTi64, s),
+            "u8" => AddKeyword(TokenKind.KeyTu8, s),
+            "u32" => AddKeyword(TokenKind.KeyTu32, s),
+            "u64" => AddKeyword(TokenKind.KeyTu64, s),
+            "unknown" => AddKeyword(TokenKind.KeyTunknown, s),
             _ => false
         };
 
@@ -205,42 +203,62 @@ namespace Mug.Models.Lexer
             return HasNext() && char.IsDigit(GetNext());
         }
 
+        /// <summary>
+        /// matches '#'
+        /// </summary>
         private bool MatchInlineComment()
         {
             return Source[_currentIndex] == '#';
         }
 
-        private bool MatchEolEof()
+        /// <summary>
+        /// match if the line ends or the source ends
+        /// </summary>
+        private bool MatchEolOrEof()
         {
             return _currentIndex == Source.Length || Source[_currentIndex] == '\n';
         }
 
+        /// <summary>
+        /// checks if there is '#['
+        /// </summary>
         private bool MatchStartMultiLineComment()
         {
             return HasNext() && Source[_currentIndex] == '#' && GetNext() == '[';
         }
 
+        /// <summary>
+        /// checks if there is ']#'
+        /// </summary>
         private bool MatchEndMultiLineComment()
         {
             return HasNext() && Source[_currentIndex] == ']' && GetNext() == '#';
         }
 
+        /// <summary>
+        /// eats comments
+        /// </summary>
         private void ConsumeComments()
         {
             if (MatchStartMultiLineComment())
             {
+                // eats first two chars '#['
                 _currentIndex += 2;
+
                 while (!MatchEndMultiLineComment() && _currentIndex != Source.Length)
                     _currentIndex++;
-                
-                if(MatchEndMultiLineComment())
+
+                if (MatchEndMultiLineComment())
                     _currentIndex += 2;
             }
             else if (MatchInlineComment())
-                while (!MatchEolEof())
+                while (!MatchEolOrEof())
                     _currentIndex++;
         }
 
+        /// <summary>
+        /// to rewrite
+        /// </summary>
         private void CollectChar()
         {
             _currentSymbol.Append(Source[_currentIndex]);
@@ -252,6 +270,9 @@ namespace Mug.Models.Lexer
             _currentSymbol.Clear();
         }
 
+        /// <summary>
+        /// collects a string, now it does not support the escaped chars yet
+        /// </summary>
         private void CollectString()
         {
             //add initial " and check next character
@@ -264,24 +285,33 @@ namespace Mug.Models.Lexer
             }
 
             //if you found an EOF, throw
-            if (_currentIndex == Source.Length && Source[_currentIndex-1] != '"')
-                this.Throw(_currentIndex-1, $"String has not been correctly enclosed");
+            if (_currentIndex == Source.Length && Source[_currentIndex - 1] != '"')
+                this.Throw(_currentIndex - 1, $"String has not been correctly enclosed");
 
             //else add closing simbol
             AddToken(TokenKind.ConstantString, _currentSymbol.Append('"').ToString(), true);
             _currentSymbol.Clear();
         }
 
+        /// <summary>
+        /// follows identifier rules
+        /// </summary>
         private bool IsValidIdentifierChar(char current)
         {
             return char.IsLetterOrDigit(current) || current == '_';
         }
 
-        private bool IsControl(char current)
+        /// <summary>
+        /// tests if current is an escaped char or a white space
+        /// </summary>
+        private bool IsEscapedChar(char current)
         {
             return char.IsControl(current) || char.IsWhiteSpace(current);
         }
 
+        /// <summary>
+        /// checks if there is a double symbol else add a single symbol
+        /// </summary>
         private void ProcessSpecial(char current)
         {
             if (!HasNext())
@@ -292,7 +322,7 @@ namespace Mug.Models.Lexer
 
             var doubleToken = current.ToString() + GetNext();
 
-            if      (doubleToken == "==") AddDouble(TokenKind.BooleanEQ, doubleToken);
+            if (doubleToken == "==") AddDouble(TokenKind.BooleanEQ, doubleToken);
             else if (doubleToken == "!=") AddDouble(TokenKind.BooleanNEQ, doubleToken);
             else if (doubleToken == "++") AddDouble(TokenKind.OperatorIncrement, doubleToken);
             else if (doubleToken == "+=") AddDouble(TokenKind.AddAssignment, doubleToken);
@@ -308,46 +338,60 @@ namespace Mug.Models.Lexer
                 AddSpecial(GetSpecial(current), current.ToString());
                 return;
             }
+
+            // if is not a single value increments the index by one
             _currentIndex++;
         }
 
+        /// <summary>
+        /// recognize the kind of the char
+        /// </summary>
         private void ProcessCurrentChar()
         {
-            //remove useless comments
+            // remove useless comments
             ConsumeComments();
 
-            //check if the newly stripped code is empty
+            // check if the newly stripped code is empty
             if (_currentIndex == Source.Length)
                 return;
 
             char current = Source[_currentIndex];
             if (current == '.' && NextIsDigit())
                 _currentSymbol.Append('.');
+
             if (current == '"')
-            {
                 CollectString();
-                return;
-            }
             else if (current == '\'')
-            {
                 CollectChar();
-                return;
-            }
-            if (IsControl(current))
-                InsertCurrentSymbol();
+            else if (IsEscapedChar(current)) // if control
+                InsertCurrentSymbol(); // skip it and add the symbol if it's not empty
             else if (IsValidIdentifierChar(current))
                 _currentSymbol.Append(current);
             else
-                ProcessSpecial(current);
+                ProcessSpecial(current); // if current is not a valid id char, a control or a string quote
         }
+
+        /// <summary>
+        /// next char
+        /// </summary>
+        private void Advance()
+        {
+            _currentIndex++;
+        }
+
+        /// <summary>
+        /// generates a token stream from a string
+        /// </summary>
         public List<Token> Tokenize()
         {
+            // set up all fields
             Reset();
 
-            while (_currentIndex < Source.Length)
+            // go to the next char while there is one
+            while (HasNext())
             {
                 ProcessCurrentChar();
-                _currentIndex++;
+                Advance();
             }
 
             AddSpecial(TokenKind.EOF, "<EOF>");

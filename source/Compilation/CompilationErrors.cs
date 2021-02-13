@@ -78,8 +78,8 @@ namespace Mug.Compilation
             while (end < source.Length && source[end] != '\n')
                 end++;
 
-            position = new(position.Start.Value- start-4, end-position.End.Value-4);
-            source = GetLine(source, lineAt-1);
+            position = new(position.Start.Value - start - 4, end - position.End.Value - 4);
+            source = GetLine(source, lineAt - 1);
 
             Console.WriteLine($"@Raw(Line: {lineAt}, Position: ({position.Start}..{position.End}))");
             Console.Write(lineAt);

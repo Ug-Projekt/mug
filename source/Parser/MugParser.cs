@@ -712,13 +712,13 @@ namespace Mug.Models.Parser
                             ForLoopDefinition(out statement) ||
                                 OtherwiseConditionDefinition(out statement) ||
                                     LoopManagerDefintion(out statement)))
-                                        if (MatchCallStatement(out statement))
-                                            _currentIndex++;
-                                        else
-                                        {
-                                            if (!ValueAssignment(out statement))
-                                                ParseError("In the current local context, this is not a valid imperative statement;");
-                                        }
+                if (MatchCallStatement(out statement))
+                    _currentIndex++;
+                else
+                {
+                    if (!ValueAssignment(out statement))
+                        ParseError("In the current local context, this is not a valid imperative statement;");
+                }
             return statement;
         }
 

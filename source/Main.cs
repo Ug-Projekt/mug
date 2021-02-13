@@ -7,17 +7,9 @@ try
     if (debug.isDebug())
     {
         var test = @"
-func main() {
-  putchar(add(add(1, 2, 3), 4) as chr);
+func main(): i32 {
+  return 90+2;
 }
-func add(a: i32, b: i32): i32 {
-  return a + b;
-}
-func add(a: i32, b: i32, c: i32): i32 {
-  return add(a, b) + c;
-}
-
-func putchar(char: chr);
 ";
 
         var unit = new CompilationUnit("test", test);
