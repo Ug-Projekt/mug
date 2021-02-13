@@ -1,7 +1,6 @@
 ﻿using LLVMSharp;
 using Mug.Compilation;
 using System;
-using System.Diagnostics;
 
 try
 {
@@ -9,15 +8,15 @@ try
 #if DEBUG
 
     var test = @"
-func main(): u1 {
-  return true+true;
+func main(): i32 {
+  return 1+23*2;
 }
 ";
 
-        var unit = new CompilationUnit("test", test);
-        unit.Generate(true);
+    var unit = new CompilationUnit("test", test);
+    unit.Generate(true);
 
-        LLVM.DumpModule(unit.IRGenerator.Module);
+    LLVM.DumpModule(unit.IRGenerator.Module);
 
 #else
 

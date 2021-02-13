@@ -1,7 +1,5 @@
 ﻿using Mug.Models.Lexer;
-using Mug.Models.Parser;
 using System;
-using System.Text;
 
 namespace Mug.Compilation
 {

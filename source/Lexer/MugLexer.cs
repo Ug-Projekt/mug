@@ -43,7 +43,7 @@ namespace Mug.Models.Lexer
         /// </summary>
         private bool AddKeyword(TokenKind kind, string keyword)
         {
-            TokenCollection.Add(new(kind, keyword, new(_currentIndex - keyword.Length, _currentIndex)));
+            TokenCollection.Add(new(kind, keyword, (_currentIndex - keyword.Length).._currentIndex));
             return true;
         }
 
@@ -141,11 +141,11 @@ namespace Mug.Models.Lexer
                 CheckValidIdentifier(value);
 
             if (isString)
-                TokenCollection.Add(new(kind, value, new(_currentIndex - value.Length + 1, _currentIndex + 1)));
+                TokenCollection.Add(new(kind, value, (_currentIndex - value.Length + 1)..(_currentIndex + 1)));
             else if (value is not null)
-                TokenCollection.Add(new(kind, value, new(_currentIndex - value.ToString().Length, _currentIndex)));
+                TokenCollection.Add(new(kind, value, (_currentIndex - value.ToString().Length).._currentIndex));
             else // chatching null reference exception
-                TokenCollection.Add(new(kind, value, new(_currentIndex, _currentIndex + 1)));
+                TokenCollection.Add(new(kind, value, _currentIndex..(_currentIndex + 1)));
         }
 
         /// <summary>
@@ -154,7 +154,7 @@ namespace Mug.Models.Lexer
         private void AddSingle(TokenKind kind, string value)
         {
             InsertCurrentSymbol();
-            TokenCollection.Add(new(kind, value, new(_currentIndex, _currentIndex + 1)));
+            TokenCollection.Add(new(kind, value, _currentIndex..(_currentIndex + 1)));
         }
 
         /// <summary>
@@ -164,7 +164,7 @@ namespace Mug.Models.Lexer
         {
             InsertCurrentSymbol();
             // current index as start position, is added 2 to the current index for the end position
-            TokenCollection.Add(new(kind, value, new(_currentIndex, _currentIndex + 2)));
+            TokenCollection.Add(new(kind, value, _currentIndex..(_currentIndex + 2)));
         }
 
         /// <summary>
@@ -200,8 +200,8 @@ namespace Mug.Models.Lexer
         /// </summary>
         private void CheckValidIdentifier(string identifier)
         {
-            var bad = new Token(TokenKind.Bad, null, new(_currentIndex - identifier.Length, _currentIndex));
-            
+            var bad = new Token(TokenKind.Bad, null, (_currentIndex - identifier.Length).._currentIndex);
+
             if (!char.IsLetter(identifier[0]) && identifier[0] != '_')
                 this.Throw(bad, "Invalid identifier, following the mug's syntax rules, an ident cannot start by `", identifier[0].ToString(), "`;");
 

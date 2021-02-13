@@ -36,7 +36,7 @@ namespace Mug.Models.Generator.Emitter
         {
             return _stack.Peek();
         }
-        
+
         public LLVMTypeRef PeekType()
         {
             return Peek().TypeOf();
