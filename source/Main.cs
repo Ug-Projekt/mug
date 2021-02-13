@@ -1,15 +1,16 @@
 ﻿using LLVMSharp;
 using Mug.Compilation;
 using System;
+using System.Diagnostics;
 
 try
 {
-    if (debug.isDebug())
-    {
-        var test = @"
-func f();
-func main() {
-  f();
+
+#if DEBUG
+
+    var test = @"
+func main(): u1 {
+  return true+true;
 }
 ";
 
@@ -17,9 +18,9 @@ func main() {
         unit.Generate(true);
 
         LLVM.DumpModule(unit.IRGenerator.Module);
-    }
-    else
-    {
+
+#else
+
         if (args.Length == 0)
             CompilationErrors.Throw("No arguments passed");
 
@@ -28,7 +29,8 @@ func main() {
             var unit = new CompilationUnit(args[i]);
             unit.Compile(0);
         }
-    }
+
+#endif
 }
 catch (CompilationException e)
 {

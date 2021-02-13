@@ -7,6 +7,10 @@ namespace Mug.Compilation
 {
     public static class CompilationErrors
     {
+        /// <summary>
+        /// general compilation-error that have no position in the text to report,
+        /// for example "no argument passed" error
+        /// </summary>
         public static void Throw(params string[] error)
         {
             throw new CompilationException(null, new(), string.Join("", error));
@@ -22,16 +26,14 @@ namespace Mug.Compilation
             Lexer.Throw(token.Position, error);
         }
 
-        public static void Throw(this MugParser Parser, INode node, params string[] error)
-        {
-            Parser.Lexer.Throw(node.Position, error);
-        }
-
         public static void Throw(this MugLexer Lexer, Range position, params string[] error)
         {
             throw new CompilationException(Lexer, position, string.Join("", error));
         }
 
+        /// <summary>
+        /// returns the line number of a char index in the text
+        /// </summary>
         public static int CountLines(string source, int posStart)
         {
             int count = 1;
@@ -41,6 +43,14 @@ namespace Mug.Compilation
             return count;
         }
 
+        private static string GetLine(string source, int index)
+        {
+            return source.Split('\n')[index];
+        }
+
+        /// <summary>
+        /// pretty module info printing
+        /// </summary
         public static void WriteModule(string moduleName)
         {
             Console.ForegroundColor = ConsoleColor.DarkMagenta;
@@ -52,22 +62,9 @@ namespace Mug.Compilation
             Console.ResetColor();
         }
 
-        private static string GetLine(string source, int index)
-        {
-            var i = 0;
-            for (; index > 0; i++)
-                if (source[i] == '\n')
-                    index--;
-
-            var builder = new StringBuilder();
-
-            do
-                builder.Append(source[i]);
-            while (++i < source.Length && source[i] != '\n');
-
-            return builder.ToString();
-        }
-
+        /// <summary>
+        /// pretty error printing
+        /// </summary>
         public static void WriteSourceLine(Range position, int lineAt, string source, string error)
         {
             int start = position.Start.Value;
@@ -97,6 +94,9 @@ namespace Mug.Compilation
             Console.ResetColor();
         }
 
+        /// <summary>
+        /// pretty general error printing
+        /// </summary>
         public static void WriteFail(string error)
         {
             Console.ForegroundColor = ConsoleColor.DarkRed;
