@@ -140,7 +140,7 @@ namespace Mug.Models.Lexer
         private void AddDouble(TokenKind kind, string value)
         {
             InsertCurrentSymbol();
-            TokenCollection.Add(new(kind, value, new(_currentIndex - 1, _currentIndex + 1)));
+            TokenCollection.Add(new(kind, value, new(_currentIndex, _currentIndex + 2)));
         }
 
         private void InsertCurrentSymbol()

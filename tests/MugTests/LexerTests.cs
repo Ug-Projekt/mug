@@ -16,7 +16,12 @@ namespace MugTests
 
         private const string COMMENTS01 = "# This is a comment";
         private const string COMMENTS02 = "#[ This is a  multi-line comment ]#";
-        
+
+        private const string SINGLE_TOKENS = "( ) [ ] { } < > = ! & | + - * / , ; : . @ ?";
+        private const string DOUBLE_TOKENS = "== != ++ += -- -= *= /= <= >= ..";
+        private const string FULL_TOKENS = "return continue break while pub use import new for type as in to if elif else func var const str chr bit i8 i32 i64 u8 u32 u64 unknown";
+        private const string RANDOM_TOKENS = "return == ( ) += continue pub ! *= ..";
+
 
         private const string STRINGS01 = "\"This is a string\"";
 
@@ -337,6 +342,141 @@ namespace MugTests
                 new Token(TokenKind.Identifier, "nested", 13..19),
                 new Token(TokenKind.ConstantString, "\"string\"", 20..28),
                 new Token(TokenKind.EOF, "<EOF>", 28..29)
+            };
+
+            AreListEqual(expected, tokens);
+        }
+
+        [Test]
+        public void TestSingleTokens_CorrectTokenization()
+        {
+            MugLexer lexer = new MugLexer("test", SINGLE_TOKENS);
+            lexer.Tokenize();
+
+            List<Token> tokens = lexer.TokenCollection;
+
+            List<Token> expected = new List<Token>
+            {
+                new Token(TokenKind.OpenPar, "(", 0..1),
+                new Token(TokenKind.ClosePar, ")", 2..3),
+                new Token(TokenKind.OpenBracket, "[", 4..5),
+                new Token(TokenKind.CloseBracket, "]", 6..7),
+                new Token(TokenKind.OpenBrace, "{", 8..9),
+                new Token(TokenKind.CloseBrace, "}", 10..11),
+                new Token(TokenKind.BooleanMinor, "<", 12..13),
+                new Token(TokenKind.BooleanMajor, ">", 14..15),
+                new Token(TokenKind.Equal, "=", 16..17),
+                new Token(TokenKind.Negation, "!", 18..19),
+                new Token(TokenKind.BooleanAND, "&", 20..21),
+                new Token(TokenKind.BooleanOR, "|", 22..23),
+                new Token(TokenKind.Plus, "+", 24..25),
+                new Token(TokenKind.Minus, "-", 26..27),
+                new Token(TokenKind.Star, "*", 28..29),
+                new Token(TokenKind.Slash, "/", 30..31),
+                new Token(TokenKind.Comma, ",", 32..33),
+                new Token(TokenKind.Semicolon, ";", 34..35),
+                new Token(TokenKind.Colon, ":", 36..37),
+                new Token(TokenKind.Dot, ".", 38..39),
+                new Token(TokenKind.DirectiveSymbol, "@", 40..41),
+                new Token(TokenKind.KeyTVoid, "?", 42..43),
+                new Token(TokenKind.EOF, "<EOF>", 43..44)
+            };
+
+            AreListEqual(expected, tokens);
+        }
+
+        [Test]
+        public void TestDoubleTokens_CorrectTokenization()
+        {
+            MugLexer lexer = new MugLexer("test", DOUBLE_TOKENS);
+            lexer.Tokenize();
+
+            List<Token> tokens = lexer.TokenCollection;
+
+            List<Token> expected = new List<Token>
+            {
+                new Token(TokenKind.BooleanEQ, "==", 0..2),
+                new Token(TokenKind.BooleanNEQ, "!=", 3..5),
+                new Token(TokenKind.OperatorIncrement, "++", 6..8),
+                new Token(TokenKind.AddAssignment, "+=", 9..11),
+                new Token(TokenKind.OperatorDecrement, "--", 12..14),
+                new Token(TokenKind.SubAssignment, "-=", 15..17),
+                new Token(TokenKind.MulAssignment, "*=", 18..20),
+                new Token(TokenKind.DivAssignment, "/=", 21..23),
+                new Token(TokenKind.BooleanMinEQ, "<=", 24..26),
+                new Token(TokenKind.BooleanMajEQ, ">=", 27..29),
+                new Token(TokenKind.RangeDots, "..", 30..32),
+                new Token(TokenKind.EOF, "<EOF>", 32..33)
+            };
+
+            AreListEqual(expected, tokens);
+        }
+
+        [Test]
+        public void TestFullTokens_CorrectTokenization()
+        {
+            MugLexer lexer = new MugLexer("test", FULL_TOKENS);
+            lexer.Tokenize();
+
+            List<Token> tokens = lexer.TokenCollection;
+
+            List<Token> expected = new List<Token>
+            {
+                new Token(TokenKind.KeyReturn, "return", 0..6),
+                new Token(TokenKind.KeyContinue, "continue", 7..15),
+                new Token(TokenKind.KeyBreak, "break", 16..21),
+                new Token(TokenKind.KeyWhile, "while", 22..27),
+                new Token(TokenKind.KeyPub, "pub", 28..31),
+                new Token(TokenKind.KeyUse, "use", 32..35),
+                new Token(TokenKind.KeyImport, "import", 36..42),
+                new Token(TokenKind.KeyNew, "new", 43..46),
+                new Token(TokenKind.KeyFor, "for", 47..50),
+                new Token(TokenKind.KeyType, "type", 51..55),
+                new Token(TokenKind.KeyAs, "as", 56..58),
+                new Token(TokenKind.KeyIn, "in", 59..61),
+                new Token(TokenKind.KeyTo, "to", 62..64),
+                new Token(TokenKind.KeyIf, "if", 65..67),
+                new Token(TokenKind.KeyElif, "elif", 68..72),
+                new Token(TokenKind.KeyElse, "else", 73..77),
+                new Token(TokenKind.KeyFunc, "func", 78..82),
+                new Token(TokenKind.KeyVar, "var", 83..86),
+                new Token(TokenKind.KeyConst, "const", 87..92),
+                new Token(TokenKind.KeyTstr, "str", 93..96),
+                new Token(TokenKind.KeyTchr, "chr", 97..100),
+                new Token(TokenKind.KeyTbool, "bit", 101..104),
+                new Token(TokenKind.KeyTi8, "i8", 105..107),
+                new Token(TokenKind.KeyTi32, "i32", 108..111),
+                new Token(TokenKind.KeyTi64, "i64", 112..115),
+                new Token(TokenKind.KeyTu8, "u8", 116..118),
+                new Token(TokenKind.KeyTu32, "u32", 119..122),
+                new Token(TokenKind.KeyTu64, "u64", 123..126),
+                new Token(TokenKind.KeyTunknown, "unknown", 127..134),
+                new Token(TokenKind.EOF, "<EOF>", 134..135)
+            };
+
+            AreListEqual(expected, tokens);
+        }
+
+        [Test]
+        public void TestRandomTokens_CorrectTokenization()
+        {
+            MugLexer lexer = new MugLexer("test", RANDOM_TOKENS);
+            lexer.Tokenize();
+            List<Token> tokens = lexer.TokenCollection;
+
+            List<Token> expected = new List<Token>
+            {
+                new Token(TokenKind.KeyReturn, "return", 0..6),
+                new Token(TokenKind.BooleanEQ, "==", 7..9),
+                new Token(TokenKind.OpenPar, "(", 10..11),
+                new Token(TokenKind.ClosePar, ")", 12..13),
+                new Token(TokenKind.AddAssignment, "+=", 14..16),
+                new Token(TokenKind.KeyContinue, "continue", 17..25),
+                new Token(TokenKind.KeyPub, "pub", 26..29),
+                new Token(TokenKind.Negation, "!", 30..31),
+                new Token(TokenKind.MulAssignment, "*=", 32..34),
+                new Token(TokenKind.RangeDots, "..", 35..37),
+                new Token(TokenKind.EOF, "<EOF>", 37..38)
             };
 
             AreListEqual(expected, tokens);
