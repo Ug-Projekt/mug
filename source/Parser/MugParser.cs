@@ -27,11 +27,13 @@ namespace Mug.Models.Parser
             var errors = string.Join("", error);
             Lexer.Throw(Back, errors, errors != "" ? ": " : "", "Unexpected <EOF>");
         }
+
         public MugParser(string moduleName, string source)
         {
             Lexer = new(moduleName, source);
             Lexer.Tokenize();
         }
+
         public MugParser(MugLexer lexer)
         {
             Lexer = lexer;
@@ -863,17 +865,19 @@ namespace Mug.Models.Parser
         {
             node = null;
 
-            if (!MatchAdvance(TokenKind.KeyFunc))
+            if (!MatchAdvance(TokenKind.KeyFunc)) // <func>
                 return false;
 
             var generics = new List<Token>();
-            var name = Expect("In function definition must specify the name;", TokenKind.Identifier);
+            var name = Expect("In function definition must specify the name;", TokenKind.Identifier); // func <name>
 
-            if (MatchAdvance(TokenKind.OpenBracket))
+            if (MatchAdvance(TokenKind.OpenBracket)) // func name<[>
             {
                 if (Match(TokenKind.CloseBracket))
                     ParseError("Invalid generic definition content;");
+
                 var count = 0;
+
                 while (!MatchAdvance(TokenKind.CloseBracket))
                 {
                     generics.Add(ExpectGenericType(count == 0));
@@ -881,7 +885,7 @@ namespace Mug.Models.Parser
                 }
             }
 
-            var parameters = ExpectParameterListDeclaration();
+            var parameters = ExpectParameterListDeclaration(); // func name<(..)>
 
             MugType type;
 
@@ -889,79 +893,49 @@ namespace Mug.Models.Parser
                 type = ExpectType();
             else
                 type = new MugType(TypeKind.Void);
-
-            if (Match(TokenKind.OpenBrace))
+            
+            if (Match(TokenKind.OpenBrace)) // function definition
             {
                 var body = ExpectBlock();
                 var f = new FunctionNode() { Body = body, Name = name.Value.ToString(), ParameterList = parameters, Type = type, Position = name.Position };
+
                 f.SetGenericTypes(generics);
+
                 node = f;
             }
-            else
+            else // prototype
             {
                 Expect("", TokenKind.Semicolon);
+
                 var f = new FunctionPrototypeNode() { Name = name.Value.ToString(), ParameterList = parameters, Type = type, Position = name.Position };
                 f.SetGenericTypes(generics);
+
                 node = f;
             }
 
             return true;
-        }
-
-        private bool NamespaceDefinition(out INode node)
-        {
-            node = null;
-
-            if (!MatchIdentifier(out var name))
-                return false;
-
-            Expect("", TokenKind.OpenBrace);
-
-            var body = ExpectNamespaceMembers(TokenKind.CloseBrace);
-
-            Expect("", TokenKind.CloseBrace);
-
-            node = new NamespaceNode() { Members = body, Position = name.Position, Name = name };
-            return true;
-        }
-
-        private INode ExpectPath()
-        {
-            INode path = Expect("", TokenKind.Identifier);
-
-            while (MatchAdvance(TokenKind.Dot))
-            {
-                var member = ExpectMultiple("Expected member, after `.`", TokenKind.Identifier, TokenKind.Star);
-
-                path = new MemberNode() { Position = Back.Position, Base = path, Member = member };
-
-                if (member.Kind == TokenKind.Star)
-                    break;
-            }
-
-            return path;
         }
 
         private bool MatchImportDirective(out INode directive)
         {
             directive = null;
 
-            if (!MatchAdvance(TokenKind.KeyImport, out var token))
+            if (!MatchAdvance(TokenKind.KeyImport, out var token)) // <import>
                 return false;
 
             INode body;
 
             ImportMode mode = ImportMode.FromPackages;
 
-            if (MatchAdvance(TokenKind.ConstantString))
+            if (MatchAdvance(TokenKind.ConstantString)) // import <"path">
             {
                 body = Back;
                 mode = ImportMode.FromLocal;
             }
-            else
-                body = ExpectPath();
+            else // import <path>
+                body = Expect("", TokenKind.Identifier);
 
-            Expect("Expected `;`, at the end of an import directive;", TokenKind.Semicolon);
+            Expect("Expected `;`, at the end of an import directive;", TokenKind.Semicolon); // import .. <;>
 
             directive = new ImportDirective() { Mode = mode, Member = body, Position = token.Position };
             return true;
@@ -971,16 +945,16 @@ namespace Mug.Models.Parser
         {
             directive = null;
 
-            if (!MatchAdvance(TokenKind.KeyUse, out var token))
+            if (!MatchAdvance(TokenKind.KeyUse, out var token)) // <use>
                 return false;
 
-            var body = ExpectPath();
+            var body = Expect("", TokenKind.Identifier); // use <path>
 
-            Expect("Allowed only alias declaration with use directive", TokenKind.KeyAs);
+            Expect("Allowed only alias declaration with use directive", TokenKind.KeyAs); // use path <as>
 
-            var alias = Expect("Expected the use path alias, after `as` in a use directive;", TokenKind.Identifier);
+            var alias = Expect("Expected the use path alias, after `as` in a use directive;", TokenKind.Identifier); // use path as <alias>
 
-            Expect("Expected `;`, at the end of a use directive;", TokenKind.Semicolon);
+            Expect("Expected `;`, at the end of a use directive;", TokenKind.Semicolon); // use path alias <;>
 
             directive = new UseDirective() { Body = body, Alias = alias, Position = token.Position };
             return true;
@@ -1011,11 +985,11 @@ namespace Mug.Models.Parser
 
         private FieldNode ExpectFieldDefinition()
         {
-            var name = Expect("Expected field name;", TokenKind.Identifier);
+            var name = Expect("Expected field name;", TokenKind.Identifier); // <field>
 
-            Expect("Expected `:` after field name, then the field type;", TokenKind.Colon);
+            Expect("Expected `:` after field name, then the field type;", TokenKind.Colon); // field <:>
 
-            var type = ExpectType();
+            var type = ExpectType(); // field: <error>
 
             return new FieldNode() { Name = name.Value.ToString(), Type = type };
         }
@@ -1081,8 +1055,7 @@ namespace Mug.Models.Parser
                 if (!(FunctionDefinition(out INode statement) ||
                     VariableDefinition(out statement) ||
                     TypeDefinition(out statement) ||
-                    DirectiveDefinition(out statement) ||
-                    NamespaceDefinition(out statement)))
+                    DirectiveDefinition(out statement)))
                     ParseError("In the current global context, this is not a valid global statement;");
 
                 // adds the statement to the members
