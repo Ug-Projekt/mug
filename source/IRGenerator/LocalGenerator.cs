@@ -30,7 +30,7 @@ namespace Mug.Models.Generator
         }
 
         /// <summary>
-        /// 
+        /// check that type is equal to one of the elements in supportedTypes
         /// </summary>
         private void ExpectOperatorImplementation(LLVMTypeRef type, OperatorKind kind, Range position, params LLVMTypeRef[] supportedTypes)
         {
@@ -161,41 +161,53 @@ namespace Mug.Models.Generator
             _emitter.Call(function, c.Parameters.Lenght, functionType.GetElementType().TypeKind == LLVMTypeKind.LLVMVoidTypeKind);
         }
 
+        /// <summary>
+        /// the function evaluates an expression, looking at the given node type
+        /// </summary>
         private void EvaluateExpression(INode expression)
         {
             switch (expression)
             {
-                case ExpressionNode e:
+                case ExpressionNode e: // binary expression: left op right
+                    // evaluated left
                     EvaluateExpression(e.Left);
+                    // the left expression type
                     var ft = _emitter.PeekType();
+                    // evaluated right
                     EvaluateExpression(e.Right);
+                    // right expression type
                     var st = _emitter.PeekType();
+                    // operator implementation
                     EmitOperator(e.Operator, ft, st, e.Position);
                     break;
                 case Token t:
-                    if (t.Kind == TokenKind.Identifier)
+                    if (t.Kind == TokenKind.Identifier) // reference value
                         _emitter.LoadFromMemory(t.Value, t.Position);
-                    else
+                    else // constant value
                         _emitter.Load(_generator.ConstToLLVMConst(t, t.Position));
                     break;
                 case PrefixOperator p:
                     EvaluateExpression(p.Expression);
-                    if (p.Prefix == TokenKind.Negation)
+
+                    if (p.Prefix == TokenKind.Negation) // '!' operator
                     {
                         _generator.ExpectBoolType(_emitter.PeekType(), p.Position);
                         _emitter.NegBool();
                     }
-                    else if (p.Prefix == TokenKind.Minus)
+                    else if (p.Prefix == TokenKind.Minus) // '-' operator, for example -(9+2) or -8+2
                     {
                         _generator.ExpectIntType(_emitter.PeekType(), p.Position);
                         _emitter.NegInt();
                     }
                     break;
                 case CallStatement c:
+                    // call statement inside expression, true as second parameter because an expression cannot be void
                     EmitCallStatement(c, true);
                     break;
                 case CastExpressionNode ce:
+                    // 'as' operator
                     EvaluateExpression(ce.Expression);
+
                     EmitCastInstruction(ce.Type, ce.Position);
                     break;
                 default:
