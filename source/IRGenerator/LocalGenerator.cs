@@ -158,7 +158,7 @@ namespace Mug.Models.Generator
                     functionType.GetElementType(),
                     c.Position);
 
-            _emitter.Call(function, c.Parameters.Lenght, functionType.GetElementType().TypeKind == LLVMTypeKind.LLVMVoidTypeKind);
+            _emitter.Call(function, c.Parameters.Lenght);
         }
 
         /// <summary>

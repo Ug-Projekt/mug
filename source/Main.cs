@@ -7,8 +7,9 @@ try
     if (debug.isDebug())
     {
         var test = @"
-func main(): i32 {
-  return 90+2;
+func f();
+func main() {
+  f();
 }
 ";
 

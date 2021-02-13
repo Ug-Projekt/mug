@@ -26,37 +26,40 @@ namespace Mug.Models.Generator.Emitter
         {
             _stack.Push(value);
         }
+
         public LLVMValueRef Pop()
         {
             return _stack.Pop();
         }
+
         public LLVMValueRef Peek()
         {
             return _stack.Peek();
         }
-        public void Duplicate()
-        {
-            Load(Peek());
-        }
+        
         public LLVMTypeRef PeekType()
         {
             return Peek().TypeOf();
         }
+
         public void Add()
         {
             var second = Pop();
             Load(BuildAdd(Builder, Pop(), second, ""));
         }
+
         public void Sub()
         {
             var second = Pop();
             Load(BuildSub(Builder, Pop(), second, ""));
         }
+
         public void Mul()
         {
             var second = Pop();
             Load(BuildMul(Builder, Pop(), second, ""));
         }
+
         public void Div()
         {
             var second = Pop();
@@ -77,16 +80,20 @@ namespace Mug.Models.Generator.Emitter
         {
             _memory.TryAdd(name, value);
         }
+
         public void DeclareVariable(VariableStatement variable)
         {
             DeclareVariable(variable.Name, _generator.TypeToLLVMType(variable.Type, variable.Position), variable.Position);
         }
+
         public void DeclareVariable(string name, LLVMTypeRef type, Range position)
         {
             if (IsDeclared(name))
                 _generator.Error(position, "Variable already declared");
+
             SetMemory(name, BuildAlloca(Builder, type, name));
         }
+
         public void StoreVariable(string name)
         {
             BuildStore(Builder, Pop(), GetFromMemory(name));
@@ -96,34 +103,39 @@ namespace Mug.Models.Generator.Emitter
         {
             return _memory.ContainsKey(name);
         }
-        public void LoadFromMemory(VariableStatement variable)
-        {
-            LoadFromMemory(variable.Name, variable.Position);
-        }
+
         public void LoadFromMemory(string name, Range position)
         {
             if (!IsDeclared(name))
                 _generator.Error(position, "Undeclared variable");
+
             Load(BuildLoad(Builder, GetFromMemory(name), ""));
         }
+
         public void Ret()
         {
             BuildRet(Builder, Pop());
         }
+
         public void RetVoid()
         {
             BuildRetVoid(Builder);
         }
+
         public void NegInt()
         {
             Load(BuildNeg(Builder, Pop(), ""));
         }
+
         public void NegBool()
         {
             Load(BuildNot(Builder, Pop(), ""));
         }
 
-        public void Call(LLVMValueRef function, int paramCount, bool isVoid)
+        /// <summary>
+        /// buils an array of the parameters to pass and calls the function
+        /// </summary>
+        public void Call(LLVMValueRef function, int paramCount)
         {
             var parameters = new LLVMValueRef[paramCount];
 
@@ -132,7 +144,7 @@ namespace Mug.Models.Generator.Emitter
 
             var result = BuildCall(Builder, function, parameters, "");
 
-            if (!isVoid)
+            if (result.TypeOf().TypeKind == LLVMTypeKind.LLVMVoidTypeKind)
                 Load(result);
         }
     }

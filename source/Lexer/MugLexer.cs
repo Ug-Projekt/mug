@@ -14,6 +14,9 @@ namespace Mug.Models.Lexer
         private StringBuilder _currentSymbol { get; set; }
         private int _currentIndex { get; set; }
 
+        /// <summary>
+        /// restores all the fields to their default values
+        /// </summary>
         public void Reset()
         {
             TokenCollection = new();
@@ -35,12 +38,18 @@ namespace Mug.Models.Lexer
             Source = source;
         }
 
+        /// <summary>
+        /// adds a keyword to the tokens stream and returns true
+        /// </summary>
         private bool AddKeyword(TokenKind kind, string keyword)
         {
             TokenCollection.Add(new(kind, keyword, new(_currentIndex - keyword.Length, _currentIndex)));
             return true;
         }
 
+        /// <summary>
+        /// returns true and insert a keyword token if s is a keyword, otherwise returns false, see the caller to understand better
+        /// </summary>
         private bool CheckAndSetKeyword(string s) => s switch
         {
             "return" => AddKeyword(TokenKind.KeyReturn, s),
@@ -78,19 +87,27 @@ namespace Mug.Models.Lexer
         private TokenKind IllegalChar()
         {
             this.Throw(_currentIndex, "Found illegal SpecialSymbol: mug's syntax does not use this character");
+            // unreachable
             return TokenKind.Bad;
         }
 
+        /// <summary>
+        /// checks if there is a next char, to avoid index out of range exception
+        /// </summary>
         private bool HasNext()
         {
             return _currentIndex + 1 < Source.Length;
         }
+
         private char GetNext()
         {
             return Source[_currentIndex + 1];
         }
 
-        private TokenKind GetSpecial(char c) => c switch
+        /// <summary>
+        /// recognizes a single symbol or launches compilation-error
+        /// </summary>
+        private TokenKind GetSingle(char c) => c switch
         {
             '(' => TokenKind.OpenPar,
             ')' => TokenKind.ClosePar,
@@ -119,32 +136,45 @@ namespace Mug.Models.Lexer
 
         private void AddToken(TokenKind kind, string value, bool isString = false)
         {
+            // identifiers must follow rules
             if (kind == TokenKind.Identifier)
                 CheckValidIdentifier(value);
+
             if (isString)
                 TokenCollection.Add(new(kind, value, new(_currentIndex - value.Length + 1, _currentIndex + 1)));
             else if (value is not null)
                 TokenCollection.Add(new(kind, value, new(_currentIndex - value.ToString().Length, _currentIndex)));
-            else
+            else // chatching null reference exception
                 TokenCollection.Add(new(kind, value, new(_currentIndex, _currentIndex + 1)));
         }
 
-        private void AddSpecial(TokenKind kind, string value)
+        /// <summary>
+        /// adds a single symbol
+        /// </summary>
+        private void AddSingle(TokenKind kind, string value)
         {
             InsertCurrentSymbol();
             TokenCollection.Add(new(kind, value, new(_currentIndex, _currentIndex + 1)));
         }
 
+        /// <summary>
+        /// adds a double symbol
+        /// </summary>
         private void AddDouble(TokenKind kind, string value)
         {
             InsertCurrentSymbol();
+            // current index as start position, is added 2 to the current index for the end position
             TokenCollection.Add(new(kind, value, new(_currentIndex, _currentIndex + 2)));
         }
 
+        /// <summary>
+        /// inserts current symbol in the tokens stream and clears it if it's not empty
+        /// </summary>
         private void InsertCurrentSymbol()
         {
             if (!string.IsNullOrWhiteSpace(_currentSymbol.ToString()))
             {
+                // symbol recognition
                 ProcessSymbol(_currentSymbol.ToString());
                 _currentSymbol.Clear();
             }
@@ -152,29 +182,29 @@ namespace Mug.Models.Lexer
 
         private bool IsDigit(string s)
         {
-            return !string.IsNullOrWhiteSpace(s) && long.TryParse(s, out _);
+            return long.TryParse(s, out _);
         }
 
         private bool IsFloatDigit(ref string s)
         {
             if (string.IsNullOrWhiteSpace(s))
                 return false;
+
             if (s[0] == '.')
                 s = '0' + s;
             return double.TryParse(s, out _);
         }
 
-        private bool InsertKeyword(string s)
-        {
-            return CheckAndSetKeyword(s);
-        }
-
+        /// <summary>
+        /// checks if an identifier matches the language rules
+        /// </summary>
         private void CheckValidIdentifier(string identifier)
         {
             var bad = new Token(TokenKind.Bad, null, new(_currentIndex - identifier.Length, _currentIndex));
             
             if (!char.IsLetter(identifier[0]) && identifier[0] != '_')
                 this.Throw(bad, "Invalid identifier, following the mug's syntax rules, an ident cannot start by `", identifier[0].ToString(), "`;");
+
             if (identifier.Contains('.'))
                 this.Throw(bad, "Invalid identifier, following the mug's syntax rules, an ident cannot contain `.`;");
         }
@@ -198,11 +228,12 @@ namespace Mug.Models.Lexer
                 AddToken(TokenKind.ConstantFloatDigit, value);
             else if (IsBoolean(value))
                 AddToken(TokenKind.ConstantBoolean, value);
-            else if (!InsertKeyword(value)) // if value is a keyword InsertKeyword will add a new token and will return true, otherwise false
+            else if (!CheckAndSetKeyword(value)) // if value is a keyword InsertKeyword will add a new token and will return true, otherwise false
             {
                 // value is an identifier
                 // the identifier must follow the language rules
                 CheckValidIdentifier(value);
+
                 AddToken(TokenKind.Identifier, value);
             }
         }
@@ -328,7 +359,7 @@ namespace Mug.Models.Lexer
         {
             if (!HasNext())
             {
-                AddSpecial(GetSpecial(current), current.ToString());
+                AddSingle(GetSingle(current), current.ToString());
                 return;
             }
 
@@ -347,7 +378,7 @@ namespace Mug.Models.Lexer
             else if (doubleToken == "..") AddDouble(TokenKind.RangeDots, doubleToken);
             else
             {
-                AddSpecial(GetSpecial(current), current.ToString());
+                AddSingle(GetSingle(current), current.ToString());
                 return;
             }
 
@@ -406,7 +437,7 @@ namespace Mug.Models.Lexer
                 Advance();
             }
 
-            AddSpecial(TokenKind.EOF, "<EOF>");
+            AddSingle(TokenKind.EOF, "<EOF>");
 
             return TokenCollection;
         }

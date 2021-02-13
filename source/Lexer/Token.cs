@@ -21,6 +21,9 @@ namespace Mug.Models.Lexer
             return $"{Position} {Kind}: {Value}";
         }
 
+        /// <summary>
+        /// tests
+        /// </summary>
         public override bool Equals(object other)
         {
             return other is Token token &&
