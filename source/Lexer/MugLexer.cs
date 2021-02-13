@@ -231,10 +231,8 @@ namespace Mug.Models.Lexer
             {
                 _currentIndex += 2;
                 while (!MatchEndMultiLineComment() && _currentIndex != Source.Length)
-                {
-                    Console.WriteLine($"current index: {_currentIndex}");
                     _currentIndex++;
-                }
+                
                 if(MatchEndMultiLineComment())
                     _currentIndex += 2;
             }
