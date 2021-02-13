@@ -27,20 +27,31 @@ namespace Mug.Models.Generator
             Parser.Parse();
             Module = LLVM.ModuleCreateWithName(moduleName);
         }
+
         public IRGenerator(MugParser parser)
         {
             Parser = parser;
             Module = LLVM.ModuleCreateWithName(parser.Lexer.ModuleName);
         }
+
         public void Error(Range position, params string[] error)
         {
             Parser.Lexer.Throw(position, error);
         }
+
+        /// <summary>
+        /// the function launches an exception and returns a generic value,
+        /// this function comes in statement switch in expressions
+        /// </summary>
         public T NotSupportedType<T>(string type, Range position)
         {
             Error(position, "`", type, "` type is not supported yet");
             throw new Exception("unreachable");
         }
+
+        /// <summary>
+        /// the function converts a Mugtype to the corresponding Llvmtyperef
+        /// </summary>
         public LLVMTypeRef TypeToLLVMType(MugType type, Range position)
         {
             return type.Kind switch
@@ -53,12 +64,18 @@ namespace Mug.Models.Generator
             };
         }
 
+        /// <summary>
+        /// the function tries to declare the symbol: if it has already been declared launches a compilation-error
+        /// </summary>
         private void DeclareSymbol(string name, LLVMValueRef value, Range position)
         {
             if (!_symbols.TryAdd(name, value))
                 Error(position, "`", name, "` member already declared");
         }
 
+        /// <summary>
+        /// calls the function <see cref="TypeToLLVMType(MugType, Range)"/> for each parameter in the past array
+        /// </summary>
         private LLVMTypeRef[] ParameterTypesToLLVMTypes(ParameterNode[] parameterTypes)
         {
             var result = new LLVMTypeRef[parameterTypes.Length];
@@ -67,6 +84,11 @@ namespace Mug.Models.Generator
             return result;
         }
 
+        /// <summary>
+        /// declares the prototype symbol of a function, the function <see cref="DefineFunction(FunctionNode)"/> will take the declared symbol
+        /// in this function and will convert the ast of the function node into the corresponding low-level code appending the result to the symbol
+        /// body
+        /// </summary>
         private void InstallFunction(string name, MugType type, Range position, ParameterListNode paramTypes)
         {
             var parameterTypes = ParameterTypesToLLVMTypes(paramTypes.Parameters);
@@ -88,10 +110,18 @@ namespace Mug.Models.Generator
             return type.Kind == TypeKind.Void;
         }
 
+        /// <summary>
+        /// converts a boolean value in string format to one in int format
+        /// </summary>
         private ulong StringBoolToIntBool(string value)
         {
+            // converts for first string "true" or "false" to a boolean value, then to a ulong, so 0 or 1
             return Convert.ToUInt64(Convert.ToBoolean(value));
         }
+
+        /// <summary>
+        /// converts a constant in token format to one in LLVMValueRef format
+        /// </summary>
         public LLVMValueRef ConstToLLVMConst(Token constant, Range position)
         {
             return constant.Kind switch
@@ -102,6 +132,9 @@ namespace Mug.Models.Generator
             };
         }
 
+        /// <summary>
+        /// the function checks that all the past types are the same, therefore compatible with each other
+        /// </summary>
         public void ExpectSameTypes(LLVMTypeRef firstType, Range position, string error, params LLVMTypeRef[] types)
         {
             for (int i = 0; i < types.Length; i++)
@@ -119,18 +152,30 @@ namespace Mug.Models.Generator
             ExpectSameTypes(type, position, "Expected `Int8`, `Int32`, `Int64` type", LLVMTypeRef.Int32Type());
         }
 
+        /// <summary>
+        /// same of <see cref="ExpectNonVoidType(LLVMTypeRef, Range)"/> but tests a <see cref="MugType"/> instead of
+        /// a <see cref="LLVMTypeRef"/>
+        /// </summary>
         public void ExpectNonVoidType(MugType type, Range position)
         {
             if (IsVoid(type))
                 Error(position, "In the current context `Void` is not allowed");
         }
 
+        /// <summary>
+        /// launches a compilation-error if the type that is passed is of void type:
+        /// this function is used in all contexts where the type void is not allowed,
+        /// for example in the declaration of variables
+        /// </summary>
         public void ExpectNonVoidType(LLVMTypeRef type, Range position)
         {
             if (type.TypeKind == LLVMTypeKind.LLVMVoidTypeKind)
                 Error(position, "Expected a non-void type");
         }
 
+        /// <summary>
+        /// the function verifies that a symbol is declared and a compilation-error if it is not
+        /// </summary>
         public LLVMValueRef GetSymbol(string name, Range position)
         {
             if (!_symbols.TryGetValue(name, out var member))
