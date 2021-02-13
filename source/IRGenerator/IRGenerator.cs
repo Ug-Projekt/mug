@@ -64,7 +64,7 @@ namespace Mug.Models.Generator
             return result;
         }
 
-        private LLVMBasicBlockRef InstallFunction(string name, MugType type, Range position, ParameterListNode paramTypes)
+        private void InstallFunction(string name, MugType type, Range position, ParameterListNode paramTypes)
         {
             var ft = LLVM.FunctionType(
                     TypeToLLVMType(type, position),
@@ -74,8 +74,6 @@ namespace Mug.Models.Generator
             var f = LLVM.AddFunction(Module, name, ft);
 
             DeclareSymbol(name, f, position);
-
-            return LLVM.AppendBasicBlock(f, "");
         }
 
         private bool IsVoid(MugType type)
@@ -135,8 +133,8 @@ namespace Mug.Models.Generator
 
         private void DefineFunction(FunctionNode function)
         {
-            var entry = InstallFunction(function.Name, function.Type, function.Position, function.ParameterList);
             MugEmitter emitter = new MugEmitter(this);
+            var entry = LLVM.AppendBasicBlock(_symbols[function.Name], "");
             LLVM.PositionBuilderAtEnd(emitter.Builder, entry);
 
             var generator = new LocalGenerator(this, _symbols, ref function, ref emitter);
@@ -144,16 +142,17 @@ namespace Mug.Models.Generator
             generator.Generate();
         }
 
-        private void RecognizeMember(INode member)
+        private void RecognizeMember(INode member, bool declareOnly)
         {
             switch (member)
             {
                 case FunctionNode function:
-                    DefineFunction(function);
+                    if (declareOnly)
+                        InstallFunction(function.Name, function.Type, function.Position, function.ParameterList);
+                    else
+                        DefineFunction(function);
                     break;
                 case FunctionPrototypeNode prototype:
-
-
                     DeclareSymbol(prototype.Name,
                         LLVM.AddFunction(Module, prototype.Name,
                             LLVMTypeRef.FunctionType(
@@ -170,8 +169,13 @@ namespace Mug.Models.Generator
 
         public void Generate()
         {
+            // prototypes' declaration
             foreach (var member in Parser.Module.Members.Nodes)
-                RecognizeMember(member);
+                RecognizeMember(member, true);
+
+            // memebers' definition
+            foreach (var member in Parser.Module.Members.Nodes)
+                RecognizeMember(member, false);
         }
     }
 }

@@ -7,16 +7,13 @@ try
     if (debug.isDebug())
     {
         var test = @"
-func putchar(char: chr);
-
-func add(a: i32, b: i32): chr {
-  return (a + b) as chr;
+func main(): i32 {
+  return add(1, 2);
 }
-func main()
-{
-  putchar(add(2, 2));
-  return;
-}";
+func add(a: i32, b: i32): i32 {
+ return a+b;
+}
+";
 
         var unit = new CompilationUnit("test", test);
         unit.Generate(true);
