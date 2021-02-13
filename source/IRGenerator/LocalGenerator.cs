@@ -165,6 +165,17 @@ namespace Mug.Models.Generator
                     break;
             }
         }
+
+        /// <summary>
+        /// functions that do not return a value must still have a ret instruction in the low level representation,
+        /// this function manages the implicit emission of the ret instruction when it is not done by the user.
+        /// see the caller to better understand
+        /// </summary>
+        public void AddImplicitRetVoid()
+        {
+            _emitter.RetVoid();
+        }
+
         public void AllocParameters(LLVMValueRef function, ParameterListNode parameters)
         {
             for (int i = 0; i < parameters.Parameters.Length; i++)

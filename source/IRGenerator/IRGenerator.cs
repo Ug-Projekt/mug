@@ -138,6 +138,11 @@ namespace Mug.Models.Generator
             return member;
         }
 
+        /// <summary>
+        /// defines the body of a function by taking from the declared symbols its own previously defined symbol,
+        /// to allow the call of a method declared under the caller.
+        /// see the first part of the Generate function
+        /// </summary>
         private void DefineFunction(FunctionNode function)
         {
             MugEmitter emitter = new MugEmitter(this);
@@ -149,41 +154,65 @@ namespace Mug.Models.Generator
             var generator = new LocalGenerator(this, ref function, ref emitter);
             generator.AllocParameters(GetSymbol(function.Name, function.Position), function.ParameterList);
             generator.Generate();
+
+            // implicit return with void functions
+            if (function.Type.Kind == TypeKind.Void &&
+                // if the type is void check if the last statement was ret, if it was not ret add one implicitly
+                entry.GetLastInstruction().IsAReturnInst().Pointer == IntPtr.Zero)
+                generator.AddImplicitRetVoid();
         }
 
-        private bool IsEntryPoint(string name, LLVMTypeRef[] types)
+
+        /// <summary>
+        /// check if an id is equal to the id of the entry point and if the parameters are 0,
+        /// to allow overload of the main function
+        /// </summary>
+        private bool IsEntryPoint(string name, int paramsLen)
         {
             return
-                name == EntryPointName && types.Length == 0;
+                name == EntryPointName && paramsLen == 0;
         }
 
+
+        /// <summary>
+        /// create a string representing the name of a function that includes its id and the list of parameters, separated by ', ', in brackets
+        /// </summary>
         private string BuildFunctionName(string name, LLVMTypeRef[] types)
         {
             return
-                IsEntryPoint(name, types) ? name : $"{name}({string.Join(", ", types)})";
+                IsEntryPoint(name, types.Length) ? name : $"{name}({string.Join(", ", types)})";
         }
 
+        /// <summary>
+        /// recognize the type of the AST node and depending on the type call methods
+        /// to convert it to the corresponding low-level code
+        /// </summary>
         private void RecognizeMember(INode member, bool declareOnly)
         {
             switch (member)
             {
                 case FunctionNode function:
-                    if (declareOnly)
+                    if (declareOnly) // declares the prototype of the function
                         InstallFunction(function.Name, function.Type, function.Position, function.ParameterList);
-                    else
+                    else // defines the function body
                     {
+                        // change the name of the function in the corresponding with the types of parameters, to allow overload of the methods
                         function.Name = BuildFunctionName(function.Name, ParameterTypesToLLVMTypes(function.ParameterList.Parameters));
                         DefineFunction(function);
                     }
                     break;
                 case FunctionPrototypeNode prototype:
-                    DeclareSymbol(prototype.Name,
-                        LLVM.AddFunction(Module, prototype.Name,
-                            LLVMTypeRef.FunctionType(
-                                TypeToLLVMType(prototype.Type, prototype.Position),
-                                ParameterTypesToLLVMTypes(prototype.ParameterList.Parameters),
-                                false)),
-                        prototype.Position);
+                    if (declareOnly)
+                    {
+                        var parameters = ParameterTypesToLLVMTypes(prototype.ParameterList.Parameters);
+                        DeclareSymbol(BuildFunctionName(prototype.Name, parameters),
+                            LLVM.AddFunction(Module, prototype.Name,
+                                LLVMTypeRef.FunctionType(
+                                    TypeToLLVMType(prototype.Type, prototype.Position),
+                                    parameters,
+                                    false)),
+                            prototype.Position);
+                    }
                     break;
                 default:
                     Error(member.Position, "Declaration not supported yet");
@@ -191,6 +220,10 @@ namespace Mug.Models.Generator
             }
         }
 
+        /// <summary>
+        /// declares the prototypes of all the global members, then defines them,
+        /// to allow the use of a member declared under the member that uses it
+        /// </summary>
         public void Generate()
         {
             // prototypes' declaration
