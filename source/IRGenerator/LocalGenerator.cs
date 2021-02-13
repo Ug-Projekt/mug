@@ -29,14 +29,21 @@ namespace Mug.Models.Generator
             _generator.Parser.Lexer.Throw(position, error);
         }
 
-        private void ExpectOperatorImplementation(LLVMTypeRef type, OperatorKind kind, Range position, params LLVMTypeRef[] supportedOperators)
+        /// <summary>
+        /// 
+        /// </summary>
+        private void ExpectOperatorImplementation(LLVMTypeRef type, OperatorKind kind, Range position, params LLVMTypeRef[] supportedTypes)
         {
-            for (int i = 0; i < supportedOperators.Length; i++)
-                if (Unsafe.Equals(type, supportedOperators[i]))
+            for (int i = 0; i < supportedTypes.Length; i++)
+                if (Unsafe.Equals(type, supportedTypes[i]))
                     return;
+
             Error(position, "The expression type does not implement the operator `", kind.ToString(), "`");
         }
 
+        /// <summary>
+        /// the function manages the operator implementations for all the types
+        /// </summary>
         private void EmitOperator(OperatorKind kind, LLVMTypeRef ft, LLVMTypeRef st, Range position)
         {
             _generator.ExpectSameTypes(ft, position, $"Unsupported operator `{kind}` between different types", st);
@@ -47,35 +54,45 @@ namespace Mug.Models.Generator
                     ExpectOperatorImplementation(ft, kind, position,
                         LLVMTypeRef.Int32Type(),
                         LLVMTypeRef.Int8Type());
+
                     _emitter.Add();
                     break;
                 case OperatorKind.Subtract:
                     ExpectOperatorImplementation(ft, kind, position,
                         LLVMTypeRef.Int32Type(),
                         LLVMTypeRef.Int8Type());
+
                     _emitter.Sub();
                     break;
                 case OperatorKind.Multiply:
                     ExpectOperatorImplementation(ft, kind, position,
                         LLVMTypeRef.Int32Type(),
                         LLVMTypeRef.Int8Type());
+
+                    _emitter.Mul();
                     break;
                 case OperatorKind.Divide:
                     ExpectOperatorImplementation(ft, kind, position,
                         LLVMTypeRef.Int32Type(),
                         LLVMTypeRef.Int8Type());
+
                     _emitter.Div();
                     break;
                 case OperatorKind.Range: break;
             }
         }
 
+        /// <summary>
+        /// the function manages the 'as' operator
+        /// </summary>
         private void EmitCastInstruction(MugType type, Range position)
         {
+            // the expression type to cast
             var expressionType = _emitter.PeekType();
+
             switch (expressionType.TypeKind) {
-                case LLVMTypeKind.LLVMIntegerTypeKind:
-                    _emitter.Cast(_generator.TypeToLLVMType(type, position));
+                case LLVMTypeKind.LLVMIntegerTypeKind: // LLVM has different instructions for each type convertion
+                    _emitter.CastInt(_generator.TypeToLLVMType(type, position));
                     break;
                 default:
                     Error(position, "Cast does not support this type yet");
@@ -83,6 +100,10 @@ namespace Mug.Models.Generator
             }
         }
 
+        /// <summary>
+        /// wip function
+        /// the function evaluates an instance node, for example: base.method()
+        /// </summary>
         private string EvaluateInstanceName(INode instance)
         {
             switch (instance)
@@ -95,28 +116,45 @@ namespace Mug.Models.Generator
             }
         }
 
+        /// <summary>
+        /// the function returns a string representing the function id and the array of
+        /// parameter types in parentheses separated by ', ',
+        /// to allow overload of functions
+        /// </summary>
         private string BuildName(string name, LLVMTypeRef[] parameters)
         {
             return $"{name}({string.Join(", ", parameters)})";
         }
 
+        /// <summary>
+        /// the function converts a Callstatement node to the corresponding low-level code
+        /// </summary>
         private void EmitCallStatement(CallStatement c, bool expectedNonVoid)
         {
+            // an array is prepared for the parameter types of function to call
             var parameters = new LLVMTypeRef[c.Parameters.Lenght];
 
+            /* the array is cycled with the expressions of the respective parameters and each expression
+             * is evaluated and assigned its type to the array of parameter types
+             */
             for (int i = 0; i < c.Parameters.Lenght; i++)
             {
                 EvaluateExpression(c.Parameters.Nodes[i]);
                 parameters[i] = _emitter.PeekType();
-                // _generator.ExpectSameTypes(_emitter.PeekType(), c.Parameters.Nodes[i].Position, "The type of the parameter passed does not match with the expected", parameterTypes[i]);
             }
 
-            // function type: <ret_type> <param_types>
+            /*
+             * the symbol of the function is taken by passing the name of the complete function which consists
+             * of the function id and in brackets the list of parameter types separated by ', '
+             */
             var function = _generator.GetSymbol(BuildName(EvaluateInstanceName(c.Name), parameters), c.Position);
+
+            // function type: <ret_type> <param_types>
             var functionType = function.TypeOf().GetElementType();
 
             if (expectedNonVoid)
                 _generator.ExpectNonVoidType(
+                    // (<ret_type> <param_types>).GetElementType() -> <ret_type>
                     functionType.GetElementType(),
                     c.Position);
 
@@ -187,22 +225,35 @@ namespace Mug.Models.Generator
             }
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
         private void RecognizeStatement(INode statement)
         {
             switch (statement)
             {
                 case VariableStatement variable:
+                    // the expression in the variable’s body is evaluated
                     EvaluateExpression(variable.Body);
+
+                    /*
+                     * if in the statement of variable the type is specified explicitly,
+                     * then a check will be made: the specified type and the type of the result of the expression must be the same.
+                     */
                     if (!variable.Type.IsAutomatic())
                     {
                         _emitter.DeclareVariable(variable);
                         _generator.ExpectSameTypes(_generator.TypeToLLVMType(variable.Type, variable.Position), variable.Body.Position, "The expression type and the variable type are different", _emitter.PeekType());
                     }
-                    else
+                    else // if the type is not specified, it will come directly allocate a variable with the same type as the expression result
                         _emitter.DeclareVariable(variable.Name, _emitter.PeekType(), variable.Position);
                     _emitter.StoreVariable(variable.Name);
                     break;
                 case ReturnStatement @return:
+                    /*
+                     * if the expression in the return statement is null, condition verified by calling Returnstatement.Isvoid(),
+                     * check that the type of function in which it is found returns void.
+                     */
                     if (@return.IsVoid())
                     {
                         _generator.ExpectSameTypes(_generator.TypeToLLVMType(_function.Type, @return.Position), @return.Position, "Expected non-void expression", LLVM.VoidType());
@@ -210,6 +261,10 @@ namespace Mug.Models.Generator
                     }
                     else
                     {
+                        /*
+                         * if instead the expression of the return statement has is nothing,
+                         * it will be evaluated and then it will be compared the type of the result with the type of return of the function
+                         */
                         EvaluateExpression(@return.Body);
                         _generator.ExpectSameTypes(_generator.TypeToLLVMType(_function.Type, @return.Position), @return.Position, "The function return type and the expression type are different", _emitter.PeekType());
                         _emitter.Ret();
@@ -223,6 +278,11 @@ namespace Mug.Models.Generator
                     break;
             }
         }
+
+        /// <summary>
+        /// the function cycles all the nodes in the statement array of a Functionnode and
+        /// calls a function to convert them into the corresponding low-level code
+        /// </summary>
         public void Generate()
         {
             foreach (var statement in _function.Body.Statements)

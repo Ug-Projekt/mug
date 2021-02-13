@@ -63,7 +63,7 @@ namespace Mug.Models.Generator.Emitter
             Load(BuildSDiv(Builder, Pop(), second, ""));
         }
 
-        public void Cast(LLVMTypeRef type)
+        public void CastInt(LLVMTypeRef type)
         {
             Load(BuildIntCast(Builder, Pop(), type, ""));
         }
