@@ -24,6 +24,7 @@ namespace Mug.Models.Generator
         {
             Parser = new(moduleName, source);
             Parser.Parse();
+
             Module = LLVM.ModuleCreateWithName(moduleName);
         }
 

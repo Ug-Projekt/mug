@@ -817,20 +817,16 @@ namespace Mug.Models.Parser
 
         private INode ExpectStatement()
         {
-            if (!VariableDefinition(out var statement))
-                if (!ReturnDeclaration(out statement))
-                    if (!ConstantDefinition(out statement))
-                        if (!ConditionDefinition(out statement))
-                            if (!ForLoopDefinition(out statement))
-                                if (!OtherwiseConditionDefinition(out statement))
-                                    if (!LoopManagerDefintion(out statement))
-                                        if (MatchCallStatement(out statement))
-                                            _currentIndex++;
-                                        else
-                                        {
-                                            if (!ValueAssignment(out statement))
+            if (!VariableDefinition(out var statement)) // var x = value;
+                if (!ReturnDeclaration(out statement)) // return value;
+                    if (!ConstantDefinition(out statement)) // const x = value;
+                        if (!ConditionDefinition(out statement)) // if condition {}, elif
+                            if (!ForLoopDefinition(out statement)) // for x: type to, in value {}
+                                if (!OtherwiseConditionDefinition(out statement)) // else {}
+                                    if (!LoopManagerDefintion(out statement)) // continue, break
+                                        if (!MatchCallStatement(out statement)) // f();
+                                            if (!ValueAssignment(out statement)) // x = value;
                                                 ParseError("In the current local context, this is not a valid imperative statement;");
-                                        }
 
             return statement;
         }
@@ -901,6 +897,7 @@ namespace Mug.Models.Parser
             if (Match(TokenKind.OpenBrace)) // function definition
             {
                 var body = ExpectBlock();
+
                 var f = new FunctionNode() { Body = body, Name = name.Value.ToString(), ParameterList = parameters, Type = type, Position = name.Position };
 
                 f.SetGenericTypes(generics);
@@ -1055,11 +1052,17 @@ namespace Mug.Models.Parser
             while (!Match(end))
             {
                 // searches for a global statement
+
+                // func id() {}
                 if (!FunctionDefinition(out INode statement))
+                    // var id = constant;
                     if (!VariableDefinition(out statement))
+                        // (c struct) type MyStruct {}
                         if (!TypeDefinition(out statement))
+                            // import "", import path, use x as y
                             if (!DirectiveDefinition(out statement))
-                                    ParseError("In the current global context, this is not a valid global statement;");
+                                // if there is not global statement
+                                ParseError("In the current global context, this is not a valid global statement;");
 
                 // adds the statement to the members
                 nodes.Add(statement);
@@ -1074,7 +1077,7 @@ namespace Mug.Models.Parser
         public NamespaceNode Parse()
         {
             var firstToken = Lexer.TokenCollection[_currentIndex];
-
+            
             Module.Name = new Token(TokenKind.Identifier, Lexer.ModuleName, 0..(Lexer.Source.Length - 1));
 
             // to avoid bugs

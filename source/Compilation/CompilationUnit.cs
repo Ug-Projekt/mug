@@ -101,11 +101,6 @@ namespace Mug.Compilation
         /// </param>
         public void Generate(bool verifyLLVMModule = true)
         {
-            // call the lexer
-            IRGenerator.Parser.Lexer.Tokenize();
-            // parser
-            IRGenerator.Parser.Parse();
-            // code generator
             IRGenerator.Generate();
 
             // have Clang verify the module

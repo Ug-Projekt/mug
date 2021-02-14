@@ -8,12 +8,9 @@ try
 #if DEBUG
 
     var test = @"
-func puts(value: str);
-
 func main() {
-  puts(""Hello fucking World"");
-}
-";
+  puts.f(""hello"");
+}";
 
     var unit = new CompilationUnit("test", test);
     unit.Generate(true);

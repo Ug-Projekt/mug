@@ -163,9 +163,12 @@ namespace Mug.Models.Lexer
         /// </summary>
         private void AddDouble(TokenKind kind, string value)
         {
-            InsertCurrentSymbol();
-            // current index as start position, is added 2 to the current index for the end position
-            TokenCollection.Add(new(kind, value, _currentIndex..(_currentIndex + 2)));
+            /*
+             * current index as start position
+             * moves the index by one: a double token occupies 2 chars
+             */
+
+            TokenCollection.Add(new(kind, value, _currentIndex..(++_currentIndex + 1)));
         }
 
         /// <summary>
@@ -193,6 +196,7 @@ namespace Mug.Models.Lexer
 
             if (s[0] == '.')
                 s = '0' + s;
+
             return double.TryParse(s, out _);
         }
 
@@ -365,6 +369,7 @@ namespace Mug.Models.Lexer
 
             var doubleToken = current.ToString() + GetNext();
 
+            // checks if there is a double token
             if (doubleToken == "==") AddDouble(TokenKind.BooleanEQ, doubleToken);
             else if (doubleToken == "!=") AddDouble(TokenKind.BooleanNEQ, doubleToken);
             else if (doubleToken == "++") AddDouble(TokenKind.OperatorIncrement, doubleToken);
@@ -377,13 +382,7 @@ namespace Mug.Models.Lexer
             else if (doubleToken == ">=") AddDouble(TokenKind.BooleanMajEQ, doubleToken);
             else if (doubleToken == "..") AddDouble(TokenKind.RangeDots, doubleToken);
             else
-            {
                 AddSingle(GetSingle(current), current.ToString());
-                return;
-            }
-
-            // if is not a single value increments the index by one
-            _currentIndex++;
         }
 
         /// <summary>
@@ -395,31 +394,23 @@ namespace Mug.Models.Lexer
             ConsumeComments();
 
             // check if the newly stripped code is empty
-            if (_currentIndex == Source.Length)
+            if (_currentIndex >= Source.Length)
                 return;
-
+            
+            // to avoid a massive array access, also better to read
             char current = Source[_currentIndex];
-            if (current == '.' && NextIsDigit())
-                _currentSymbol.Append('.');
 
-            if (current == '"')
+            // search for a string, a char, a control, an identifier char or a symbol
+            if (current == '"') // collecting a string
                 CollectString();
-            else if (current == '\'')
+            else if (current == '\'') // collecting a char
                 CollectChar();
-            else if (IsEscapedChar(current)) // if control
-                InsertCurrentSymbol(); // skip it and add the symbol if it's not empty
-            else if (IsValidIdentifierChar(current))
+            else if (IsEscapedChar(current)) // skipping it and add the symbol if it's not empty
+                InsertCurrentSymbol();
+            else if (IsValidIdentifierChar(current)) // adding a char to the current symbol
                 _currentSymbol.Append(current);
             else
                 ProcessSpecial(current); // if current is not a valid id char, a control or a string quote
-        }
-
-        /// <summary>
-        /// next char
-        /// </summary>
-        private void Advance()
-        {
-            _currentIndex++;
         }
 
         /// <summary>
@@ -431,12 +422,11 @@ namespace Mug.Models.Lexer
             Reset();
 
             // go to the next char while there is one
-            while (HasNext())
-            {
+            do
                 ProcessCurrentChar();
-                Advance();
-            }
+            while (++_currentIndex < Source.Length);
 
+            // end of file token
             AddSingle(TokenKind.EOF, "<EOF>");
 
             return TokenCollection;
