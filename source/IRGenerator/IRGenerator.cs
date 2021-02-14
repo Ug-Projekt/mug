@@ -4,10 +4,12 @@ using Mug.Models.Generator.Emitter;
 using Mug.Models.Lexer;
 using Mug.Models.Parser;
 using Mug.Models.Parser.NodeKinds;
+using Mug.Models.Parser.NodeKinds.Directives;
 using Mug.Models.Parser.NodeKinds.Statements;
 using Mug.TypeSystem;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Runtime.CompilerServices;
 
 namespace Mug.Models.Generator
@@ -15,15 +17,24 @@ namespace Mug.Models.Generator
     public class IRGenerator
     {
         public readonly MugParser Parser;
-        public readonly LLVMModuleRef Module;
-        private readonly Dictionary<string, LLVMValueRef> _symbols = new();
+        public LLVMModuleRef Module { get; set; }
+        
+        private readonly Dictionary<string, LLVMValueRef> Symbols = new();
 
         private const string EntryPointName = "main";
+
+        public string LocalPath
+        {
+            get
+            {
+                return Path.GetFullPath(Parser.Lexer.ModuleName);
+            }
+        }
+
 
         public IRGenerator(string moduleName, string source)
         {
             Parser = new(moduleName, source);
-            Parser.Parse();
 
             Module = LLVM.ModuleCreateWithName(moduleName);
         }
@@ -39,6 +50,11 @@ namespace Mug.Models.Generator
             Parser.Lexer.Throw(position, error);
         }
 
+        public bool MatchStringType(LLVMTypeRef exprType)
+        {
+            return Unsafe.Equals(exprType, LLVMTypeRef.PointerType(LLVMTypeRef.Int8Type(), 0));
+        }
+
         /// <summary>
         /// the function launches an exception and returns a generic value,
         /// this function comes in statement switch in expressions
@@ -49,9 +65,12 @@ namespace Mug.Models.Generator
             throw new Exception("unreachable");
         }
 
+        /// <summary>
+        /// returns an llvm function: declares it if not declared yet
+        /// </summary>
         public LLVMValueRef RequireFunction(string name, LLVMTypeRef returnType, params LLVMTypeRef[] paramTypes)
         {
-            if (!_symbols.TryGetValue(name, out var function))
+            if (!Symbols.TryGetValue(name, out var function))
                 return LLVM.AddFunction(Module, name, LLVMTypeRef.FunctionType(returnType, paramTypes, false));
 
             return function;
@@ -83,7 +102,7 @@ namespace Mug.Models.Generator
         /// </summary>
         private void DeclareSymbol(string name, LLVMValueRef value, Range position)
         {
-            if (!_symbols.TryAdd(name, value))
+            if (!Symbols.TryAdd(name, value))
                 Error(position, "`", name, "` member already declared");
         }
 
@@ -179,7 +198,7 @@ namespace Mug.Models.Generator
         /// </summary>
         public LLVMValueRef GetSymbol(string name, Range position)
         {
-            if (!_symbols.TryGetValue(name, out var member))
+            if (!Symbols.TryGetValue(name, out var member))
                 Error(position, "`", name, "` undeclared member");
             return member;
         }
@@ -193,7 +212,7 @@ namespace Mug.Models.Generator
         {
             MugEmitter emitter = new MugEmitter(this);
 
-            var entry = LLVM.AppendBasicBlock(_symbols[function.Name], "");
+            var entry = LLVM.AppendBasicBlock(Symbols[function.Name], "");
 
             LLVM.PositionBuilderAtEnd(emitter.Builder, entry);
 
@@ -229,6 +248,12 @@ namespace Mug.Models.Generator
                 IsEntryPoint(name, types.Length) ? name : $"{name}({string.Join(", ", types)})";
         }
 
+        private void InstallSymbols(Dictionary<string, LLVMValueRef> symbols)
+        {
+            foreach (var symbol in symbols)
+                Symbols.Add(symbol.Key, symbol.Value);
+        }
+
         /// <summary>
         /// recognize the type of the AST node and depending on the type call methods
         /// to convert it to the corresponding low-level code
@@ -258,6 +283,24 @@ namespace Mug.Models.Generator
                                     parameters,
                                     false)),
                             prototype.Position);
+                    }
+                    break;
+                case ImportDirective import:
+                    if (declareOnly)
+                    {
+                        CompilationUnit unit;
+
+                        if (import.Mode == ImportMode.FromPackages)
+                            // dirof(mug.exe)/include/
+                            unit = new CompilationUnit("include/" + ((Token)import.Member).Value + ".mug");
+                        else
+                            // dirof(file.mug)
+                            unit = new CompilationUnit(Path.GetFullPath(((Token)import.Member).Value, LocalPath));
+
+                        unit.IRGenerator.Module = Module;
+                        unit.Generate();
+
+                        InstallSymbols(unit.IRGenerator.Symbols);
                     }
                     break;
                 default:

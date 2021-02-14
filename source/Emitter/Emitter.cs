@@ -43,10 +43,18 @@ namespace Mug.Models.Generator.Emitter
             return Peek().TypeOf();
         }
 
-        public void Add()
+        public void Add(Range position)
         {
-            var second = Pop();
-            Load(BuildAdd(Builder, Pop(), second, ""));
+            var exprType = PeekType();
+
+            if (_generator.MatchStringType(exprType))
+                Call(_generator.GetSymbol("string_concat", position), 2);
+            else
+            {
+                var second = Pop();
+
+                Load(BuildAdd(Builder, Pop(), second, ""));
+            }
         }
 
         public void Sub()

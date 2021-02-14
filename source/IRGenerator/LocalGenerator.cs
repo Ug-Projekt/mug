@@ -90,9 +90,10 @@ namespace Mug.Models.Generator
                 case OperatorKind.Sum:
                     ExpectOperatorImplementation(ft, kind, position,
                         LLVMTypeRef.Int32Type(),
-                        LLVMTypeRef.Int8Type());
+                        LLVMTypeRef.Int8Type(),
+                        LLVMTypeRef.PointerType(LLVMTypeRef.Int8Type(), 0));
 
-                    _emitter.Add();
+                    _emitter.Add(position);
                     break;
                 case OperatorKind.Subtract:
                     ExpectOperatorImplementation(ft, kind, position,
@@ -131,6 +132,12 @@ namespace Mug.Models.Generator
             {
                 case LLVMTypeKind.LLVMIntegerTypeKind: // LLVM has different instructions for each type convertion
                     _emitter.CastInt(_generator.TypeToLLVMType(type, position));
+                    break;
+                case LLVMTypeKind.LLVMPointerTypeKind:
+                    // string
+                    if (Unsafe.Equals(expressionType.GetElementType(), LLVMTypeRef.Int8Type()))
+                    {
+                    }
                     break;
                 default:
                     Error(position, "Cast does not support this type yet");
@@ -283,6 +290,16 @@ namespace Mug.Models.Generator
             switch (statement)
             {
                 case VariableStatement variable:
+                    _generator.ExpectNonVoidType(variable.Type, variable.Position);
+
+                    if (!variable.IsAssigned)
+                    {
+                        if (variable.Type.IsAutomatic())
+                            Error(variable.Position, "Unable to allocate a new variable of `Auto` type");
+
+                        variable.Body = GetDefaultValueOf(variable.Type);
+                    }
+
                     // the expression in the variable’s body is evaluated
                     EvaluateExpression(variable.Body);
 
@@ -297,6 +314,7 @@ namespace Mug.Models.Generator
                     }
                     else // if the type is not specified, it will come directly allocate a variable with the same type as the expression result
                         _emitter.DeclareVariable(variable.Name, _emitter.PeekType(), variable.Position);
+
                     _emitter.StoreVariable(variable.Name);
                     break;
                 case ReturnStatement @return:
@@ -327,6 +345,16 @@ namespace Mug.Models.Generator
                     Error(statement.Position, "Statement not supported yet");
                     break;
             }
+        }
+
+        private INode GetDefaultValueOf(MugType type)
+        {
+            return type.Kind switch
+            {
+                TypeKind.Char or TypeKind.Int8 or TypeKind.Int32 or TypeKind.Int64 or
+                TypeKind.UInt8 or TypeKind.UInt32 or TypeKind.UInt64 => new Token(TokenKind.ConstantDigit, "0", new()),
+                TypeKind.String => new Token(TokenKind.ConstantString, "", new()),
+            };
         }
 
         /// <summary>

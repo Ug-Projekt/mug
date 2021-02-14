@@ -31,7 +31,6 @@ namespace Mug.Models.Parser
         public MugParser(string moduleName, string source)
         {
             Lexer = new(moduleName, source);
-            Lexer.Tokenize();
         }
 
         public MugParser(MugLexer lexer)
@@ -317,7 +316,7 @@ namespace Mug.Models.Parser
                 c1.SetGenericTypes(generics);
                 e = c1;
 
-                _currentIndex++;
+                _currentIndex+=2;
                 return true;
             }
 
@@ -962,13 +961,10 @@ namespace Mug.Models.Parser
 
         private bool DirectiveDefinition(out INode directive)
         {
-            directive = null;
-
-            if (!MatchImportDirective(out var dir))
-                if (!MatchUseDirective(out dir))
+            if (!MatchImportDirective(out directive))
+                if (!MatchUseDirective(out directive))
                     return false;
 
-            directive = dir;
             return true;
         }
 

@@ -1,6 +1,7 @@
 ﻿using Mug.Compilation;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Text;
 
 namespace Mug.Models.Lexer
@@ -142,7 +143,7 @@ namespace Mug.Models.Lexer
                 CheckValidIdentifier(value);
 
             if (isString)
-                TokenCollection.Add(new(kind, value, (_currentIndex - value.Length + 1)..(_currentIndex + 1)));
+                TokenCollection.Add(new(kind, value, (_currentIndex - value.Length - 1)..(_currentIndex + 1)));
             else if (value is not null)
                 TokenCollection.Add(new(kind, value, (_currentIndex - value.ToString().Length).._currentIndex));
             else // chatching null reference exception

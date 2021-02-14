@@ -17,7 +17,10 @@ namespace Mug.Compilation
 
         public CompilationUnit(string path)
         {
-            IRGenerator = new(Path.GetFileNameWithoutExtension(path), File.ReadAllText(path));
+            if (!File.Exists(path))
+                CompilationErrors.Throw($"Unable to open path: `{path}`");
+
+            IRGenerator = new(path, File.ReadAllText(path));
         }
 
         public void Compile(int optimizazioneLevel)
@@ -101,6 +104,8 @@ namespace Mug.Compilation
         /// </param>
         public void Generate(bool verifyLLVMModule = true)
         {
+            IRGenerator.Parser.Lexer.Tokenize();
+            IRGenerator.Parser.Parse();
             IRGenerator.Generate();
 
             // have Clang verify the module

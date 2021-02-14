@@ -8,9 +8,22 @@ try
 #if DEBUG
 
     var test = @"
+
+func puts(text: str);
+
+func printf(text: str);
+
+func gets(): str;
+
+func readln(text: str): str {
+   printf(text);
+   return gets();
+}
+
 func main() {
-  puts.f(""hello"");
-}";
+   var name = gets();
+}
+";
 
     var unit = new CompilationUnit("test", test);
     unit.Generate(true);
