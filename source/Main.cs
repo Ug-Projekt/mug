@@ -8,8 +8,10 @@ try
 #if DEBUG
 
     var test = @"
-func main(): i32 {
-  return 1+23*2;
+func puts(value: str);
+
+func main() {
+  puts(""Hello fucking World"");
 }
 ";
 

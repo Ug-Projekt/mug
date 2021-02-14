@@ -44,6 +44,9 @@ namespace Mug.Models.Parser
         {
             get
             {
+                if (_currentIndex >= Lexer.TokenCollection.Count)
+                    ParseErrorEOF("");
+
                 return Lexer.TokenCollection[_currentIndex];
             }
         }
@@ -328,6 +331,7 @@ namespace Mug.Models.Parser
             c.SetGenericTypes(generics);
             e = c;
 
+            _currentIndex++;
             return true;
         }
 
@@ -813,20 +817,20 @@ namespace Mug.Models.Parser
 
         private INode ExpectStatement()
         {
-            if (!(VariableDefinition(out INode statement) ||
-                ReturnDeclaration(out statement) ||
-                    ConstantDefinition(out statement) ||
-                        ConditionDefinition(out statement) ||
-                            ForLoopDefinition(out statement) ||
-                                OtherwiseConditionDefinition(out statement) ||
-                                    LoopManagerDefintion(out statement)))
-                if (MatchCallStatement(out statement))
-                    _currentIndex++;
-                else
-                {
-                    if (!ValueAssignment(out statement))
-                        ParseError("In the current local context, this is not a valid imperative statement;");
-                }
+            if (!VariableDefinition(out var statement))
+                if (!ReturnDeclaration(out statement))
+                    if (!ConstantDefinition(out statement))
+                        if (!ConditionDefinition(out statement))
+                            if (!ForLoopDefinition(out statement))
+                                if (!OtherwiseConditionDefinition(out statement))
+                                    if (!LoopManagerDefintion(out statement))
+                                        if (MatchCallStatement(out statement))
+                                            _currentIndex++;
+                                        else
+                                        {
+                                            if (!ValueAssignment(out statement))
+                                                ParseError("In the current local context, this is not a valid imperative statement;");
+                                        }
 
             return statement;
         }
@@ -841,7 +845,7 @@ namespace Mug.Models.Parser
                 block.Add(ExpectStatement());
 
             Expect("A block statement must end with `}` token;", TokenKind.CloseBrace);
-
+            
             return block;
         }
 
@@ -912,7 +916,6 @@ namespace Mug.Models.Parser
 
                 node = f;
             }
-
             return true;
         }
 
@@ -1052,11 +1055,11 @@ namespace Mug.Models.Parser
             while (!Match(end))
             {
                 // searches for a global statement
-                if (!(FunctionDefinition(out INode statement) ||
-                    VariableDefinition(out statement) ||
-                    TypeDefinition(out statement) ||
-                    DirectiveDefinition(out statement)))
-                    ParseError("In the current global context, this is not a valid global statement;");
+                if (!FunctionDefinition(out INode statement))
+                    if (!VariableDefinition(out statement))
+                        if (!TypeDefinition(out statement))
+                            if (!DirectiveDefinition(out statement))
+                                    ParseError("In the current global context, this is not a valid global statement;");
 
                 // adds the statement to the members
                 nodes.Add(statement);

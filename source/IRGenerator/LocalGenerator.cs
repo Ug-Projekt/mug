@@ -29,6 +29,44 @@ namespace Mug.Models.Generator
         }
 
         /// <summary>
+        /// declares a global string and returns a pointer to it
+        /// </summary>
+        private LLVMValueRef CreateString(string value)
+        {
+            // global string
+            var globalArray = LLVM.AddGlobal(_generator.Module, LLVMTypeRef.ArrayType(LLVMTypeRef.Int8Type(), (uint)value.Length+1), "str");
+            // assigning the constant value to the global array
+            LLVM.SetInitializer(globalArray, LLVM.ConstString(value, (uint)value.Length, MugEmitter.ConstLLVMFalse));
+
+            // creating pointer
+            var x = LLVM.BuildGEP(_emitter.Builder, globalArray,
+                new[]
+                {
+                    // see the gep instruction on the llvm documentation
+                    LLVM.ConstInt(LLVMTypeRef.Int32Type(), 0, MugEmitter.ConstLLVMFalse),
+                    LLVM.ConstInt(LLVMTypeRef.Int32Type(), 0, MugEmitter.ConstLLVMFalse)
+                },
+                "");
+
+            return x;
+        }
+
+        /// <summary>
+        /// converts a constant in token format to one in LLVMValueRef format
+        /// </summary>
+        public LLVMValueRef ConstToLLVMConst(Token constant, Range position)
+        {
+            return constant.Kind switch
+            {
+                TokenKind.ConstantDigit => LLVMTypeRef.ConstInt(LLVMTypeRef.Int32Type(), Convert.ToUInt64(constant.Value), MugEmitter.ConstLLVMFalse),
+                TokenKind.ConstantBoolean => LLVMTypeRef.ConstInt(LLVMTypeRef.Int1Type(), _generator.StringBoolToIntBool(constant.Value), MugEmitter.ConstLLVMTrue),
+                TokenKind.ConstantString => CreateString(constant.Value),
+                TokenKind.ConstantChar => LLVMTypeRef.ConstInt(LLVMTypeRef.Int8Type(), _generator.StringCharToIntChar(constant.Value), MugEmitter.ConstLLVMFalse),
+                _ => _generator.NotSupportedType<LLVMValueRef>(constant.Kind.ToString(), position)
+            };
+        }
+
+        /// <summary>
         /// check that type is equal to one of the elements in supportedTypes
         /// </summary>
         private void ExpectOperatorImplementation(LLVMTypeRef type, OperatorKind kind, Range position, params LLVMTypeRef[] supportedTypes)
@@ -184,7 +222,7 @@ namespace Mug.Models.Generator
                     if (t.Kind == TokenKind.Identifier) // reference value
                         _emitter.LoadFromMemory(t.Value, t.Position);
                     else // constant value
-                        _emitter.Load(_generator.ConstToLLVMConst(t, t.Position));
+                        _emitter.Load(ConstToLLVMConst(t, t.Position));
                     break;
                 case PrefixOperator p:
                     EvaluateExpression(p.Expression);

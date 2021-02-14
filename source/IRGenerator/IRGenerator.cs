@@ -48,6 +48,14 @@ namespace Mug.Models.Generator
             throw new Exception("unreachable");
         }
 
+        public LLVMValueRef RequireFunction(string name, LLVMTypeRef returnType, params LLVMTypeRef[] paramTypes)
+        {
+            if (!_symbols.TryGetValue(name, out var function))
+                return LLVM.AddFunction(Module, name, LLVMTypeRef.FunctionType(returnType, paramTypes, false));
+
+            return function;
+        }
+
         /// <summary>
         /// the function converts a Mugtype to the corresponding Llvmtyperef
         /// </summary>
@@ -59,8 +67,14 @@ namespace Mug.Models.Generator
                 TypeKind.Bool => LLVMTypeRef.Int1Type(),
                 TypeKind.Void => LLVMTypeRef.VoidType(),
                 TypeKind.Char => LLVMTypeRef.Int8Type(),
+                TypeKind.String => LLVMTypeRef.PointerType(LLVMTypeRef.Int8Type(), 0),
                 _ => NotSupportedType<LLVMTypeRef>(type.Kind.ToString(), position)
             };
+        }
+
+        public ulong StringCharToIntChar(string value)
+        {
+            return Convert.ToUInt64(Convert.ToChar(value));
         }
 
         /// <summary>
@@ -112,23 +126,10 @@ namespace Mug.Models.Generator
         /// <summary>
         /// converts a boolean value in string format to one in int format
         /// </summary>
-        private ulong StringBoolToIntBool(string value)
+        public ulong StringBoolToIntBool(string value)
         {
             // converts for first string "true" or "false" to a boolean value, then to a ulong, so 0 or 1
             return Convert.ToUInt64(Convert.ToBoolean(value));
-        }
-
-        /// <summary>
-        /// converts a constant in token format to one in LLVMValueRef format
-        /// </summary>
-        public LLVMValueRef ConstToLLVMConst(Token constant, Range position)
-        {
-            return constant.Kind switch
-            {
-                TokenKind.ConstantDigit => LLVMTypeRef.ConstInt(LLVMTypeRef.Int32Type(), Convert.ToUInt64(constant.Value), MugEmitter.ConstLLVMFalse),
-                TokenKind.ConstantBoolean => LLVMTypeRef.ConstInt(LLVMTypeRef.Int1Type(), StringBoolToIntBool(constant.Value), MugEmitter.ConstLLVMTrue),
-                _ => NotSupportedType<LLVMValueRef>(constant.Kind.ToString(), position)
-            };
         }
 
         /// <summary>

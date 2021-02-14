@@ -1,4 +1,5 @@
 ﻿using Mug.Compilation;
+using System;
 using System.Collections.Generic;
 using System.Text;
 
@@ -304,11 +305,13 @@ namespace Mug.Models.Lexer
         /// </summary>
         private void CollectChar()
         {
-            _currentSymbol.Append(Source[_currentIndex]);
+
             while (_currentIndex++ < Source.Length && Source[_currentIndex] != '\'')
                 _currentSymbol.Append(Source[_currentIndex]);
-            AddToken(TokenKind.ConstantChar, _currentSymbol.Append('\'').ToString(), true);
-            if (_currentSymbol.Length > 3 || _currentSymbol.Length < 3)
+
+            AddToken(TokenKind.ConstantChar, _currentSymbol.ToString(), true);
+
+            if (_currentSymbol.Length != 1)
                 this.Throw(TokenCollection[^1], "Invalid characters in ConstantChar: it can only contain a character, not ", (_currentSymbol.Length - 2).ToString());
             _currentSymbol.Clear();
         }
@@ -318,21 +321,18 @@ namespace Mug.Models.Lexer
         /// </summary>
         private void CollectString()
         {
-            //add initial " and check next character
-            _currentSymbol.Append(Source[_currentIndex++]);
+            _currentIndex++;
 
             //consume string until EOF or closed " is found
             while (_currentIndex < Source.Length && Source[_currentIndex] != '"')
-            {
                 _currentSymbol.Append(Source[_currentIndex++]);
-            }
 
             //if you found an EOF, throw
             if (_currentIndex == Source.Length && Source[_currentIndex - 1] != '"')
                 this.Throw(_currentIndex - 1, $"String has not been correctly enclosed");
 
             //else add closing simbol
-            AddToken(TokenKind.ConstantString, _currentSymbol.Append('"').ToString(), true);
+            AddToken(TokenKind.ConstantString, _currentSymbol.ToString(), true);
             _currentSymbol.Clear();
         }
 

@@ -2,6 +2,7 @@
 using Mug.Models.Parser.NodeKinds.Statements;
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using static LLVMSharp.LLVM;
 
 namespace Mug.Models.Generator.Emitter
@@ -144,7 +145,7 @@ namespace Mug.Models.Generator.Emitter
 
             var result = BuildCall(Builder, function, parameters, "");
 
-            if (result.TypeOf().TypeKind == LLVMTypeKind.LLVMVoidTypeKind)
+            if (result.TypeOf().TypeKind != LLVMTypeKind.LLVMVoidTypeKind)
                 Load(result);
         }
     }
