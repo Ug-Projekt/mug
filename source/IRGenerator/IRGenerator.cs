@@ -227,7 +227,7 @@ namespace Mug.Models.Generator
             // implicit return with void functions
             if (function.Type.Kind == TypeKind.Void &&
                 // if the type is void check if the last statement was ret, if it was not ret add one implicitly
-                entry.LastInstruction.IsAReturnInst.IsNull)
+                entry.LastInstruction.IsAReturnInst.Handle == IntPtr.Zero) // is null
                 generator.AddImplicitRetVoid();
         }
 
@@ -256,15 +256,19 @@ namespace Mug.Models.Generator
         {
             unsafe
             {
-                LLVMOpaqueMemoryBuffer** memoryBuffer = (LLVMOpaqueMemoryBuffer**)Marshal.AllocCoTaskMem(File.ReadAllBytes(filename).Length).ToPointer();
-                sbyte** message = (sbyte**)Marshal.AllocCoTaskMem(100).ToPointer();
-                if (LLVM.CreateMemoryBufferWithContentsOfFile(filename.ToSbytePointer(), memoryBuffer, message) != 0)
-                    CompilationErrors.Throw("Unable to open bitcode file: `", filename, "`");
+                LLVMOpaqueMemoryBuffer* memoryBuffer;
+                LLVMOpaqueModule* module;
+                sbyte* message;
 
-                if (LLVM.ParseBitcode(memoryBuffer, module, message) != 0)
-                    CompilationErrors.Throw("Unable to parse bitcode file: ", message);
+                using (var marshalledFilename = new MarshaledString(filename))
+                    if (LLVM.CreateMemoryBufferWithContentsOfFile(marshalledFilename, &memoryBuffer, &message) != 0)
+                        CompilationErrors.Throw("Unable to open file: `", filename, "`");
+                
+                if (LLVM.ParseBitcode(memoryBuffer, &module, &message) != 0)
+                    CompilationErrors.Throw("Unable to parse file: `", filename, "`");
 
-                LLVM.LinkModules2(Module, module);
+                if (LLVM.LinkModules2(Module, module) != 0)
+                    CompilationErrors.Throw("Unable to link file: `", filename, "`, with the main module");
             }
         }
 
@@ -301,7 +305,7 @@ namespace Mug.Models.Generator
                         LLVMValueRef function = Module.GetNamedFunction(prototype.Name);
 
                         // if the function is not declared yet
-                        if (function.IsNull)
+                        if (function.Handle == IntPtr.Zero)
                             // declares it
                             function = Module.AddFunction(prototype.Name,
                                     LLVMTypeRef.CreateFunction(

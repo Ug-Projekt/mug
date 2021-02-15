@@ -111,10 +111,9 @@ namespace Mug.Compilation
             IRGenerator.Parser.Parse();
             IRGenerator.Generate();
 
-            // have Clang verify the module
             if (verifyLLVMModule)
-                if (IRGenerator.Module.TryVerify(LLVMVerifierFailureAction.LLVMReturnStatusAction, out string error))
-                    CompilationErrors.Throw($"External compiler error: {error}");
+                if (!IRGenerator.Module.TryVerify(LLVMVerifierFailureAction.LLVMReturnStatusAction, out var error))
+                    CompilationErrors.Throw($"Cannot build due to external compiler error: {error}");
         }
     }
 }

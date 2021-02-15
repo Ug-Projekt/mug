@@ -220,7 +220,7 @@ namespace Mug.Models.Generator
             if (expectedNonVoid)
                 _generator.ExpectNonVoidType(
                     // (<ret_type> <param_types>).GetElementType() -> <ret_type>
-                    functionType.ElementType,
+                    functionType.ReturnType,
                     c.Position);
 
             _emitter.Call(function, c.Parameters.Lenght);
@@ -341,7 +341,8 @@ namespace Mug.Models.Generator
                     if (!variable.Type.IsAutomatic())
                     {
                         _emitter.DeclareVariable(variable);
-                        _generator.ExpectSameTypes(_generator.TypeToLLVMType(variable.Type, variable.Position), variable.Body.Position, "The expression type and the variable type are different", _emitter.PeekType());
+                        var type = _generator.TypeToLLVMType(variable.Type, variable.Position);
+                        _generator.ExpectSameTypes(type, variable.Body.Position, $"Expected {type} type, got {_emitter.PeekType()} type", _emitter.PeekType());
                     }
                     else // if the type is not specified, it will come directly allocate a variable with the same type as the expression result
                         _emitter.DeclareVariable(variable.Name, _emitter.PeekType(), variable.Position);
@@ -365,7 +366,8 @@ namespace Mug.Models.Generator
                          * it will be evaluated and then it will be compared the type of the result with the type of return of the function
                          */
                         EvaluateExpression(@return.Body);
-                        _generator.ExpectSameTypes(_generator.TypeToLLVMType(_function.Type, @return.Position), @return.Position, "The function return type and the expression type are different", _emitter.PeekType());
+                        var type = _generator.TypeToLLVMType(_function.Type, @return.Position);
+                        _generator.ExpectSameTypes(type, @return.Position, $"Expected {type} type, got {_emitter.PeekType()} type", _emitter.PeekType());
                         _emitter.Ret();
                     }
                     break;

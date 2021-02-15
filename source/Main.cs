@@ -8,8 +8,8 @@ try
 #if DEBUG
 
     var test = @"
-func main() {
-  var x: str;
+func main(): i32 {
+  return c(1);
 }
 ";
 
