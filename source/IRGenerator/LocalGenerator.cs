@@ -1,4 +1,4 @@
-﻿using LLVMSharp;
+﻿using LLVMSharp.Interop;
 using Mug.Compilation;
 using Mug.Models.Generator.Emitter;
 using Mug.Models.Lexer;
@@ -28,28 +28,30 @@ namespace Mug.Models.Generator
             _generator.Parser.Lexer.Throw(position, error);
         }
 
-        /// <summary>
+        /*/// <summary>
         /// declares a global string and returns a pointer to it
         /// </summary>
         private LLVMValueRef CreateString(string value)
         {
             // global string
-            var globalArray = LLVM.AddGlobal(_generator.Module, LLVMTypeRef.ArrayType(LLVMTypeRef.Int8Type(), (uint)value.Length+1), "str");
+            
+            var type = LLVMTypeRef.CreateArray(LLVMTypeRef.Int8, (uint)value.Length + 1);
+            var globalArray = _generator.Module.AddGlobal(type, "str");
             // assigning the constant value to the global array
-            LLVM.SetInitializer(globalArray, LLVM.ConstString(value, (uint)value.Length, MugEmitter.ConstLLVMFalse));
+            globalArray.Initializer = LLVMValueRef.CreateConstIntOfString(type, value, 0);
 
             // creating pointer
             var x = LLVM.BuildGEP(_emitter.Builder, globalArray,
                 new[]
                 {
                     // see the gep instruction on the llvm documentation
-                    LLVM.ConstInt(LLVMTypeRef.Int32Type(), 0, MugEmitter.ConstLLVMFalse),
-                    LLVM.ConstInt(LLVMTypeRef.Int32Type(), 0, MugEmitter.ConstLLVMFalse)
+                    LLVMValueRef.CreateConstInt(LLVMTypeRef.Int32, (ulong)0),
+                    LLVMValueRef.CreateConstInt(LLVMTypeRef.Int32, (ulong)0)
                 },
                 "");
 
             return x;
-        }
+        }*/
 
         /// <summary>
         /// converts a constant in token format to one in LLVMValueRef format
@@ -58,10 +60,17 @@ namespace Mug.Models.Generator
         {
             return constant.Kind switch
             {
-                TokenKind.ConstantDigit => LLVMTypeRef.ConstInt(LLVMTypeRef.Int32Type(), Convert.ToUInt64(constant.Value), MugEmitter.ConstLLVMFalse),
-                TokenKind.ConstantBoolean => LLVMTypeRef.ConstInt(LLVMTypeRef.Int1Type(), _generator.StringBoolToIntBool(constant.Value), MugEmitter.ConstLLVMTrue),
-                TokenKind.ConstantString => CreateString(constant.Value),
-                TokenKind.ConstantChar => LLVMTypeRef.ConstInt(LLVMTypeRef.Int8Type(), _generator.StringCharToIntChar(constant.Value), MugEmitter.ConstLLVMFalse),
+                TokenKind.ConstantDigit => LLVMValueRef.CreateConstInt(LLVMTypeRef.Int32, Convert.ToUInt64(constant.Value)),
+                TokenKind.ConstantBoolean => LLVMValueRef.CreateConstInt(LLVMTypeRef.Int1, _generator.StringBoolToIntBool(constant.Value)),
+                TokenKind.ConstantString => _emitter.Builder.BuildGEP(
+                    _emitter.Builder.BuildGlobalString(constant.Value),
+                    new[]
+                    {
+                        LLVMValueRef.CreateConstInt(LLVMTypeRef.Int32, 0),
+                        LLVMValueRef.CreateConstInt(LLVMTypeRef.Int32, 0),
+                    }
+                ),
+                TokenKind.ConstantChar => LLVMValueRef.CreateConstInt(LLVMTypeRef.Int8, _generator.StringCharToIntChar(constant.Value)),
                 _ => _generator.NotSupportedType<LLVMValueRef>(constant.Kind.ToString(), position)
             };
         }
@@ -89,35 +98,44 @@ namespace Mug.Models.Generator
             {
                 case OperatorKind.Sum:
                     ExpectOperatorImplementation(ft, kind, position,
-                        LLVMTypeRef.Int32Type(),
-                        LLVMTypeRef.Int8Type(),
-                        LLVMTypeRef.PointerType(LLVMTypeRef.Int8Type(), 0));
+                        LLVMTypeRef.Int64,
+                        LLVMTypeRef.Int32,
+                        LLVMTypeRef.Int8,
+                        LLVMTypeRef.CreatePointer(LLVMTypeRef.Int8, 0));
 
                     _emitter.Add(position);
                     break;
                 case OperatorKind.Subtract:
                     ExpectOperatorImplementation(ft, kind, position,
-                        LLVMTypeRef.Int32Type(),
-                        LLVMTypeRef.Int8Type());
+                        LLVMTypeRef.Int64,
+                        LLVMTypeRef.Int32,
+                        LLVMTypeRef.Int8);
 
                     _emitter.Sub();
                     break;
                 case OperatorKind.Multiply:
                     ExpectOperatorImplementation(ft, kind, position,
-                        LLVMTypeRef.Int32Type(),
-                        LLVMTypeRef.Int8Type());
+                        LLVMTypeRef.Int32,
+                        LLVMTypeRef.Int8);
 
                     _emitter.Mul();
                     break;
                 case OperatorKind.Divide:
                     ExpectOperatorImplementation(ft, kind, position,
-                        LLVMTypeRef.Int32Type(),
-                        LLVMTypeRef.Int8Type());
+                        LLVMTypeRef.Int64,
+                        LLVMTypeRef.Int32,
+                        LLVMTypeRef.Int8);
 
                     _emitter.Div();
                     break;
                 case OperatorKind.Range: break;
             }
+        }
+
+        private void CallOperatorFunction(string name, Range position)
+        {
+            var function = _generator.GetSymbol(name, position);
+            _emitter.Call(function, (int)function.ParamsCount);
         }
 
         /// <summary>
@@ -128,15 +146,17 @@ namespace Mug.Models.Generator
             // the expression type to cast
             var expressionType = _emitter.PeekType();
 
-            switch (expressionType.TypeKind)
+            switch (expressionType.Kind)
             {
                 case LLVMTypeKind.LLVMIntegerTypeKind: // LLVM has different instructions for each type convertion
                     _emitter.CastInt(_generator.TypeToLLVMType(type, position));
                     break;
                 case LLVMTypeKind.LLVMPointerTypeKind:
                     // string
-                    if (Unsafe.Equals(expressionType.GetElementType(), LLVMTypeRef.Int8Type()))
+                    if (Unsafe.Equals(expressionType.ElementType, LLVMTypeRef.Int8))
                     {
+                        if (type.Kind == TypeKind.Array && ((MugType)type.BaseType).Kind == TypeKind.Char)
+                            CallOperatorFunction(MugEmitter.StringToCharArrayIF, position);
                     }
                     break;
                 default:
@@ -195,12 +215,12 @@ namespace Mug.Models.Generator
             var function = _generator.GetSymbol(BuildName(EvaluateInstanceName(c.Name), parameters), c.Position);
             
             // function type: <ret_type> <param_types>
-            var functionType = function.TypeOf().GetElementType();
+            var functionType = function.TypeOf.ElementType;
 
             if (expectedNonVoid)
                 _generator.ExpectNonVoidType(
                     // (<ret_type> <param_types>).GetElementType() -> <ret_type>
-                    functionType.GetElementType(),
+                    functionType.ReturnType,
                     c.Position);
 
             _emitter.Call(function, c.Parameters.Lenght);
@@ -277,7 +297,7 @@ namespace Mug.Models.Generator
             {
                 var parameter = parameters.Parameters[i];
                 _emitter.DeclareVariable(parameter.Name, _generator.TypeToLLVMType(parameter.Type, parameter.Position), parameter.Position);
-                _emitter.Load(LLVM.GetParam(function, (uint)i));
+                _emitter.Load(function.GetParam((uint)i));
                 _emitter.StoreVariable(parameters.Parameters[i].Name);
             }
         }
@@ -321,7 +341,8 @@ namespace Mug.Models.Generator
                     if (!variable.Type.IsAutomatic())
                     {
                         _emitter.DeclareVariable(variable);
-                        _generator.ExpectSameTypes(_generator.TypeToLLVMType(variable.Type, variable.Position), variable.Body.Position, "The expression type and the variable type are different", _emitter.PeekType());
+                        var type = _generator.TypeToLLVMType(variable.Type, variable.Position);
+                        _generator.ExpectSameTypes(type, variable.Body.Position, $"Expected {type} type, got {_emitter.PeekType()} type", _emitter.PeekType());
                     }
                     else // if the type is not specified, it will come directly allocate a variable with the same type as the expression result
                         _emitter.DeclareVariable(variable.Name, _emitter.PeekType(), variable.Position);
@@ -335,7 +356,7 @@ namespace Mug.Models.Generator
                      */
                     if (@return.IsVoid())
                     {
-                        _generator.ExpectSameTypes(_generator.TypeToLLVMType(_function.Type, @return.Position), @return.Position, "Expected non-void expression", LLVM.VoidType());
+                        _generator.ExpectSameTypes(_generator.TypeToLLVMType(_function.Type, @return.Position), @return.Position, "Expected non-void expression", LLVMTypeRef.Void);
                         _emitter.RetVoid();
                     }
                     else
@@ -345,7 +366,8 @@ namespace Mug.Models.Generator
                          * it will be evaluated and then it will be compared the type of the result with the type of return of the function
                          */
                         EvaluateExpression(@return.Body);
-                        _generator.ExpectSameTypes(_generator.TypeToLLVMType(_function.Type, @return.Position), @return.Position, "The function return type and the expression type are different", _emitter.PeekType());
+                        var type = _generator.TypeToLLVMType(_function.Type, @return.Position);
+                        _generator.ExpectSameTypes(type, @return.Position, $"Expected {type} type, got {_emitter.PeekType()} type", _emitter.PeekType());
                         _emitter.Ret();
                     }
                     break;

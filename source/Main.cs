@@ -8,19 +8,15 @@ try
 #if DEBUG
 
     var test = @"
-import ""C:\Users\carpal\Desktop\mug\source\bin\Release\netcoreapp3.1\functions.bc"";
-
-func add(a: i32, b: i32): i32;
-
-func main() {
-  add(1, 2);
+func main(): i32 {
+  return c(1);
 }
 ";
 
     var unit = new CompilationUnit("test", test);
     unit.Generate(true);
 
-    LLVM.DumpModule(unit.IRGenerator.Module);
+    unit.IRGenerator.Module.Dump();
 
 #else
 

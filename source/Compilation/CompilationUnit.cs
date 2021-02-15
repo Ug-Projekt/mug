@@ -1,8 +1,9 @@
-﻿using LLVMSharp;
+﻿using LLVMSharp.Interop;
 using Mug.Models.Generator;
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Text;
 
 namespace Mug.Compilation
 {
@@ -58,7 +59,7 @@ namespace Mug.Compilation
                 if (File.Exists(output)) File.Delete(output);
 
                 // writes the module to a file
-                if (LLVM.WriteBitcodeToFile(module, output) != 0)
+                if (module.WriteBitcodeToFile(output) != 0)
                     CompilationErrors.Throw("Error writing to file");
 
                 // the program goes in this keeps the program waiting until it finds the file containing the compiled program
@@ -110,10 +111,9 @@ namespace Mug.Compilation
             IRGenerator.Parser.Parse();
             IRGenerator.Generate();
 
-            // have Clang verify the module
             if (verifyLLVMModule)
-                if (LLVM.VerifyModule(IRGenerator.Module, LLVMVerifierFailureAction.LLVMReturnStatusAction, out string error))
-                    CompilationErrors.Throw($"External compiler error: {error}");
+                if (!IRGenerator.Module.TryVerify(LLVMVerifierFailureAction.LLVMReturnStatusAction, out var error))
+                    CompilationErrors.Throw($"Cannot build due to external compiler error: {error}");
         }
     }
 }

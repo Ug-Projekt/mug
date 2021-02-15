@@ -1,4 +1,5 @@
 ﻿using LLVMSharp;
+using LLVMSharp.Interop;
 using Mug.Compilation;
 using Mug.Models.Generator.Emitter;
 using Mug.Models.Lexer;
@@ -11,6 +12,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 
 namespace Mug.Models.Generator
 {
@@ -36,13 +38,13 @@ namespace Mug.Models.Generator
         {
             Parser = new(moduleName, source);
 
-            Module = LLVM.ModuleCreateWithName(moduleName);
+            Module = LLVMModuleRef.CreateWithName(moduleName);
         }
 
         public IRGenerator(MugParser parser)
         {
             Parser = parser;
-            Module = LLVM.ModuleCreateWithName(parser.Lexer.ModuleName);
+            Module = LLVMModuleRef.CreateWithName(parser.Lexer.ModuleName);
         }
 
         public void Error(Range position, params string[] error)
@@ -52,7 +54,7 @@ namespace Mug.Models.Generator
 
         public bool MatchStringType(LLVMTypeRef exprType)
         {
-            return Unsafe.Equals(exprType, LLVMTypeRef.PointerType(LLVMTypeRef.Int8Type(), 0));
+            return Unsafe.Equals(exprType, LLVMTypeRef.CreatePointer(LLVMTypeRef.Int8, 0));
         }
 
         /// <summary>
@@ -71,7 +73,7 @@ namespace Mug.Models.Generator
         public LLVMValueRef RequireFunction(string name, LLVMTypeRef returnType, params LLVMTypeRef[] paramTypes)
         {
             if (!Symbols.TryGetValue(name, out var function))
-                return LLVM.AddFunction(Module, name, LLVMTypeRef.FunctionType(returnType, paramTypes, false));
+                return Module.AddFunction(name, LLVMTypeRef.CreateFunction(returnType, paramTypes));
 
             return function;
         }
@@ -83,11 +85,12 @@ namespace Mug.Models.Generator
         {
             return type.Kind switch
             {
-                TypeKind.Int32 => LLVMTypeRef.Int32Type(),
-                TypeKind.Bool => LLVMTypeRef.Int1Type(),
-                TypeKind.Void => LLVMTypeRef.VoidType(),
-                TypeKind.Char => LLVMTypeRef.Int8Type(),
-                TypeKind.String => LLVMTypeRef.PointerType(LLVMTypeRef.Int8Type(), 0),
+                TypeKind.Int32 => LLVMTypeRef.Int32,
+                TypeKind.Int64 => LLVMTypeRef.Int64,
+                TypeKind.Bool => LLVMTypeRef.Int1,
+                TypeKind.Void => LLVMTypeRef.Void,
+                TypeKind.Char => LLVMTypeRef.Int8,
+                TypeKind.String => LLVMTypeRef.CreatePointer(LLVMTypeRef.Int8, 0),
                 _ => NotSupportedType<LLVMTypeRef>(type.Kind.ToString(), position)
             };
         }
@@ -125,15 +128,14 @@ namespace Mug.Models.Generator
         private void InstallFunction(string name, MugType type, Range position, ParameterListNode paramTypes)
         {
             var parameterTypes = ParameterTypesToLLVMTypes(paramTypes.Parameters);
-            var ft = LLVM.FunctionType(
+            var ft = LLVMTypeRef.CreateFunction(
                     TypeToLLVMType(type, position),
-                    parameterTypes,
-                    false
+                    parameterTypes
                 );
 
             name = BuildFunctionName(name, parameterTypes);
 
-            var f = LLVM.AddFunction(Module, name, ft);
+            var f = Module.AddFunction(name, ft);
 
             DeclareSymbol(name, f, position);
         }
@@ -164,12 +166,14 @@ namespace Mug.Models.Generator
 
         public void ExpectBoolType(LLVMTypeRef type, Range position)
         {
-            ExpectSameTypes(type, position, "Expected `Bool` type", LLVMTypeRef.Int1Type());
+            ExpectSameTypes(type, position, "Expected `Bool` type", LLVMTypeRef.Int1);
         }
 
         public void ExpectIntType(LLVMTypeRef type, Range position)
         {
-            ExpectSameTypes(type, position, "Expected `Int8`, `Int32`, `Int64` type", LLVMTypeRef.Int32Type());
+            ExpectSameTypes(type, position, "Expected `Int32`, `Int64` type",
+                LLVMTypeRef.Int32,
+                LLVMTypeRef.Int64);
         }
 
         /// <summary>
@@ -189,7 +193,7 @@ namespace Mug.Models.Generator
         /// </summary>
         public void ExpectNonVoidType(LLVMTypeRef type, Range position)
         {
-            if (type.TypeKind == LLVMTypeKind.LLVMVoidTypeKind)
+            if (type.Kind == LLVMTypeKind.LLVMVoidTypeKind)
                 Error(position, "Expected a non-void type");
         }
 
@@ -212,9 +216,9 @@ namespace Mug.Models.Generator
         {
             MugEmitter emitter = new MugEmitter(this);
 
-            var entry = LLVM.AppendBasicBlock(Symbols[function.Name], "");
+            var entry = Symbols[function.Name].AppendBasicBlock("");
 
-            LLVM.PositionBuilderAtEnd(emitter.Builder, entry);
+            emitter.Builder.PositionAtEnd(entry);
 
             var generator = new LocalGenerator(this, ref function, ref emitter);
             generator.AllocParameters(GetSymbol(function.Name, function.Position), function.ParameterList);
@@ -223,7 +227,7 @@ namespace Mug.Models.Generator
             // implicit return with void functions
             if (function.Type.Kind == TypeKind.Void &&
                 // if the type is void check if the last statement was ret, if it was not ret add one implicitly
-                entry.GetLastInstruction().IsAReturnInst().Pointer == IntPtr.Zero)
+                entry.LastInstruction.IsAReturnInst.Handle == IntPtr.Zero) // is null
                 generator.AddImplicitRetVoid();
         }
 
@@ -250,13 +254,22 @@ namespace Mug.Models.Generator
 
         private void ReadModule(string filename)
         {
-            if (LLVM.CreateMemoryBufferWithContentsOfFile(filename, out var memoryBuffer, out var message))
-                CompilationErrors.Throw("Unable to open bitcode file: `", filename, "`");
+            unsafe
+            {
+                LLVMOpaqueMemoryBuffer* memoryBuffer;
+                LLVMOpaqueModule* module;
+                sbyte* message;
 
-            if (LLVM.ParseBitcode(memoryBuffer, out var module, out message))
-                CompilationErrors.Throw(message);
+                using (var marshalledFilename = new MarshaledString(filename))
+                    if (LLVM.CreateMemoryBufferWithContentsOfFile(marshalledFilename, &memoryBuffer, &message) != 0)
+                        CompilationErrors.Throw("Unable to open file: `", filename, "`");
+                
+                if (LLVM.ParseBitcode(memoryBuffer, &module, &message) != 0)
+                    CompilationErrors.Throw("Unable to parse file: `", filename, "`");
 
-            LLVM.LinkModules2(Module, module);
+                if (LLVM.LinkModules2(Module, module) != 0)
+                    CompilationErrors.Throw("Unable to link file: `", filename, "`, with the main module");
+            }
         }
 
         /// <summary>
@@ -289,16 +302,15 @@ namespace Mug.Models.Generator
                     {
                         var parameters = ParameterTypesToLLVMTypes(prototype.ParameterList.Parameters);
                         // search for the function
-                        LLVMValueRef function = LLVM.GetNamedFunction(Module, prototype.Name);
+                        LLVMValueRef function = Module.GetNamedFunction(prototype.Name);
 
                         // if the function is not declared yet
-                        if (function.Pointer == IntPtr.Zero)
+                        if (function.Handle == IntPtr.Zero)
                             // declares it
-                            function = LLVM.AddFunction(Module, prototype.Name,
-                                    LLVMTypeRef.FunctionType(
+                            function = Module.AddFunction(prototype.Name,
+                                    LLVMTypeRef.CreateFunction(
                                         TypeToLLVMType(prototype.Type, prototype.Position),
-                                        parameters,
-                                        false));
+                                        parameters));
 
                         // adding a new symbol
                         DeclareSymbol(
@@ -318,14 +330,15 @@ namespace Mug.Models.Generator
                         {
                             var path = (Token)import.Member;
                             var filekind = Path.GetExtension(path.Value);
+                            var fullpath = Path.GetFullPath(path.Value, Path.GetDirectoryName(LocalPath));
                             
                             if (filekind == ".bc") // llvm bitcode file
                             {
-                                ReadModule(path.Value);
+                                ReadModule(fullpath);
                                 break;
                             }
                             else if (filekind == ".mug") // dirof(file.mug)
-                                unit = new CompilationUnit(Path.GetFullPath(path.Value, LocalPath));
+                                unit = new CompilationUnit(fullpath);
                             else
                                 CompilationErrors.Throw("Unrecognized file kind: `", path.Value, "`");
                         }

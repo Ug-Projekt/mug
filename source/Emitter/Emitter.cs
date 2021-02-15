@@ -1,22 +1,25 @@
-﻿using LLVMSharp;
+﻿using LLVMSharp.Interop;
 using Mug.Models.Parser.NodeKinds.Statements;
 using System;
 using System.Collections.Generic;
-using System.Runtime.CompilerServices;
-using static LLVMSharp.LLVM;
+using static LLVMSharp.Interop.LLVM;
 
 namespace Mug.Models.Generator.Emitter
 {
     public class MugEmitter
     {
-        public LLVMBuilderRef Builder { get; private set; } = CreateBuilder();
+        unsafe public LLVMBuilderRef Builder { get; private set; } = CreateBuilder();
 
         private readonly Stack<LLVMValueRef> _stack = new();
         private readonly Dictionary<string, LLVMValueRef> _memory = new();
         private readonly IRGenerator _generator;
 
-        public static readonly LLVMBool ConstLLVMFalse = new LLVMBool(0);
-        public static readonly LLVMBool ConstLLVMTrue = new LLVMBool(1);
+        // public static readonly LLVMBool ConstLLVMFalse = new LLVMBool(0);
+        // public static readonly LLVMBool ConstLLVMTrue = new LLVMBool(1);
+
+        // implicit function operators
+        public const string StringConcatenationIF = "string_concat(i8*, i8*)";
+        public const string StringToCharArrayIF = "string_to_chararray(i8*)";
 
         public MugEmitter(IRGenerator generator)
         {
@@ -40,7 +43,13 @@ namespace Mug.Models.Generator.Emitter
 
         public LLVMTypeRef PeekType()
         {
-            return Peek().TypeOf();
+            return Peek().TypeOf;
+        }
+
+        private void CallOperatorFunction(string name, Range position)
+        {
+            var function = _generator.GetSymbol(name, position);
+            Call(function, (int)function.ParamsCount);
         }
 
         public void Add(Range position)
@@ -48,36 +57,36 @@ namespace Mug.Models.Generator.Emitter
             var exprType = PeekType();
 
             if (_generator.MatchStringType(exprType))
-                Call(_generator.GetSymbol("string_concat", position), 2);
+                CallOperatorFunction(StringConcatenationIF, position);
             else
             {
                 var second = Pop();
 
-                Load(BuildAdd(Builder, Pop(), second, ""));
+                Load(Builder.BuildAdd(Pop(), second));
             }
         }
 
         public void Sub()
         {
             var second = Pop();
-            Load(BuildSub(Builder, Pop(), second, ""));
+            Load(Builder.BuildSub(Pop(), second));
         }
 
         public void Mul()
         {
             var second = Pop();
-            Load(BuildMul(Builder, Pop(), second, ""));
+            Load(Builder.BuildMul(Pop(), second));
         }
 
         public void Div()
         {
             var second = Pop();
-            Load(BuildSDiv(Builder, Pop(), second, ""));
+            Load(Builder.BuildSDiv(Pop(), second));
         }
 
         public void CastInt(LLVMTypeRef type)
         {
-            Load(BuildIntCast(Builder, Pop(), type, ""));
+            Load(Builder.BuildIntCast(Pop(), type));
         }
 
         private LLVMValueRef GetFromMemory(string name)
@@ -100,12 +109,12 @@ namespace Mug.Models.Generator.Emitter
             if (IsDeclared(name))
                 _generator.Error(position, "Variable already declared");
 
-            SetMemory(name, BuildAlloca(Builder, type, name));
+            SetMemory(name, Builder.BuildAlloca(type, name));
         }
 
         public void StoreVariable(string name)
         {
-            BuildStore(Builder, Pop(), GetFromMemory(name));
+            Builder.BuildStore(Pop(), GetFromMemory(name));
         }
 
         private bool IsDeclared(string name)
@@ -118,27 +127,27 @@ namespace Mug.Models.Generator.Emitter
             if (!IsDeclared(name))
                 _generator.Error(position, "Undeclared variable");
 
-            Load(BuildLoad(Builder, GetFromMemory(name), ""));
+            Load(Builder.BuildLoad(GetFromMemory(name)));
         }
 
         public void Ret()
         {
-            BuildRet(Builder, Pop());
+            Builder.BuildRet(Pop());
         }
 
         public void RetVoid()
         {
-            BuildRetVoid(Builder);
+            Builder.BuildRetVoid();
         }
 
         public void NegInt()
         {
-            Load(BuildNeg(Builder, Pop(), ""));
+            Load(Builder.BuildNeg(Pop()));
         }
 
         public void NegBool()
         {
-            Load(BuildNot(Builder, Pop(), ""));
+            Load(Builder.BuildNot(Pop()));
         }
 
         /// <summary>
@@ -151,9 +160,9 @@ namespace Mug.Models.Generator.Emitter
             for (int i = 0; i < paramCount; i++)
                 parameters[i] = Pop();
 
-            var result = BuildCall(Builder, function, parameters, "");
+            var result = Builder.BuildCall(function, parameters, "");
 
-            if (result.TypeOf().TypeKind != LLVMTypeKind.LLVMVoidTypeKind)
+            if (result.TypeOf.Kind != LLVMTypeKind.LLVMVoidTypeKind)
                 Load(result);
         }
     }
