@@ -59,7 +59,7 @@ namespace Mug.Compilation
                 if (File.Exists(output)) File.Delete(output);
 
                 // writes the module to a file
-                if (LLVM.WriteBitcodeToFile(module, output) != 0)
+                if (module.WriteBitcodeToFile(output) != 0)
                     CompilationErrors.Throw("Error writing to file");
 
                 // the program goes in this keeps the program waiting until it finds the file containing the compiled program
@@ -113,7 +113,7 @@ namespace Mug.Compilation
 
             // have Clang verify the module
             if (verifyLLVMModule)
-                if (LLVM.VerifyModule(IRGenerator.Module, LLVMVerifierFailureAction.LLVMReturnStatusAction, out string error))
+                if (IRGenerator.Module.TryVerify(LLVMVerifierFailureAction.LLVMReturnStatusAction, out string error))
                     CompilationErrors.Throw($"External compiler error: {error}");
         }
     }

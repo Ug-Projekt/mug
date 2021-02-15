@@ -8,20 +8,15 @@ try
 #if DEBUG
 
     var test = @"
-import ""C:\Users\carpal\Desktop\mug\source\bin\Release\netcoreapp3.1\include\mugstrings.bc"";
-
-func strlen(self: str): i32;
-func string_concat(left: str, right: str): str;
-
 func main() {
-  strlen(""ciao"");
+  var x: str;
 }
 ";
 
     var unit = new CompilationUnit("test", test);
     unit.Generate(true);
 
-    LLVM.DumpModule(unit.IRGenerator.Module);
+    unit.IRGenerator.Module.Dump();
 
 #else
 
