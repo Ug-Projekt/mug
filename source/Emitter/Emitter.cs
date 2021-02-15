@@ -1,93 +1,107 @@
-﻿using LLVMSharp;
+﻿using LLVMSharp.Interop;
 using Mug.Models.Parser.NodeKinds.Statements;
 using System;
 using System.Collections.Generic;
-using System.Runtime.CompilerServices;
-using static LLVMSharp.LLVM;
+using Mug.Compilation;
+using static LLVMSharp.Interop.LLVM;
 
 namespace Mug.Models.Generator.Emitter
 {
     public class MugEmitter
     {
-        public LLVMBuilderRef Builder { get; private set; } = CreateBuilder();
+        unsafe public LLVMBuilderRef Builder { get; private set; } = CreateBuilder();
 
-        private readonly Stack<LLVMValueRef> _stack = new();
-        private readonly Dictionary<string, LLVMValueRef> _memory = new();
+        unsafe private readonly Stack<LLVMOpaqueValue> _stack = new();
+        unsafe private readonly Dictionary<string, LLVMOpaqueValue> _memory = new();
         private readonly IRGenerator _generator;
 
-        public static readonly LLVMBool ConstLLVMFalse = new LLVMBool(0);
-        public static readonly LLVMBool ConstLLVMTrue = new LLVMBool(1);
+        // public static readonly LLVMBool ConstLLVMFalse = new LLVMBool(0);
+        // public static readonly LLVMBool ConstLLVMTrue = new LLVMBool(1);
+
+        // implicit function operators
+        public const string StringConcatenationIF = "string_concat(i8*, i8*)";
+        public const string StringToCharArrayIF = "string_to_chararray(i8*)";
 
         public MugEmitter(IRGenerator generator)
         {
             _generator = generator;
         }
 
-        public void Load(LLVMValueRef value)
+        unsafe public void Load(LLVMOpaqueValue* value)
         {
-            _stack.Push(value);
+            _stack.Push(*value);
         }
 
-        public LLVMValueRef Pop()
+        unsafe public LLVMValueRef Pop()
         {
-            return _stack.Pop();
+            var p = _stack.Pop();
+            return &p;
         }
 
-        public LLVMValueRef Peek()
+        unsafe public LLVMValueRef Peek()
         {
-            return _stack.Peek();
+            var p = _stack.Peek();
+            return &p;
         }
 
-        public LLVMTypeRef PeekType()
+        unsafe public LLVMTypeRef PeekType()
         {
-            return Peek().TypeOf();
+            return Peek().TypeOf;
         }
 
-        public void Add(Range position)
+        private void CallOperatorFunction(string name, Range position)
+        {
+            var function = _generator.GetSymbol(name, position);
+            Call(function, (int)function.CountParams());
+        }
+
+        unsafe public void Add(Range position)
         {
             var exprType = PeekType();
 
             if (_generator.MatchStringType(exprType))
-                Call(_generator.GetSymbol("string_concat", position), 2);
+                CallOperatorFunction(StringConcatenationIF, position);
             else
             {
                 var second = Pop();
 
-                Load(BuildAdd(Builder, Pop(), second, ""));
+                
+                Load(BuildAdd(Builder, Pop(), second, "".ToSbytePointer()));
             }
         }
 
-        public void Sub()
+        unsafe public void Sub()
         {
             var second = Pop();
-            Load(BuildSub(Builder, Pop(), second, ""));
+            Load(BuildSub(Builder, Pop(), second, "".ToSbytePointer()));
         }
 
-        public void Mul()
+        unsafe public void Mul()
         {
             var second = Pop();
-            Load(BuildMul(Builder, Pop(), second, ""));
+            Load(BuildMul(Builder, Pop(), second, "".ToSbytePointer()));
         }
 
-        public void Div()
+        unsafe public void Div()
         {
             var second = Pop();
-            Load(BuildSDiv(Builder, Pop(), second, ""));
+            Load(BuildSDiv(Builder, Pop(), second, "".ToSbytePointer()));
         }
 
-        public void CastInt(LLVMTypeRef type)
+        unsafe public void CastInt(LLVMTypeRef type)
         {
-            Load(BuildIntCast(Builder, Pop(), type, ""));
+            Load(BuildIntCast(Builder, Pop(), type, "".ToSbytePointer()));
         }
 
-        private LLVMValueRef GetFromMemory(string name)
+        unsafe private LLVMValueRef GetFromMemory(string name)
         {
-            return _memory[name];
+            var p = _memory[name];
+            return &p;
         }
 
-        private void SetMemory(string name, LLVMValueRef value)
+        unsafe private void SetMemory(string name, LLVMOpaqueValue* value)
         {
-            _memory.TryAdd(name, value);
+            _memory.TryAdd(name, *value);
         }
 
         public void DeclareVariable(VariableStatement variable)
@@ -95,15 +109,15 @@ namespace Mug.Models.Generator.Emitter
             DeclareVariable(variable.Name, _generator.TypeToLLVMType(variable.Type, variable.Position), variable.Position);
         }
 
-        public void DeclareVariable(string name, LLVMTypeRef type, Range position)
+        unsafe public void DeclareVariable(string name, LLVMTypeRef type, Range position)
         {
             if (IsDeclared(name))
                 _generator.Error(position, "Variable already declared");
 
-            SetMemory(name, BuildAlloca(Builder, type, name));
+            SetMemory(name, BuildAlloca(Builder, type, name.ToSbytePointer()));
         }
 
-        public void StoreVariable(string name)
+        unsafe public void StoreVariable(string name)
         {
             BuildStore(Builder, Pop(), GetFromMemory(name));
         }
@@ -113,48 +127,51 @@ namespace Mug.Models.Generator.Emitter
             return _memory.ContainsKey(name);
         }
 
-        public void LoadFromMemory(string name, Range position)
+        unsafe public void LoadFromMemory(string name, Range position)
         {
             if (!IsDeclared(name))
                 _generator.Error(position, "Undeclared variable");
 
-            Load(BuildLoad(Builder, GetFromMemory(name), ""));
+            Load(BuildLoad(Builder, GetFromMemory(name), "".ToSbytePointer()));
         }
 
-        public void Ret()
+        unsafe public void Ret()
         {
             BuildRet(Builder, Pop());
         }
 
-        public void RetVoid()
+        unsafe public void RetVoid()
         {
             BuildRetVoid(Builder);
         }
 
-        public void NegInt()
+        unsafe public void NegInt()
         {
-            Load(BuildNeg(Builder, Pop(), ""));
+            Load(BuildNeg(Builder, Pop(), "".ToSbytePointer()));
         }
 
-        public void NegBool()
+        unsafe public void NegBool()
         {
-            Load(BuildNot(Builder, Pop(), ""));
+            Load(BuildNot(Builder, Pop(), "".ToSbytePointer()));
         }
 
         /// <summary>
         /// buils an array of the parameters to pass and calls the function
         /// </summary>
-        public void Call(LLVMValueRef function, int paramCount)
+        unsafe public void Call(LLVMValueRef function, int paramCount)
         {
-            var parameters = new LLVMValueRef[paramCount];
+            var parameters = new LLVMOpaqueValue*[paramCount];
 
             for (int i = 0; i < paramCount; i++)
                 parameters[i] = Pop();
 
-            var result = BuildCall(Builder, function, parameters, "");
+            fixed (LLVMOpaqueValue** @params = parameters)
+            {
+                var result = BuildCall(Builder, function, @params, (uint)paramCount, "".ToSbytePointer());
 
-            if (result.TypeOf().TypeKind != LLVMTypeKind.LLVMVoidTypeKind)
-                Load(result);
+                if (GetTypeKind(TypeOf(result)) != LLVMTypeKind.LLVMVoidTypeKind)
+                    Load(result);
+            }
         }
     }
 }

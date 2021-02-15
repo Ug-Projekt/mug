@@ -1,8 +1,9 @@
-﻿using LLVMSharp;
+﻿using LLVMSharp.Interop;
 using Mug.Models.Generator;
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Text;
 
 namespace Mug.Compilation
 {

@@ -1,4 +1,4 @@
-﻿using LLVMSharp;
+﻿using LLVMSharp.Interop;
 using Mug.Compilation;
 using Mug.Models.Generator.Emitter;
 using Mug.Models.Lexer;
@@ -43,8 +43,8 @@ namespace Mug.Models.Generator
                 new[]
                 {
                     // see the gep instruction on the llvm documentation
-                    LLVM.ConstInt(LLVMTypeRef.Int32Type(), 0, MugEmitter.ConstLLVMFalse),
-                    LLVM.ConstInt(LLVMTypeRef.Int32Type(), 0, MugEmitter.ConstLLVMFalse)
+                    ,
+                    LLVM.ConstInt(LLVMTypeRef.Int32, (ulong)0, 0)
                 },
                 "");
 
@@ -89,6 +89,7 @@ namespace Mug.Models.Generator
             {
                 case OperatorKind.Sum:
                     ExpectOperatorImplementation(ft, kind, position,
+                        LLVMTypeRef.Int64Type(),
                         LLVMTypeRef.Int32Type(),
                         LLVMTypeRef.Int8Type(),
                         LLVMTypeRef.PointerType(LLVMTypeRef.Int8Type(), 0));
@@ -97,6 +98,7 @@ namespace Mug.Models.Generator
                     break;
                 case OperatorKind.Subtract:
                     ExpectOperatorImplementation(ft, kind, position,
+                        LLVMTypeRef.Int64Type(),
                         LLVMTypeRef.Int32Type(),
                         LLVMTypeRef.Int8Type());
 
@@ -111,6 +113,7 @@ namespace Mug.Models.Generator
                     break;
                 case OperatorKind.Divide:
                     ExpectOperatorImplementation(ft, kind, position,
+                        LLVMTypeRef.Int64Type(),
                         LLVMTypeRef.Int32Type(),
                         LLVMTypeRef.Int8Type());
 
@@ -118,6 +121,12 @@ namespace Mug.Models.Generator
                     break;
                 case OperatorKind.Range: break;
             }
+        }
+
+        private void CallOperatorFunction(string name, Range position)
+        {
+            var function = _generator.GetSymbol(name, position);
+            _emitter.Call(function, (int)function.CountParams());
         }
 
         /// <summary>
@@ -137,6 +146,8 @@ namespace Mug.Models.Generator
                     // string
                     if (Unsafe.Equals(expressionType.GetElementType(), LLVMTypeRef.Int8Type()))
                     {
+                        if (type.Kind == TypeKind.Array && ((MugType)type.BaseType).Kind == TypeKind.Char)
+                            CallOperatorFunction(MugEmitter.StringToCharArrayIF, position);
                     }
                     break;
                 default:

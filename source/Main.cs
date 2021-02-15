@@ -8,12 +8,13 @@ try
 #if DEBUG
 
     var test = @"
-import ""C:\Users\carpal\Desktop\mug\source\bin\Release\netcoreapp3.1\functions.bc"";
+import ""C:\Users\carpal\Desktop\mug\source\bin\Release\netcoreapp3.1\include\mugstrings.bc"";
 
-func add(a: i32, b: i32): i32;
+func strlen(self: str): i32;
+func string_concat(left: str, right: str): str;
 
 func main() {
-  add(1, 2);
+  strlen(""ciao"");
 }
 ";
 

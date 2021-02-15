@@ -84,6 +84,7 @@ namespace Mug.Models.Generator
             return type.Kind switch
             {
                 TypeKind.Int32 => LLVMTypeRef.Int32Type(),
+                TypeKind.Int64 => LLVMTypeRef.Int64Type(),
                 TypeKind.Bool => LLVMTypeRef.Int1Type(),
                 TypeKind.Void => LLVMTypeRef.VoidType(),
                 TypeKind.Char => LLVMTypeRef.Int8Type(),
@@ -169,7 +170,9 @@ namespace Mug.Models.Generator
 
         public void ExpectIntType(LLVMTypeRef type, Range position)
         {
-            ExpectSameTypes(type, position, "Expected `Int8`, `Int32`, `Int64` type", LLVMTypeRef.Int32Type());
+            ExpectSameTypes(type, position, "Expected `Int32`, `Int64` type",
+                LLVMTypeRef.Int32Type(),
+                LLVMTypeRef.Int64Type());
         }
 
         /// <summary>
@@ -254,7 +257,7 @@ namespace Mug.Models.Generator
                 CompilationErrors.Throw("Unable to open bitcode file: `", filename, "`");
 
             if (LLVM.ParseBitcode(memoryBuffer, out var module, out message))
-                CompilationErrors.Throw(message);
+                CompilationErrors.Throw("Unable to parse bitcode file: ", message);
 
             LLVM.LinkModules2(Module, module);
         }
@@ -318,14 +321,15 @@ namespace Mug.Models.Generator
                         {
                             var path = (Token)import.Member;
                             var filekind = Path.GetExtension(path.Value);
+                            var fullpath = Path.GetFullPath(path.Value, Path.GetDirectoryName(LocalPath));
                             
                             if (filekind == ".bc") // llvm bitcode file
                             {
-                                ReadModule(path.Value);
+                                ReadModule(fullpath);
                                 break;
                             }
                             else if (filekind == ".mug") // dirof(file.mug)
-                                unit = new CompilationUnit(Path.GetFullPath(path.Value, LocalPath));
+                                unit = new CompilationUnit(fullpath);
                             else
                                 CompilationErrors.Throw("Unrecognized file kind: `", path.Value, "`");
                         }
