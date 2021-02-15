@@ -96,6 +96,8 @@ namespace Mug.Compilation
 
                 // the program will wait until clang works
                 clang.WaitForExit();
+                if (clang.ExitCode != 0)
+                    CompilationErrors.Throw("External compiler: ", clang.StandardOutput.ReadToEnd());
             }
         }
 

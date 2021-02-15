@@ -8,20 +8,12 @@ try
 #if DEBUG
 
     var test = @"
+import ""C:\Users\carpal\Desktop\mug\source\bin\Release\netcoreapp3.1\functions.bc"";
 
-func puts(text: str);
-
-func printf(text: str);
-
-func gets(): str;
-
-func readln(text: str): str {
-   printf(text);
-   return gets();
-}
+func add(a: i32, b: i32): i32;
 
 func main() {
-   var name = gets();
+  add(1, 2);
 }
 ";
 

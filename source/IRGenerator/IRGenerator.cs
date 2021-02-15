@@ -18,8 +18,8 @@ namespace Mug.Models.Generator
     {
         public readonly MugParser Parser;
         public LLVMModuleRef Module { get; set; }
-        
-        private readonly Dictionary<string, LLVMValueRef> Symbols = new();
+
+        private Dictionary<string, LLVMValueRef> Symbols { get; set; } = new();
 
         private const string EntryPointName = "main";
 
@@ -232,7 +232,7 @@ namespace Mug.Models.Generator
         /// check if an id is equal to the id of the entry point and if the parameters are 0,
         /// to allow overload of the main function
         /// </summary>
-        private bool IsEntryPoint(string name, int paramsLen)
+        public bool IsEntryPoint(string name, int paramsLen)
         {
             return
                 name == EntryPointName && paramsLen == 0;
@@ -248,10 +248,15 @@ namespace Mug.Models.Generator
                 IsEntryPoint(name, types.Length) ? name : $"{name}({string.Join(", ", types)})";
         }
 
-        private void InstallSymbols(Dictionary<string, LLVMValueRef> symbols)
+        private void ReadModule(string filename)
         {
-            foreach (var symbol in symbols)
-                Symbols.Add(symbol.Key, symbol.Value);
+            if (LLVM.CreateMemoryBufferWithContentsOfFile(filename, out var memoryBuffer, out var message))
+                CompilationErrors.Throw("Unable to open bitcode file: `", filename, "`");
+
+            if (LLVM.ParseBitcode(memoryBuffer, out var module, out message))
+                CompilationErrors.Throw(message);
+
+            LLVM.LinkModules2(Module, module);
         }
 
         /// <summary>
@@ -264,11 +269,18 @@ namespace Mug.Models.Generator
             {
                 case FunctionNode function:
                     if (declareOnly) // declares the prototype of the function
+                    {
                         InstallFunction(function.Name, function.Type, function.Position, function.ParameterList);
+
+                        // allowing to call entrypoint
+                        if (function.Name == EntryPointName)
+                            DeclareSymbol(EntryPointName + "()", Symbols[EntryPointName], function.Position);
+                    }
                     else // defines the function body
                     {
                         // change the name of the function in the corresponding with the types of parameters, to allow overload of the methods
                         function.Name = BuildFunctionName(function.Name, ParameterTypesToLLVMTypes(function.ParameterList.Parameters));
+
                         DefineFunction(function);
                     }
                     break;
@@ -276,31 +288,53 @@ namespace Mug.Models.Generator
                     if (declareOnly)
                     {
                         var parameters = ParameterTypesToLLVMTypes(prototype.ParameterList.Parameters);
-                        DeclareSymbol(BuildFunctionName(prototype.Name, parameters),
-                            LLVM.AddFunction(Module, prototype.Name,
-                                LLVMTypeRef.FunctionType(
-                                    TypeToLLVMType(prototype.Type, prototype.Position),
-                                    parameters,
-                                    false)),
+                        // search for the function
+                        LLVMValueRef function = LLVM.GetNamedFunction(Module, prototype.Name);
+
+                        // if the function is not declared yet
+                        if (function.Pointer == IntPtr.Zero)
+                            // declares it
+                            function = LLVM.AddFunction(Module, prototype.Name,
+                                    LLVMTypeRef.FunctionType(
+                                        TypeToLLVMType(prototype.Type, prototype.Position),
+                                        parameters,
+                                        false));
+
+                        // adding a new symbol
+                        DeclareSymbol(
+                            BuildFunctionName(prototype.Name, parameters),
+                            function,
                             prototype.Position);
                     }
                     break;
                 case ImportDirective import:
                     if (declareOnly)
                     {
-                        CompilationUnit unit;
+                        CompilationUnit unit = null;
 
-                        if (import.Mode == ImportMode.FromPackages)
-                            // dirof(mug.exe)/include/
+                        if (import.Mode == ImportMode.FromPackages) // dirof(mug.exe)/include/
                             unit = new CompilationUnit("include/" + ((Token)import.Member).Value + ".mug");
                         else
-                            // dirof(file.mug)
-                            unit = new CompilationUnit(Path.GetFullPath(((Token)import.Member).Value, LocalPath));
+                        {
+                            var path = (Token)import.Member;
+                            var filekind = Path.GetExtension(path.Value);
+                            
+                            if (filekind == ".bc") // llvm bitcode file
+                            {
+                                ReadModule(path.Value);
+                                break;
+                            }
+                            else if (filekind == ".mug") // dirof(file.mug)
+                                unit = new CompilationUnit(Path.GetFullPath(path.Value, LocalPath));
+                            else
+                                CompilationErrors.Throw("Unrecognized file kind: `", path.Value, "`");
+                        }
 
+                        // pass the current module to generate the llvm code together by the irgenerator
                         unit.IRGenerator.Module = Module;
+                        // pass the current symbols to declare those in the module here
+                        unit.IRGenerator.Symbols = Symbols;
                         unit.Generate();
-
-                        InstallSymbols(unit.IRGenerator.Symbols);
                     }
                     break;
                 default:

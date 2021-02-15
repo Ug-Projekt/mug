@@ -193,7 +193,7 @@ namespace Mug.Models.Generator
              * of the function id and in brackets the list of parameter types separated by ', '
              */
             var function = _generator.GetSymbol(BuildName(EvaluateInstanceName(c.Name), parameters), c.Position);
-
+            
             // function type: <ret_type> <param_types>
             var functionType = function.TypeOf().GetElementType();
 
@@ -282,6 +282,17 @@ namespace Mug.Models.Generator
             }
         }
 
+        private INode GetDefaultValueOf(MugType type)
+        {
+            return type.Kind switch
+            {
+                TypeKind.Char or TypeKind.Int8 or TypeKind.Int32 or TypeKind.Int64 or
+                TypeKind.UInt8 or TypeKind.UInt32 or TypeKind.UInt64 => new Token(TokenKind.ConstantDigit, "0", new()),
+                TypeKind.Bool => new Token(TokenKind.ConstantBoolean, "false", new()),
+                TypeKind.String => new Token(TokenKind.ConstantString, "", new()),
+            };
+        }
+
         /// <summary>
         /// 
         /// </summary>
@@ -345,16 +356,6 @@ namespace Mug.Models.Generator
                     Error(statement.Position, "Statement not supported yet");
                     break;
             }
-        }
-
-        private INode GetDefaultValueOf(MugType type)
-        {
-            return type.Kind switch
-            {
-                TypeKind.Char or TypeKind.Int8 or TypeKind.Int32 or TypeKind.Int64 or
-                TypeKind.UInt8 or TypeKind.UInt32 or TypeKind.UInt64 => new Token(TokenKind.ConstantDigit, "0", new()),
-                TypeKind.String => new Token(TokenKind.ConstantString, "", new()),
-            };
         }
 
         /// <summary>
