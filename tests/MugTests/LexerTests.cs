@@ -7,6 +7,11 @@ namespace MugTests
 {
     public class LexerTests
     {
+        /*
+         * TODO:
+         *  - add tests for chars
+         */
+
         // Well constructed code strings
         private const string OPERATION01 = "1 + 2";
         private const string VARIABLE01 = "var x = 0;";
@@ -17,7 +22,7 @@ namespace MugTests
 
         private const string SINGLE_TOKENS = "( ) [ ] { } < > = ! & | + - * / , ; : . @ ?";
         private const string DOUBLE_TOKENS = "== != ++ += -- -= *= /= <= >= ..";
-        private const string FULL_TOKENS = "return continue break while pub use import new for type as in to if elif else func var const str chr bit i8 i32 i64 u8 u32 u64 unknown";
+        private const string FULL_TOKENS = "return continue break while pub use import new for type as in to if elif else func var const str chr u1 i8 i32 i64 u8 u32 u64 unknown";
         private const string RANDOM_TOKENS = "return == ( ) += continue pub ! *= ..";
 
 
@@ -28,6 +33,15 @@ namespace MugTests
 
         private const string STRINGS02 = "\"This is a non-closed string";
         private const string STRINGS03 = "\"This is a \" nested \"string\"";
+        private const string STRINGS04 = "\"\\n\\t\\r\\\"\"";
+        private const string STRINGS05 = "u1\"\\\\ \"t token";
+        private const string STRINGS06 = "\"";
+
+        private const string CHARS01 = "'c'";
+        private const string CHARS02 = "'c";
+        private const string CHARS03 = "'cc'";
+        private const string CHARS04 = "'\\\\'";
+        private const string CHARS05 = "'\\\\\\\\'";
 
         private const string VARIABLE03 = ";50 = i32 :number var";
         private const string VARIABLE04 = "varnumber";
@@ -36,12 +50,6 @@ namespace MugTests
         private const string COMMENTS03 = "#[ This is a non closed multi-line comment";
         private const string COMMENTS04 = "#[ This is a nested ]# multi-line comment ]#";
         private const string COMMENTS05 = "#[ This is a #[ nested ]# multi-line comment ]#";
-
-        [SetUp]
-        public void Setup()
-        {
-
-        }
 
         [Test]
         public void GetLength_EmptyCollection_ReturnZero()
@@ -310,7 +318,7 @@ namespace MugTests
 
             List<Token> expected = new List<Token>
             {
-                new Token(TokenKind.ConstantString, "\"This is a string\"", 0..18),
+                new Token(TokenKind.ConstantString, "This is a string", 0..18),
                 new Token(TokenKind.EOF, "<EOF>", 18..19)
             };
 
@@ -336,13 +344,58 @@ namespace MugTests
 
             List<Token> expected = new List<Token>
             {
-                new Token(TokenKind.ConstantString, "\"This is a \"", 0..12),
+                new Token(TokenKind.ConstantString, "This is a ", 0..12),
                 new Token(TokenKind.Identifier, "nested", 13..19),
-                new Token(TokenKind.ConstantString, "\"string\"", 20..28),
+                new Token(TokenKind.ConstantString, "string", 20..28),
                 new Token(TokenKind.EOF, "<EOF>", 28..29)
             };
 
             AreListEqual(expected, tokens);
+        }
+
+        [Test]
+        public void TestStrings04_EscapedChars()
+        {
+            MugLexer lexer = new MugLexer("test", STRINGS04);
+            lexer.Tokenize();
+
+            List<Token> tokens = lexer.TokenCollection;
+
+            List<Token> expected = new List<Token>
+            {
+                new Token(TokenKind.ConstantString, "\n\t\r\"", 0..10),
+                new Token(TokenKind.EOF, "<EOF>", 10..11)
+            };
+
+            AreListEqual(expected, tokens);
+        }
+
+        [Test]
+        public void TestStrings05_AdvancedEscapedChars()
+        {
+            MugLexer lexer = new MugLexer("test", STRINGS05);
+            lexer.Tokenize();
+            List<Token> tokens = lexer.TokenCollection;
+
+            List<Token> expected = new List<Token>
+            {
+                new Token(TokenKind.KeyTbool, "u1", 0..2),
+                new Token(TokenKind.ConstantString, "\\ ", 2..7),
+                new Token(TokenKind.Identifier, "t", 7..8),
+                new Token(TokenKind.Identifier, "token", 9..14),
+                new Token(TokenKind.EOF, "<EOF>", 14..15)
+            };
+
+            AreListEqual(expected, tokens);
+        }
+
+        [Test]
+        public void TestStrings06_ExceptionCaught()
+        {
+            MugLexer lexer = new MugLexer("test", STRINGS06);
+            var ex = Assert.Throws<Mug.Compilation.CompilationException>(() => lexer.Tokenize());
+
+            Assert.AreEqual("In the current context, this is not a valid char", ex.Message);
         }
 
         [Test]
@@ -441,15 +494,15 @@ namespace MugTests
                 new Token(TokenKind.KeyConst, "const", 87..92),
                 new Token(TokenKind.KeyTstr, "str", 93..96),
                 new Token(TokenKind.KeyTchr, "chr", 97..100),
-                new Token(TokenKind.KeyTbool, "bit", 101..104),
-                new Token(TokenKind.KeyTi8, "i8", 105..107),
-                new Token(TokenKind.KeyTi32, "i32", 108..111),
-                new Token(TokenKind.KeyTi64, "i64", 112..115),
-                new Token(TokenKind.KeyTu8, "u8", 116..118),
-                new Token(TokenKind.KeyTu32, "u32", 119..122),
-                new Token(TokenKind.KeyTu64, "u64", 123..126),
-                new Token(TokenKind.KeyTunknown, "unknown", 127..134),
-                new Token(TokenKind.EOF, "<EOF>", 134..135)
+                new Token(TokenKind.KeyTbool, "u1", 101..103),
+                new Token(TokenKind.KeyTi8, "i8", 104..106),
+                new Token(TokenKind.KeyTi32, "i32", 107..110),
+                new Token(TokenKind.KeyTi64, "i64", 111..114),
+                new Token(TokenKind.KeyTu8, "u8", 115..117),
+                new Token(TokenKind.KeyTu32, "u32", 118..121),
+                new Token(TokenKind.KeyTu64, "u64", 122..125),
+                new Token(TokenKind.KeyTunknown, "unknown", 126..133),
+                new Token(TokenKind.EOF, "<EOF>", 133..134)
             };
 
             AreListEqual(expected, tokens);
@@ -460,6 +513,7 @@ namespace MugTests
         {
             MugLexer lexer = new MugLexer("test", RANDOM_TOKENS);
             lexer.Tokenize();
+
             List<Token> tokens = lexer.TokenCollection;
 
             List<Token> expected = new List<Token>
@@ -478,6 +532,67 @@ namespace MugTests
             };
 
             AreListEqual(expected, tokens);
+        }
+
+        [Test]
+        public void TestChars01_OneChar()
+        {
+            MugLexer lexer = new MugLexer("test", CHARS01);
+            lexer.Tokenize();
+
+            List<Token> tokens = lexer.TokenCollection;
+
+            List<Token> expected = new List<Token>
+            {
+                new Token(TokenKind.ConstantChar, "c", 0..3),
+                new Token(TokenKind.EOF, "<EOF>", 3..4)
+            };
+
+            AreListEqual(expected, tokens);
+        }
+
+        [Test]
+        public void TestChars02_OneChar()
+        {
+            MugLexer lexer = new MugLexer("test", CHARS02);
+            var ex = Assert.Throws<Mug.Compilation.CompilationException>(() => lexer.Tokenize());
+
+            Assert.AreEqual("Char has not been correctly enclosed", ex.Message);
+        }
+
+        [Test]
+        public void TestChars03_TooManyChars()
+        {
+            MugLexer lexer = new MugLexer("test", CHARS03);
+            var ex = Assert.Throws<Mug.Compilation.CompilationException>(() => lexer.Tokenize());
+
+            Assert.AreEqual("Too many characters in const char", ex.Message);
+        }
+
+        [Test]
+        public void TestChars04_OneEscapedChar()
+        {
+            MugLexer lexer = new MugLexer("test", CHARS04);
+            lexer.Tokenize();
+
+            List<Token> tokens = lexer.TokenCollection;
+
+            List<Token> expected = new List<Token>
+            {
+                new Token(TokenKind.ConstantChar, "\\", 0..4),
+                new Token(TokenKind.EOF, "<EOF>", 4..5)
+            };
+
+            AreListEqual(expected, tokens);
+        }
+
+        [Test]
+        public void TestChars05_TooManyEscapedChars()
+        {
+            MugLexer lexer = new MugLexer("test", CHARS05);
+            var ex = Assert.Throws<Mug.Compilation.CompilationException>(() => lexer.Tokenize());
+
+            Assert.AreEqual("Too many characters in const char", ex.Message);
         }
     }
 }
