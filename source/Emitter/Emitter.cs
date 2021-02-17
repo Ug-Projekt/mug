@@ -16,7 +16,7 @@ namespace Mug.Models.Generator.Emitter
 
         // implicit function operators
         public const string StringConcatenationIF = "+(i8*, i8*)";
-        public const string StringToCharArrayIF = "as chr[](i8*)";
+        public const string StringToCharArrayIF = "as [chr](i8*)";
 
         public MugEmitter(IRGenerator generator)
         {

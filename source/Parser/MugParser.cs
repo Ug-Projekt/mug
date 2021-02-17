@@ -735,20 +735,42 @@ namespace Mug.Models.Parser
             return true;
         }
 
-        private bool ConditionDefinition(out INode statement)
+        private bool ConditionDefinition(out INode statement, bool isFirstCondition = true)
         {
             statement = null;
 
             if (!MatchAdvance(TokenKind.KeyIf, out Token key) &&
                 !MatchAdvance(TokenKind.KeyElif, out key) &&
+                !MatchAdvance(TokenKind.KeyElse, out key) &&
                 !MatchAdvance(TokenKind.KeyWhile, out key))
                 return false;
 
-            var expression = ExpectExpression(true, TokenKind.OpenBrace);
-            _currentIndex--;
+            if (isFirstCondition && key.Kind != TokenKind.KeyIf && key.Kind != TokenKind.KeyWhile)
+            {
+                _currentIndex--;
+                ParseError("The 'elif' and 'else' conditions shall be referenced to an 'if' block");
+            }
+
+            INode expression = null;
+            if (key.Kind != TokenKind.KeyElse)
+            {
+                expression = ExpectExpression(true, TokenKind.OpenBrace);
+                _currentIndex--;
+            }
 
             var body = ExpectBlock();
-            statement = new ConditionalStatement() { Position = key.Position, Expression = expression, Kind = key.Kind, Body = body };
+            INode elif = null;
+            if (key.Kind != TokenKind.KeyWhile && (Match(TokenKind.KeyElif) || Match(TokenKind.KeyElse)))
+            {
+                /*if (!isFirstCondition)
+                {
+                    ConditionDefinition(out statement, false);
+                    return true;
+                }*/
+                
+                ConditionDefinition(out elif, false);
+            }
+            statement = new ConditionalStatement() { Position = key.Position, Expression = expression, Kind = key.Kind, Body = body, ElseNode = elif };
 
             return true;
         }
@@ -784,21 +806,6 @@ namespace Mug.Models.Parser
             return true;
         }
 
-        private bool OtherwiseConditionDefinition(out INode statement)
-        {
-            statement = null;
-
-            if (!MatchAdvance(TokenKind.KeyElse))
-                return false;
-
-            var pos = Back.Position;
-            var body = ExpectBlock();
-
-            statement = new ConditionalStatement() { Position = pos, Kind = TokenKind.KeyElse, Body = body };
-
-            return true;
-        }
-
         private bool LoopManagerDefintion(out INode statement)
         {
             statement = null;
@@ -821,11 +828,10 @@ namespace Mug.Models.Parser
                     if (!ConstantDefinition(out statement)) // const x = value;
                         if (!ConditionDefinition(out statement)) // if condition {}, elif
                             if (!ForLoopDefinition(out statement)) // for x: type to, in value {}
-                                if (!OtherwiseConditionDefinition(out statement)) // else {}
-                                    if (!LoopManagerDefintion(out statement)) // continue, break
-                                        if (!MatchCallStatement(out statement)) // f();
-                                            if (!ValueAssignment(out statement)) // x = value;
-                                                ParseError("In the current local context, this is not a valid imperative statement;");
+                                if (!LoopManagerDefintion(out statement)) // continue, break
+                                    if (!MatchCallStatement(out statement)) // f();
+                                        if (!ValueAssignment(out statement)) // x = value;
+                                            ParseError("In the current local context, this is not a valid imperative statement;");
 
             return statement;
         }

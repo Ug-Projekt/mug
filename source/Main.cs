@@ -1,6 +1,7 @@
 ﻿using LLVMSharp;
 using Mug.Compilation;
 using System;
+using System.IO;
 
 try
 {
@@ -8,12 +9,13 @@ try
 #if DEBUG
 
     var test = @"
-func `+`(left: str, right: str): str {
-  return ""ciao"";
-}
 
 func main() {
-  var _ = ""1""+""2"";
+  while 90 == 90 {
+    print(""x"");
+  } if 9 {
+    print(""y"");
+  }
 }
 ";
 
