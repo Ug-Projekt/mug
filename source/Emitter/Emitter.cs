@@ -14,12 +14,9 @@ namespace Mug.Models.Generator.Emitter
         private readonly Dictionary<string, LLVMValueRef> _memory = new();
         private readonly IRGenerator _generator;
 
-        // public static readonly LLVMBool ConstLLVMFalse = new LLVMBool(0);
-        // public static readonly LLVMBool ConstLLVMTrue = new LLVMBool(1);
-
         // implicit function operators
-        public const string StringConcatenationIF = "string_concat(i8*, i8*)";
-        public const string StringToCharArrayIF = "string_to_chararray(i8*)";
+        public const string StringConcatenationIF = "+(i8*, i8*)";
+        public const string StringToCharArrayIF = "as chr[](i8*)";
 
         public MugEmitter(IRGenerator generator)
         {
@@ -46,24 +43,11 @@ namespace Mug.Models.Generator.Emitter
             return Peek().TypeOf;
         }
 
-        private void CallOperatorFunction(string name, Range position)
+        public void Add()
         {
-            var function = _generator.GetSymbol(name, position);
-            Call(function, (int)function.ParamsCount);
-        }
+            var second = Pop();
 
-        public void Add(Range position)
-        {
-            var exprType = PeekType();
-
-            if (_generator.MatchStringType(exprType))
-                CallOperatorFunction(StringConcatenationIF, position);
-            else
-            {
-                var second = Pop();
-
-                Load(Builder.BuildAdd(Pop(), second));
-            }
+            Load(Builder.BuildAdd(Pop(), second));
         }
 
         public void Sub()
@@ -164,6 +148,11 @@ namespace Mug.Models.Generator.Emitter
 
             if (result.TypeOf.Kind != LLVMTypeKind.LLVMVoidTypeKind)
                 Load(result);
+        }
+
+        public void ConcatString(Range position)
+        {
+            Call(_generator.GetSymbol(StringConcatenationIF, position), 2);
         }
     }
 }

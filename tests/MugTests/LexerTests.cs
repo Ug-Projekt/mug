@@ -43,6 +43,10 @@ namespace MugTests
         private const string CHARS04 = "'\\\\'";
         private const string CHARS05 = "'\\\\\\\\'";
 
+        private const string BACKTICKS01 = "`*`";
+        private const string BACKTICKS02 = "`/";
+        private const string BACKTICKS03 = "``";
+
         private const string VARIABLE03 = ";50 = i32 :number var";
         private const string VARIABLE04 = "varnumber";
         private const string VARIABLE05 = "i33";
@@ -593,6 +597,41 @@ namespace MugTests
             var ex = Assert.Throws<Mug.Compilation.CompilationException>(() => lexer.Tokenize());
 
             Assert.AreEqual("Too many characters in const char", ex.Message);
+        }
+
+        [Test]
+        public void TestBackticks01_OneSymbol()
+        {
+            MugLexer lexer = new MugLexer("test", BACKTICKS01);
+            lexer.Tokenize();
+
+            List<Token> tokens = lexer.TokenCollection;
+
+            List<Token> expected = new List<Token>
+            {
+                new Token(TokenKind.Identifier, "*", 0..3),
+                new Token(TokenKind.EOF, "<EOF>", 3..4)
+            };
+
+            AreListEqual(expected, tokens);
+        }
+
+        [Test]
+        public void TestBackticks02_OneChar()
+        {
+            MugLexer lexer = new MugLexer("test", BACKTICKS02);
+            var ex = Assert.Throws<Mug.Compilation.CompilationException>(() => lexer.Tokenize());
+
+            Assert.AreEqual("Backtick sequence has not been correctly enclosed", ex.Message);
+        }
+
+        [Test]
+        public void TestBackticks03_Empty()
+        {
+            MugLexer lexer = new MugLexer("test", BACKTICKS03);
+            var ex = Assert.Throws<Mug.Compilation.CompilationException>(() => lexer.Tokenize());
+
+            Assert.AreEqual("Not enough characters in backtick sequence", ex.Message);
         }
     }
 }

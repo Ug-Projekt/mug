@@ -333,7 +333,7 @@ namespace Mug.Models.Lexer
                 this.Throw(start..end, "Not enough characters in const char");
 
             //else add closing simbol
-            TokenCollection.Add(new(TokenKind.ConstantChar, _currentSymbol.ToString(), start..(end + 1)));
+            TokenCollection.Add(new(TokenKind.ConstantChar, _currentSymbol.ToString(), new(start, end + 1)));
             _currentSymbol.Clear();
         }
 
@@ -344,6 +344,7 @@ namespace Mug.Models.Lexer
                 'n' => '\n',
                 't' => '\t',
                 'r' => '\r',
+                '0' => '\0',
                 '\'' or '"' or '\\' => escapedchar,
                 _ => InExpressionError<char>("Unable to recognize escaped char")
             };
@@ -374,7 +375,32 @@ namespace Mug.Models.Lexer
                 this.Throw(_currentIndex - 1, $"String has not been correctly enclosed");
 
             //else add closing simbol
-            TokenCollection.Add(new(TokenKind.ConstantString, _currentSymbol.ToString(), start..(end+1)));
+            TokenCollection.Add(new(TokenKind.ConstantString, _currentSymbol.ToString(), new(start, end+1)));
+            _currentSymbol.Clear();
+        }
+
+        /// <summary>
+        /// collects a symbol incapsulated in a backtick string and add it to the token stream as identifier
+        /// </summary>
+        private void CollectBacktick()
+        {
+            var start = _currentIndex++;
+
+            //consume string until EOF or closed ` is found
+            while (_currentIndex < Source.Length && Source[_currentIndex] != '`')
+                _currentSymbol.Append(Source[_currentIndex++]);
+
+            var end = _currentIndex;
+
+            //if you found an EOF, throw
+            if (_currentIndex == Source.Length && Source[_currentIndex - 1] != '`')
+                this.Throw(_currentIndex - 1, $"Backtick sequence has not been correctly enclosed");
+
+            if (_currentSymbol.Length < 1)
+                this.Throw(start..end, "Not enough characters in backtick sequence");
+
+            //else add closing simbol
+            TokenCollection.Add(new(TokenKind.Identifier, _currentSymbol.ToString(), new (start, end+1)));
             _currentSymbol.Clear();
         }
 
@@ -422,6 +448,7 @@ namespace Mug.Models.Lexer
             else if (doubleToken == "..") AddDouble(TokenKind.RangeDots, doubleToken);
             else if (current == '"') CollectString();
             else if (current == '\'') CollectChar();
+            else if (current == '`') CollectBacktick();
             else
                 AddSingle(GetSingle(current), current.ToString());
         }

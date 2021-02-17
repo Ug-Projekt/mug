@@ -103,7 +103,10 @@ namespace Mug.Models.Generator
                         LLVMTypeRef.Int8,
                         LLVMTypeRef.CreatePointer(LLVMTypeRef.Int8, 0));
 
-                    _emitter.Add(position);
+                    if (_generator.MatchStringType(ft))
+                        _emitter.ConcatString(position);
+                    else
+                        _emitter.Add();
                     break;
                 case OperatorKind.Subtract:
                     ExpectOperatorImplementation(ft, kind, position,

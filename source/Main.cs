@@ -8,8 +8,12 @@ try
 #if DEBUG
 
     var test = @"
-func main(): i32 {
-  return c(1);
+func `+`(left: str, right: str): str {
+  return ""ciao"";
+}
+
+func main() {
+  var _ = ""1""+""2"";
 }
 ";
 
