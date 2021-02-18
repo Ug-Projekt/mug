@@ -123,16 +123,17 @@ namespace Mug.Models.Parser
             MugType find;
             find = ExpectBaseType();
 
-            if (MatchAdvance(TokenKind.OpenBracket))
+            // removed temporanely generics
+            /*if (MatchAdvance(TokenKind.OpenBracket))
             {
                 if (expectKeyTypeInGeneric)
                     Expect("", TokenKind.KeyType);
-
+ 
                 var type = ExpectType();
-                find = new MugType(TypeKind.GenericStruct, type);
+                find = new MugType(TypeKind.GenericStruct, new GenericType(find, type));
 
                 Expect("Generic type specification must be wrote between `[]`;", TokenKind.CloseBracket);
-            }
+            }*/
 
             return find;
         }
@@ -199,7 +200,7 @@ namespace Mug.Models.Parser
             var match = MatchPrimitiveType(out var type) || MatchAdvance(TokenKind.Identifier, out type);
 
             if (!match)
-                ParseError("Expected a built in type, but found `" + Current.Kind.ToString() + "`;");
+                ParseError("Expected a type, but found `" + Current.Kind.ToString() + "`;");
 
             return MugType.FromToken(type);
         }
@@ -212,7 +213,6 @@ namespace Mug.Models.Parser
                 MatchAdvance(TokenKind.KeyTbool, out type) ||
                 MatchAdvance(TokenKind.KeyTchr, out type) ||
                 MatchAdvance(TokenKind.KeyTi64, out type) ||
-                MatchAdvance(TokenKind.KeyTi8, out type) ||
                 MatchAdvance(TokenKind.KeyTu32, out type) ||
                 MatchAdvance(TokenKind.KeyTu8, out type) ||
                 MatchAdvance(TokenKind.KeyTu64, out type) ||

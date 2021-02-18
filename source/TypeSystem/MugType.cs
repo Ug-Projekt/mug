@@ -1,5 +1,6 @@
 ﻿using Mug.Compilation;
 using Mug.Models.Lexer;
+using System;
 
 namespace Mug.TypeSystem
 {
@@ -27,7 +28,6 @@ namespace Mug.TypeSystem
                 TokenKind.KeyTstr => new MugType(TypeKind.String),
                 TokenKind.KeyTchr => new MugType(TypeKind.Char),
                 TokenKind.KeyTbool => new MugType(TypeKind.Bool),
-                TokenKind.KeyTi8 => new MugType(TypeKind.Int8),
                 TokenKind.KeyTi32 => new MugType(TypeKind.Int32),
                 TokenKind.KeyTi64 => new MugType(TypeKind.Int64),
                 TokenKind.KeyTu8 => new MugType(TypeKind.UInt8),
@@ -59,6 +59,39 @@ namespace Mug.TypeSystem
         public bool IsAutomatic()
         {
             return Kind == TypeKind.Auto;
+        }
+
+        /// <summary>
+        /// returns a string reppresentation of the type
+        /// </summary>
+        public override string ToString()
+        {
+            return Kind switch
+            {
+                TypeKind.Auto => "auto",
+                TypeKind.Array => $"[{BaseType}]",
+                TypeKind.Bool => "u1",
+                TypeKind.Char => "chr",
+                TypeKind.Struct => BaseType.ToString(),
+                TypeKind.Int32 => "i32",
+                TypeKind.Int64 => "i64",
+                TypeKind.UInt8 => "u8",
+                TypeKind.UInt32 => "u32",
+                TypeKind.UInt64 => "u64",
+                TypeKind.Pointer => $"ptr {BaseType}",
+                TypeKind.String => "str",
+                TypeKind.Void => "?",
+            };
+        }
+
+        public bool IsInt()
+        {
+            return
+                Kind == TypeKind.Int32  ||
+                Kind == TypeKind.Int64  ||
+                Kind == TypeKind.UInt8  ||
+                Kind == TypeKind.UInt32 ||
+                Kind == TypeKind.UInt64;
         }
     }
 }

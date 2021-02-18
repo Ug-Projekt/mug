@@ -9,13 +9,12 @@ try
 #if DEBUG
 
     var test = @"
+func `+`(left: chr, right: chr): chr {
+  return ((left as i32) + (right as i32)) as chr;
+}
 
 func main() {
-  while 90 == 90 {
-    print(""x"");
-  } if 9 {
-    print(""y"");
-  }
+  var x = 'a'+'b';
 }
 ";
 

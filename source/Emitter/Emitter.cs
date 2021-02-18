@@ -14,10 +14,6 @@ namespace Mug.Models.Generator.Emitter
         private readonly Dictionary<string, LLVMValueRef> _memory = new();
         private readonly IRGenerator _generator;
 
-        // implicit function operators
-        public const string StringConcatenationIF = "+(i8*, i8*)";
-        public const string StringToCharArrayIF = "as [chr](i8*)";
-
         public MugEmitter(IRGenerator generator)
         {
             _generator = generator;
@@ -43,29 +39,28 @@ namespace Mug.Models.Generator.Emitter
             return Peek().TypeOf;
         }
 
-        public void Add()
+        public void AddInt()
         {
             var second = Pop();
-
             Load(Builder.BuildAdd(Pop(), second));
         }
 
-        public void Sub()
+        public void SubInt()
         {
             var second = Pop();
             Load(Builder.BuildSub(Pop(), second));
         }
 
-        public void Mul()
+        public void MulInt()
         {
             var second = Pop();
             Load(Builder.BuildMul(Pop(), second));
         }
 
-        public void Div()
+        public void DivInt()
         {
             var second = Pop();
-            Load(Builder.BuildSDiv(Pop(), second));
+            Load(Builder.BuildFDiv(Pop(), second));
         }
 
         public void CastInt(LLVMTypeRef type)
@@ -114,6 +109,16 @@ namespace Mug.Models.Generator.Emitter
             Load(Builder.BuildLoad(GetFromMemory(name)));
         }
 
+        public void CallOperator(string op, Range position, params LLVMTypeRef[] types)
+        {
+            var function = _generator.GetSymbol($"{op}({string.Join(", ", types)})", position);
+            
+            // check the operator overloading is not void
+            _generator.ExpectNonVoidType(function.TypeOf.ElementType.ReturnType, position);
+
+            Call(function, types.Length);
+        }
+
         public void Ret()
         {
             Builder.BuildRet(Pop());
@@ -148,11 +153,6 @@ namespace Mug.Models.Generator.Emitter
 
             if (result.TypeOf.Kind != LLVMTypeKind.LLVMVoidTypeKind)
                 Load(result);
-        }
-
-        public void ConcatString(Range position)
-        {
-            Call(_generator.GetSymbol(StringConcatenationIF, position), 2);
         }
     }
 }

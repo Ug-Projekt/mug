@@ -7,7 +7,6 @@
         Pointer,
         String,
         Char,
-        Int8,
         Int32,
         Int64,
         UInt8,

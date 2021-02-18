@@ -28,31 +28,6 @@ namespace Mug.Models.Generator
             _generator.Parser.Lexer.Throw(position, error);
         }
 
-        /*/// <summary>
-        /// declares a global string and returns a pointer to it
-        /// </summary>
-        private LLVMValueRef CreateString(string value)
-        {
-            // global string
-            
-            var type = LLVMTypeRef.CreateArray(LLVMTypeRef.Int8, (uint)value.Length + 1);
-            var globalArray = _generator.Module.AddGlobal(type, "str");
-            // assigning the constant value to the global array
-            globalArray.Initializer = LLVMValueRef.CreateConstIntOfString(type, value, 0);
-
-            // creating pointer
-            var x = LLVM.BuildGEP(_emitter.Builder, globalArray,
-                new[]
-                {
-                    // see the gep instruction on the llvm documentation
-                    LLVMValueRef.CreateConstInt(LLVMTypeRef.Int32, (ulong)0),
-                    LLVMValueRef.CreateConstInt(LLVMTypeRef.Int32, (ulong)0)
-                },
-                "");
-
-            return x;
-        }*/
-
         /// <summary>
         /// converts a constant in token format to one in LLVMValueRef format
         /// </summary>
@@ -70,21 +45,9 @@ namespace Mug.Models.Generator
                         LLVMValueRef.CreateConstInt(LLVMTypeRef.Int32, 0),
                     }
                 ),
-                TokenKind.ConstantChar => LLVMValueRef.CreateConstInt(LLVMTypeRef.Int8, _generator.StringCharToIntChar(constant.Value)),
+                TokenKind.ConstantChar => LLVMValueRef.CreateConstInt(LLVMTypeRef.Int16, _generator.StringCharToIntChar(constant.Value)),
                 _ => _generator.NotSupportedType<LLVMValueRef>(constant.Kind.ToString(), position)
             };
-        }
-
-        /// <summary>
-        /// check that type is equal to one of the elements in supportedTypes
-        /// </summary>
-        private void ExpectOperatorImplementation(LLVMTypeRef type, OperatorKind kind, Range position, params LLVMTypeRef[] supportedTypes)
-        {
-            for (int i = 0; i < supportedTypes.Length; i++)
-                if (Unsafe.Equals(type, supportedTypes[i]))
-                    return;
-
-            Error(position, "The expression type does not implement the operator `", kind.ToString(), "`");
         }
 
         /// <summary>
@@ -92,53 +55,34 @@ namespace Mug.Models.Generator
         /// </summary>
         private void EmitOperator(OperatorKind kind, LLVMTypeRef ft, LLVMTypeRef st, Range position)
         {
-            _generator.ExpectSameTypes(ft, position, $"Unsupported operator `{kind}` between different types", st);
-
             switch (kind)
             {
                 case OperatorKind.Sum:
-                    ExpectOperatorImplementation(ft, kind, position,
-                        LLVMTypeRef.Int64,
-                        LLVMTypeRef.Int32,
-                        LLVMTypeRef.Int8,
-                        LLVMTypeRef.CreatePointer(LLVMTypeRef.Int8, 0));
-
-                    if (_generator.MatchStringType(ft))
-                        _emitter.ConcatString(position);
+                    if (_generator.MatchIntType(ft, st))
+                        _emitter.AddInt();
                     else
-                        _emitter.Add();
+                        _emitter.CallOperator("+", position, ft, st);
                     break;
                 case OperatorKind.Subtract:
-                    ExpectOperatorImplementation(ft, kind, position,
-                        LLVMTypeRef.Int64,
-                        LLVMTypeRef.Int32,
-                        LLVMTypeRef.Int8);
-
-                    _emitter.Sub();
+                    if (_generator.MatchIntType(ft, st))
+                        _emitter.SubInt();
+                    else
+                        _emitter.CallOperator("-", position, ft, st);
                     break;
                 case OperatorKind.Multiply:
-                    ExpectOperatorImplementation(ft, kind, position,
-                        LLVMTypeRef.Int32,
-                        LLVMTypeRef.Int8);
-
-                    _emitter.Mul();
+                    if (_generator.MatchIntType(ft, st))
+                        _emitter.MulInt();
+                    else
+                        _emitter.CallOperator("*", position, ft, st);
                     break;
                 case OperatorKind.Divide:
-                    ExpectOperatorImplementation(ft, kind, position,
-                        LLVMTypeRef.Int64,
-                        LLVMTypeRef.Int32,
-                        LLVMTypeRef.Int8);
-
-                    _emitter.Div();
+                    if (_generator.MatchIntType(ft, st))
+                        _emitter.DivInt();
+                    else
+                        _emitter.CallOperator("/", position, ft, st);
                     break;
                 case OperatorKind.Range: break;
             }
-        }
-
-        private void CallOperatorFunction(string name, Range position)
-        {
-            var function = _generator.GetSymbol(name, position);
-            _emitter.Call(function, (int)function.ParamsCount);
         }
 
         /// <summary>
@@ -148,24 +92,13 @@ namespace Mug.Models.Generator
         {
             // the expression type to cast
             var expressionType = _emitter.PeekType();
+            var castType = _generator.TypeToLLVMType(type, position);
 
-            switch (expressionType.Kind)
-            {
-                case LLVMTypeKind.LLVMIntegerTypeKind: // LLVM has different instructions for each type convertion
-                    _emitter.CastInt(_generator.TypeToLLVMType(type, position));
-                    break;
-                case LLVMTypeKind.LLVMPointerTypeKind:
-                    // string
-                    if (Unsafe.Equals(expressionType.ElementType, LLVMTypeRef.Int8))
-                    {
-                        if (type.Kind == TypeKind.Array && ((MugType)type.BaseType).Kind == TypeKind.Char)
-                            CallOperatorFunction(MugEmitter.StringToCharArrayIF, position);
-                    }
-                    break;
-                default:
-                    Error(position, "Cast does not support this type yet");
-                    break;
-            }
+            if (_generator.MatchAnyTypeOfIntType(expressionType) &&
+                _generator.MatchAnyTypeOfIntType(castType)) // LLVM has different instructions for each type convertion
+                _emitter.CastInt(castType);
+            else
+                _emitter.CallOperator($"as {type}", position, expressionType);
         }
 
         /// <summary>
@@ -309,7 +242,7 @@ namespace Mug.Models.Generator
         {
             return type.Kind switch
             {
-                TypeKind.Char or TypeKind.Int8 or TypeKind.Int32 or TypeKind.Int64 or
+                TypeKind.Char or TypeKind.Int32 or TypeKind.Int64 or
                 TypeKind.UInt8 or TypeKind.UInt32 or TypeKind.UInt64 => new Token(TokenKind.ConstantDigit, "0", new()),
                 TypeKind.Bool => new Token(TokenKind.ConstantBoolean, "false", new()),
                 TypeKind.String => new Token(TokenKind.ConstantString, "", new()),
@@ -345,7 +278,7 @@ namespace Mug.Models.Generator
                     {
                         _emitter.DeclareVariable(variable);
                         var type = _generator.TypeToLLVMType(variable.Type, variable.Position);
-                        _generator.ExpectSameTypes(type, variable.Body.Position, $"Expected {type} type, got {_emitter.PeekType()} type", _emitter.PeekType());
+                        _generator.ExpectSameTypes(type, variable.Body.Position, $"Expected {type.ToMugTypeString()} type, got {_emitter.PeekType()} type", _emitter.PeekType());
                     }
                     else // if the type is not specified, it will come directly allocate a variable with the same type as the expression result
                         _emitter.DeclareVariable(variable.Name, _emitter.PeekType(), variable.Position);

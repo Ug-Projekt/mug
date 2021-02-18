@@ -67,15 +67,27 @@ namespace Mug.Models.Generator
             throw new Exception("unreachable");
         }
 
-        /// <summary>
-        /// returns an llvm function: declares it if not declared yet
-        /// </summary>
-        public LLVMValueRef RequireFunction(string name, LLVMTypeRef returnType, params LLVMTypeRef[] paramTypes)
+        public bool MatchIntType(LLVMTypeRef ft, LLVMTypeRef st)
         {
-            if (!Symbols.TryGetValue(name, out var function))
-                return Module.AddFunction(name, LLVMTypeRef.CreateFunction(returnType, paramTypes));
+            return
+                // make sure it is an int
+                ft.Kind == LLVMTypeKind.LLVMIntegerTypeKind &&
+                // check are the same type
+                Unsafe.Equals(ft, st) &&
+                // allowed int
+                (Unsafe.Equals(ft, LLVMTypeRef.Int32) ||
+                Unsafe.Equals(ft, LLVMTypeRef.Int64) ||
+                Unsafe.Equals(ft, LLVMTypeRef.Int8));
+        }
 
-            return function;
+        public bool MatchAnyTypeOfIntType(LLVMTypeRef type)
+        {
+            return
+                Unsafe.Equals(type, LLVMTypeRef.Int1) ||
+                Unsafe.Equals(type, LLVMTypeRef.Int8) ||
+                Unsafe.Equals(type, LLVMTypeRef.Int16) ||
+                Unsafe.Equals(type, LLVMTypeRef.Int32) ||
+                Unsafe.Equals(type, LLVMTypeRef.Int64);
         }
 
         /// <summary>
@@ -86,13 +98,19 @@ namespace Mug.Models.Generator
             return type.Kind switch
             {
                 TypeKind.Int32 => LLVMTypeRef.Int32,
+                TypeKind.UInt8 => LLVMTypeRef.Int8,
                 TypeKind.Int64 => LLVMTypeRef.Int64,
                 TypeKind.Bool => LLVMTypeRef.Int1,
                 TypeKind.Void => LLVMTypeRef.Void,
-                TypeKind.Char => LLVMTypeRef.Int8,
+                TypeKind.Char => LLVMTypeRef.Int16,
                 TypeKind.String => LLVMTypeRef.CreatePointer(LLVMTypeRef.Int8, 0),
                 _ => NotSupportedType<LLVMTypeRef>(type.Kind.ToString(), position)
             };
+        }
+
+        public bool MatchCharType(LLVMTypeRef ft)
+        {
+            return Unsafe.Equals(ft, LLVMTypeRef.Int16);
         }
 
         public ulong StringCharToIntChar(string value)
@@ -166,12 +184,12 @@ namespace Mug.Models.Generator
 
         public void ExpectBoolType(LLVMTypeRef type, Range position)
         {
-            ExpectSameTypes(type, position, "Expected `Bool` type", LLVMTypeRef.Int1);
+            ExpectSameTypes(type, position, "Expected `u1` type", LLVMTypeRef.Int1);
         }
 
         public void ExpectIntType(LLVMTypeRef type, Range position)
         {
-            ExpectSameTypes(type, position, "Expected `Int32`, `Int64` type",
+            ExpectSameTypes(type, position, "Expected `i32`, `i64` type",
                 LLVMTypeRef.Int32,
                 LLVMTypeRef.Int64);
         }
@@ -183,7 +201,7 @@ namespace Mug.Models.Generator
         public void ExpectNonVoidType(MugType type, Range position)
         {
             if (IsVoid(type))
-                Error(position, "In the current context `Void` is not allowed");
+                Error(position, "In the current context `void` is not allowed");
         }
 
         /// <summary>

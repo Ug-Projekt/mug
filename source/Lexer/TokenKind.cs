@@ -28,7 +28,6 @@
         Slash,
         BooleanNEQ,
         KeyTi32,
-        KeyTi8,
         KeyTi64,
         KeyTunknown,
         KeyTchr,

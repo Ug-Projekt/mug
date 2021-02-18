@@ -22,7 +22,7 @@ namespace MugTests
 
         private const string SINGLE_TOKENS = "( ) [ ] { } < > = ! & | + - * / , ; : . @ ?";
         private const string DOUBLE_TOKENS = "== != ++ += -- -= *= /= <= >= ..";
-        private const string FULL_TOKENS = "return continue break while pub use import new for type as in to if elif else func var const str chr u1 i8 i32 i64 u8 u32 u64 unknown";
+        private const string FULL_TOKENS = "return continue break while pub use import new for type as in to if elif else func var const str chr u1    i32 i64 u8 u32 u64 unknown";
         private const string RANDOM_TOKENS = "return == ( ) += continue pub ! *= ..";
 
 
@@ -499,7 +499,6 @@ namespace MugTests
                 new Token(TokenKind.KeyTstr, "str", 93..96),
                 new Token(TokenKind.KeyTchr, "chr", 97..100),
                 new Token(TokenKind.KeyTbool, "u1", 101..103),
-                new Token(TokenKind.KeyTi8, "i8", 104..106),
                 new Token(TokenKind.KeyTi32, "i32", 107..110),
                 new Token(TokenKind.KeyTi64, "i64", 111..114),
                 new Token(TokenKind.KeyTu8, "u8", 115..117),
