@@ -11,8 +11,6 @@ try
     var test = @"
 
 func main() {
-  while 90 == 90 {
-  }
 }
 
 ";
@@ -24,7 +22,7 @@ func main() {
 
 #else
 
-        if (args.Length == 0)
+    if (args.Length == 0)
             CompilationErrors.Throw("No arguments passed");
 
         for (int i = 0; i < args.Length; i++)
@@ -37,7 +35,7 @@ func main() {
 }
 catch (CompilationException e)
 {
-    Console.WriteLine($"{(e.Lexer is not null ? $"(`{e.Lexer.Source[e.Bad]}`): " : "")}{e.Message}");
+    Console.WriteLine($"{(e.Lexer is not null ? $"(`{e.Lexer.Source[e.Bad]}`: {e.Bad}): " : "")}{e.Message}");
     /*if (e.Lexer is not null)
     {
         CompilationErrors.WriteModule(e.Lexer.ModuleName);

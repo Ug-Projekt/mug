@@ -7,6 +7,7 @@ using Mug.Models.Parser.NodeKinds;
 using Mug.Models.Parser.NodeKinds.Statements;
 using Mug.TypeSystem;
 using System;
+using System.Diagnostics;
 
 namespace Mug.Models.Generator
 {
@@ -55,6 +56,38 @@ namespace Mug.Models.Generator
             };
         }
 
+        private void EmitSum(LLVMTypeRef ft, LLVMTypeRef st, Range position)
+        {
+            if (_generator.MatchSameIntType(ft, st))
+                _emitter.AddInt();
+            else
+                _emitter.CallOperator("+", position, ft, st);
+        }
+
+        private void EmitSub(LLVMTypeRef ft, LLVMTypeRef st, Range position)
+        {
+            if (_generator.MatchSameIntType(ft, st))
+                _emitter.SubInt();
+            else
+                _emitter.CallOperator("-", position, ft, st);
+        }
+
+        private void EmitMul(LLVMTypeRef ft, LLVMTypeRef st, Range position)
+        {
+            if (_generator.MatchSameIntType(ft, st))
+                _emitter.MulInt();
+            else
+                _emitter.CallOperator("*", position, ft, st);
+        }
+
+        private void EmitDiv(LLVMTypeRef ft, LLVMTypeRef st, Range position)
+        {
+            if (_generator.MatchSameIntType(ft, st))
+                _emitter.DivInt();
+            else
+                _emitter.CallOperator("/", position, ft, st);
+        }
+
         /// <summary>
         /// the function manages the operator implementations for all the types
         /// </summary>
@@ -63,28 +96,16 @@ namespace Mug.Models.Generator
             switch (kind)
             {
                 case OperatorKind.Sum:
-                    if (_generator.MatchSameIntType(ft, st))
-                        _emitter.AddInt();
-                    else
-                        _emitter.CallOperator("+", position, ft, st);
+                    EmitSum(ft, st, position);
                     break;
                 case OperatorKind.Subtract:
-                    if (_generator.MatchSameIntType(ft, st))
-                        _emitter.SubInt();
-                    else
-                        _emitter.CallOperator("-", position, ft, st);
+                    EmitSub(ft, st, position);
                     break;
                 case OperatorKind.Multiply:
-                    if (_generator.MatchSameIntType(ft, st))
-                        _emitter.MulInt();
-                    else
-                        _emitter.CallOperator("*", position, ft, st);
+                    EmitMul(ft, st, position);
                     break;
                 case OperatorKind.Divide:
-                    if (_generator.MatchSameIntType(ft, st))
-                        _emitter.DivInt();
-                    else
-                        _emitter.CallOperator("/", position, ft, st);
+                    EmitDiv(ft, st, position);
                     break;
                 case OperatorKind.CompareEQ:
                     if (_generator.MatchSameIntType(ft, st))
@@ -417,13 +438,12 @@ namespace Mug.Models.Generator
             // save the old emitter
             var oldemitter = _emitter;
 
-            _emitter = new(_generator);
+            _emitter = new(_generator, oldemitter.Memory);
+            // locating the builder in the compare block
+            _emitter.Builder.PositionAtEnd(compare);
 
             // evaluate expression
             EvaluateConditionExpression(i.Expression, i.Position);
-
-            // locating the builder in the compare block
-            _emitter.Builder.PositionAtEnd(compare);
 
             // compare
             _emitter.CompareJump(cycle, endcycle);
@@ -507,11 +527,58 @@ namespace Mug.Models.Generator
             _emitter.StoreVariable(variable.Name, variable.Position);
         }
 
+        private string IncrementOperatorToString(TokenKind kind)
+        {
+            return kind switch
+            {
+                TokenKind.OperatorIncrement => "++",
+                TokenKind.OperatorDecrement => "--",
+                _ => throw new Exception("unreachable")
+            };
+        }
+
         private void EmitAssignmentStatement(AssignmentStatement a)
         {
             var name = EvaluateInstanceName(a.Name);
 
-            EvaluateExpression(a.Body);
+            if (_emitter.IsConstant(name, a.Position))
+                Error(a.Position, "Unable to change a constant value");
+
+            var variableType = _emitter.PeekTypeFromMemory(name, a.Position);
+
+            if (a.Operator != TokenKind.Equal)
+            {
+                _emitter.LoadFromMemory(name, a.Position);
+
+                if (a.Body is not null)
+                {
+                    EvaluateExpression(a.Body);
+
+                    var expressionType = _emitter.PeekType();
+
+                    if (a.Operator == TokenKind.AddAssignment)
+                        EmitSum(variableType, expressionType, a.Position);
+                    else if (a.Operator == TokenKind.SubAssignment)
+                        EmitSub(variableType, expressionType, a.Position);
+                    else if (a.Operator == TokenKind.MulAssignment)
+                        EmitMul(variableType, expressionType, a.Position);
+                    else if (a.Operator == TokenKind.DivAssignment)
+                        EmitDiv(variableType, expressionType, a.Position);
+                }
+                else if (_generator.MatchIntType(variableType))
+                {
+                    _emitter.Load(LLVMValueRef.CreateConstInt(variableType, 1));
+
+                    if (a.Operator == TokenKind.OperatorIncrement)
+                        _emitter.AddInt();
+                    else if (a.Operator == TokenKind.OperatorIncrement)
+                        _emitter.SubInt();
+                }
+                else
+                    _emitter.CallOperator(IncrementOperatorToString(a.Operator), a.Position, variableType);
+            }
+            else
+                EvaluateExpression(a.Body);
 
             _emitter.StoreVariable(name, a.Position);
         }

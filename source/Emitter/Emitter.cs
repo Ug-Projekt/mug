@@ -133,11 +133,11 @@ namespace Mug.Models.Generator.Emitter
         {
             var variable = GetFromMemory(name, position);
 
-            // check if is not a constant
+            // variable
             if (variable.IsAAllocaInst.Handle != IntPtr.Zero)
-                variable = Builder.BuildLoad(variable);
-
-            Load(variable);
+                Load(Builder.BuildLoad(variable));
+            else // constant
+                Load(variable);
         }
 
         public void CallOperator(string op, Range position, params LLVMTypeRef[] types)
@@ -184,7 +184,8 @@ namespace Mug.Models.Generator.Emitter
             var parameters = new LLVMValueRef[paramCount];
 
             for (int i = 0; i < paramCount; i++)
-                parameters[i] = Pop();
+                // paramcount - current index (the last - i) - 1 (offset)
+                parameters[paramCount-i-1] = Pop();
 
             var result = Builder.BuildCall(function, parameters, "");
 
@@ -207,6 +208,16 @@ namespace Mug.Models.Generator.Emitter
         public void Jump(LLVMBasicBlockRef targetblock)
         {
             Builder.BuildBr(targetblock);
+        }
+
+        public LLVMTypeRef PeekTypeFromMemory(string name, Range position)
+        {
+            return GetFromMemory(name, position).TypeOf.ElementType;
+        }
+
+        public bool IsConstant(string name, Range position)
+        {
+            return GetFromMemory(name, position).IsAAllocaInst.Handle == IntPtr.Zero;
         }
     }
 }

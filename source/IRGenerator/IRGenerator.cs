@@ -400,5 +400,14 @@ namespace Mug.Models.Generator
             foreach (var member in Parser.Module.Members.Nodes)
                 RecognizeMember(member, false);
         }
+
+        public bool MatchIntType(LLVMTypeRef variableType)
+        {
+            return
+                variableType.Kind == LLVMTypeKind.LLVMIntegerTypeKind &&
+                variableType == LLVMTypeRef.Int8 ||
+                (variableType == LLVMTypeRef.Int32 ||
+                variableType == LLVMTypeRef.Int64);
+        }
     }
 }
