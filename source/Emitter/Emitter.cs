@@ -1,4 +1,5 @@
 ﻿using LLVMSharp.Interop;
+using Mug.Compilation;
 using Mug.Models.Parser.NodeKinds.Statements;
 using System;
 using System.Collections.Generic;
@@ -76,14 +77,17 @@ namespace Mug.Models.Generator.Emitter
             Load(Builder.BuildIntCast(Pop(), type));
         }
 
-        private LLVMValueRef GetFromMemory(string name)
+        private LLVMValueRef GetFromMemory(string name, Range position)
         {
-            return Memory[name];
+            if (!Memory.TryGetValue(name, out var variable))
+                _generator.Error(position, "Undeclared variable");
+
+            return variable;
         }
 
         private void SetMemory(string name, LLVMValueRef value)
         {
-            Memory.TryAdd(name, value);
+            Memory.Add(name, value);
         }
 
         public void DeclareVariable(VariableStatement variable)
@@ -99,9 +103,25 @@ namespace Mug.Models.Generator.Emitter
             SetMemory(name, Builder.BuildAlloca(type, name));
         }
 
-        public void StoreVariable(string name)
+        public void DeclareConstant(string name, Range position)
         {
-            Builder.BuildStore(Pop(), GetFromMemory(name));
+            if (IsDeclared(name))
+                _generator.Error(position, "Variable already declared");
+
+            SetMemory(name, Pop());
+        }
+
+        public void StoreVariable(string name, Range position)
+        {
+            var variable = GetFromMemory(name, position);
+
+            // check it is a variable and not a constant
+            if (variable.IsAAllocaInst.Handle == IntPtr.Zero)
+                _generator.Error(position, "Unable to change the value of a constant");
+
+            _generator.ExpectSameTypes(variable.TypeOf.ElementType, position, $"Expected {variable.TypeOf.ElementType.ToMugTypeString()} type, got {PeekType().ToMugTypeString()} type", PeekType());
+
+            Builder.BuildStore(Pop(), variable);
         }
 
         public bool IsDeclared(string name)
@@ -111,10 +131,13 @@ namespace Mug.Models.Generator.Emitter
 
         public void LoadFromMemory(string name, Range position)
         {
-            if (!IsDeclared(name))
-                _generator.Error(position, "Undeclared variable");
+            var variable = GetFromMemory(name, position);
 
-            Load(Builder.BuildLoad(GetFromMemory(name)));
+            // check if is not a constant
+            if (variable.IsAAllocaInst.Handle != IntPtr.Zero)
+                variable = Builder.BuildLoad(variable);
+
+            Load(variable);
         }
 
         public void CallOperator(string op, Range position, params LLVMTypeRef[] types)

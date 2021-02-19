@@ -295,12 +295,21 @@ namespace Mug.Models.Generator
 
         private void AllocParameters()
         {
-            for (int i = 0; i < _function.ParameterList.Parameters.Length; i++)
+            // alias for ...
+            var parameters = _function.ParameterList.Parameters;
+
+            for (int i = 0; i < parameters.Length; i++)
             {
-                var parameter = _function.ParameterList.Parameters[i];
+                // alias for ...
+                var parameter = parameters[i];
+
+                // allocating the local variable
                 _emitter.DeclareVariable(parameter.Name, _generator.TypeToLLVMType(parameter.Type, parameter.Position), parameter.Position);
+                // loading onto the stack the parameter
                 _emitter.Load(_llvmfunction.GetParam((uint)i));
-                _emitter.StoreVariable(_function.ParameterList.Parameters[i].Name);
+
+                // storing the parameter into the variable
+                _emitter.StoreVariable(parameter.Name, parameter.Position);
             }
         }
 
@@ -422,7 +431,7 @@ namespace Mug.Models.Generator
                  */
                 EvaluateExpression(@return.Body);
                 var type = _generator.TypeToLLVMType(_function.Type, @return.Position);
-                _generator.ExpectSameTypes(type, @return.Position, $"Expected {type} type, got {_emitter.PeekType()} type", _emitter.PeekType());
+                _generator.ExpectSameTypes(type, @return.Position, $"Expected {type.ToMugTypeString()} type, got {_emitter.PeekType().ToMugTypeString()} type", _emitter.PeekType());
                 _emitter.Ret();
             }
         }
@@ -447,26 +456,33 @@ namespace Mug.Models.Generator
              * then a check will be made: the specified type and the type of the result of the expression must be the same.
              */
             if (!variable.Type.IsAutomatic())
-            {
                 _emitter.DeclareVariable(variable);
-                var type = _generator.TypeToLLVMType(variable.Type, variable.Position);
-                _generator.ExpectSameTypes(type, variable.Body.Position, $"Expected {type.ToMugTypeString()} type, got {_emitter.PeekType()} type", _emitter.PeekType());
-            }
             else // if the type is not specified, it will come directly allocate a variable with the same type as the expression result
                 _emitter.DeclareVariable(variable.Name, _emitter.PeekType(), variable.Position);
 
-            _emitter.StoreVariable(variable.Name);
+            _emitter.StoreVariable(variable.Name, variable.Position);
         }
 
         private void EmitAssignmentStatement(AssignmentStatement a)
         {
             var name = EvaluateInstanceName(a.Name);
 
-            if (!_emitter.IsDeclared(name))
-                Error(a.Position, "Undeclared variable");
-
             EvaluateExpression(a.Body);
-            _emitter.StoreVariable(name);
+
+            _emitter.StoreVariable(name, a.Position);
+        }
+
+        private void EmitConstantStatement(ConstantStatement constant)
+        {
+            // evaluating the body expression of the constant
+            EvaluateExpression(constant.Body);
+
+            // match the constant explicit type and expression type are the same
+            if (!constant.Type.IsAutomatic())
+                _generator.ExpectSameTypes(_generator.TypeToLLVMType(constant.Type, constant.Position), constant.Body.Position, $"Expected {constant.Type} type, got {_emitter.PeekType().ToMugTypeString()} type", _emitter.PeekType());
+
+            // declaring the constant with a name
+            _emitter.DeclareConstant(constant.Name, constant.Position);
         }
 
         /// <summary>
@@ -490,6 +506,9 @@ namespace Mug.Models.Generator
                     break;
                 case AssignmentStatement assignment:
                     EmitAssignmentStatement(assignment);
+                    break;
+                case ConstantStatement constant:
+                    EmitConstantStatement(constant);
                     break;
                 default:
                     Error(statement.Position, "Statement not supported yet");

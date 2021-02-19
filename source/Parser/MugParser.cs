@@ -380,7 +380,7 @@ namespace Mug.Models.Parser
                 var oldIndex = _currentIndex;
                 List<MugType> generics = new();
 
-                if (MatchAdvance(TokenKind.BooleanMinor))
+                /*if (MatchAdvance(TokenKind.BooleanMinor))
                 {
                     if (Match(TokenKind.BooleanMajor))
                         ParseError("Invalid generic type passing content;");
@@ -388,7 +388,7 @@ namespace Mug.Models.Parser
                         generics.Add(ExpectType());
                     while (MatchAdvance(TokenKind.Comma));
                     Expect("", TokenKind.BooleanMajor);
-                }
+                }*/
                 if (!MatchAdvance(TokenKind.OpenPar))
                 {
                     if (generics.Count > 0)

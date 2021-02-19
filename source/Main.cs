@@ -9,11 +9,13 @@ try
 #if DEBUG
 
     var test = @"
-func main(): i32 {
-   if true {
-     return 0;
-   }
-   return 0;
+func fib(n: i32): i32 {
+  if n < 2
+    { return n; }
+  return fib(n - 1) + fib(n - 2);
+}
+
+func main() {
 }
 ";
 
