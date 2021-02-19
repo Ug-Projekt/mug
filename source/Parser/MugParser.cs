@@ -192,6 +192,13 @@ namespace Mug.Models.Parser
                 TokenKind.Star => OperatorKind.Multiply,
                 TokenKind.Slash => OperatorKind.Divide,
                 TokenKind.RangeDots => OperatorKind.Range,
+                TokenKind.BooleanEQ => OperatorKind.CompareEQ,
+                TokenKind.BooleanNEQ => OperatorKind.CompareNEQ,
+                TokenKind.BooleanMajor => OperatorKind.CompareMajor,
+                TokenKind.BooleanMajEQ => OperatorKind.CompareMajorEQ,
+                TokenKind.BooleanMinor => OperatorKind.CompareMinor,
+                TokenKind.BooleanMinEQ => OperatorKind.CompareMinorEQ,
+                _ => throw new Exception($"Unable to perform cast from TokenKind(`{op}`) to OperatorKind, if you see this error please open an issue on github")
             };
         }
 
@@ -295,7 +302,7 @@ namespace Mug.Models.Parser
 
             List<MugType> generics = new();
 
-            if (MatchAdvance(TokenKind.BooleanMinor))
+            /*if (MatchAdvance(TokenKind.BooleanMinor))
             {
                 if (Match(TokenKind.BooleanMajor))
                     ParseError("Invalid generic type passing content;");
@@ -303,7 +310,7 @@ namespace Mug.Models.Parser
                     generics.Add(ExpectType());
                 while (MatchAdvance(TokenKind.Comma));
                 Expect("", TokenKind.BooleanMajor);
-            }
+            }*/
             if (!MatchAdvance(TokenKind.OpenPar))
             {
                 _currentIndex -= count;
@@ -605,7 +612,7 @@ namespace Mug.Models.Parser
                 if (!isFirst)
                     return e;
                 var right = ExpectExpression(false, end);
-                e = new BooleanExpressionNode() { Operator = boolOP.Kind, Position = boolOP.Position, Left = e, Right = right };
+                e = new BooleanExpressionNode() { Operator = ToOperatorKind(boolOP.Kind), Position = boolOP.Position, Left = e, Right = right };
                 _currentIndex--;
                 if (MatchBooleanOperator(out _))
                 {
@@ -759,18 +766,12 @@ namespace Mug.Models.Parser
             }
 
             var body = ExpectBlock();
+
             INode elif = null;
-            if (key.Kind != TokenKind.KeyWhile && (Match(TokenKind.KeyElif) || Match(TokenKind.KeyElse)))
-            {
-                /*if (!isFirstCondition)
-                {
-                    ConditionDefinition(out statement, false);
-                    return true;
-                }*/
-                
+            if (key.Kind != TokenKind.KeyWhile && key.Kind != TokenKind.KeyElse && (Match(TokenKind.KeyElif) || Match(TokenKind.KeyElse)))
                 ConditionDefinition(out elif, false);
-            }
-            statement = new ConditionalStatement() { Position = key.Position, Expression = expression, Kind = key.Kind, Body = body, ElseNode = elif };
+
+            statement = new ConditionalStatement() { Position = key.Position, Expression = expression, Kind = key.Kind, Body = body, ElseNode = (ConditionalStatement)elif };
 
             return true;
         }

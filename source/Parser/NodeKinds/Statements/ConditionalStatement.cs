@@ -9,6 +9,6 @@ namespace Mug.Models.Parser.NodeKinds.Statements
         public INode Expression { get; set; }
         public BlockNode Body { get; set; }
         public Range Position { get; set; }
-        public INode ElseNode { get; set; }
+        public ConditionalStatement ElseNode { get; set; }
     }
 }

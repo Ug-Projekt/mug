@@ -7,6 +7,12 @@ namespace Mug.Models.Parser.NodeKinds
         Subtract,
         Multiply,
         Divide,
-        Range
+        Range,
+        CompareEQ,
+        CompareNEQ,
+        CompareMajorEQ,
+        CompareMajor,
+        CompareMinorEQ,
+        CompareMinor
     }
 }

@@ -9,12 +9,11 @@ try
 #if DEBUG
 
     var test = @"
-func `+`(left: chr, right: chr): chr {
-  return ((left as i32) + (right as i32)) as chr;
-}
-
-func main() {
-  var x = 'a'+'b';
+func main(): i32 {
+   if true {
+     return 0;
+   }
+   return 0;
 }
 ";
 

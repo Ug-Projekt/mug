@@ -11,12 +11,20 @@ namespace Mug.Models.Generator.Emitter
         unsafe public LLVMBuilderRef Builder { get; private set; } = CreateBuilder();
 
         private readonly Stack<LLVMValueRef> _stack = new();
-        private readonly Dictionary<string, LLVMValueRef> _memory = new();
+        public Dictionary<string, LLVMValueRef> Memory { get; }
         private readonly IRGenerator _generator;
+
+        public MugEmitter(IRGenerator generator, Dictionary<string, LLVMValueRef> memory)
+        {
+            _generator = generator;
+            // copying the symbols instead of passing them for reference
+            Memory = new(memory);
+        }
 
         public MugEmitter(IRGenerator generator)
         {
             _generator = generator;
+            Memory = new();
         }
 
         public void Load(LLVMValueRef value)
@@ -70,12 +78,12 @@ namespace Mug.Models.Generator.Emitter
 
         private LLVMValueRef GetFromMemory(string name)
         {
-            return _memory[name];
+            return Memory[name];
         }
 
         private void SetMemory(string name, LLVMValueRef value)
         {
-            _memory.TryAdd(name, value);
+            Memory.TryAdd(name, value);
         }
 
         public void DeclareVariable(VariableStatement variable)
@@ -96,9 +104,9 @@ namespace Mug.Models.Generator.Emitter
             Builder.BuildStore(Pop(), GetFromMemory(name));
         }
 
-        private bool IsDeclared(string name)
+        public bool IsDeclared(string name)
         {
-            return _memory.ContainsKey(name);
+            return Memory.ContainsKey(name);
         }
 
         public void LoadFromMemory(string name, Range position)
@@ -129,6 +137,12 @@ namespace Mug.Models.Generator.Emitter
             Builder.BuildRetVoid();
         }
 
+        public void CompareInt(LLVMIntPredicate kind)
+        {
+            var second = Pop();
+            Load(Builder.BuildICmp(kind, Pop(), second));
+        }
+
         public void NegInt()
         {
             Load(Builder.BuildNeg(Pop()));
@@ -153,6 +167,18 @@ namespace Mug.Models.Generator.Emitter
 
             if (result.TypeOf.Kind != LLVMTypeKind.LLVMVoidTypeKind)
                 Load(result);
+        }
+
+        public void CompareJump(LLVMBasicBlockRef ifbody, LLVMBasicBlockRef elsebody)
+        {
+            Builder.BuildCondBr(Pop(), ifbody, elsebody);
+        }
+
+        public void JumpOutOfScope(LLVMValueRef terminator, LLVMBasicBlockRef targetblock)
+        {
+            // check if the block has not terminator yet
+            if (terminator.Handle == IntPtr.Zero)
+                Builder.BuildBr(targetblock);
         }
     }
 }

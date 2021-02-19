@@ -54,7 +54,7 @@ namespace Mug.Models.Generator
 
         public bool MatchStringType(LLVMTypeRef exprType)
         {
-            return Unsafe.Equals(exprType, LLVMTypeRef.CreatePointer(LLVMTypeRef.Int8, 0));
+            return exprType == LLVMTypeRef.CreatePointer(LLVMTypeRef.Int8, 0);
         }
 
         /// <summary>
@@ -67,27 +67,27 @@ namespace Mug.Models.Generator
             throw new Exception("unreachable");
         }
 
-        public bool MatchIntType(LLVMTypeRef ft, LLVMTypeRef st)
+        public bool MatchSameIntType(LLVMTypeRef ft, LLVMTypeRef st)
         {
             return
                 // make sure it is an int
                 ft.Kind == LLVMTypeKind.LLVMIntegerTypeKind &&
                 // check are the same type
-                Unsafe.Equals(ft, st) &&
+                ft == st &&
                 // allowed int
-                (Unsafe.Equals(ft, LLVMTypeRef.Int32) ||
-                Unsafe.Equals(ft, LLVMTypeRef.Int64) ||
-                Unsafe.Equals(ft, LLVMTypeRef.Int8));
+                (ft == LLVMTypeRef.Int32 ||
+                ft == LLVMTypeRef.Int64 ||
+                ft == LLVMTypeRef.Int8);
         }
 
         public bool MatchAnyTypeOfIntType(LLVMTypeRef type)
         {
             return
-                Unsafe.Equals(type, LLVMTypeRef.Int1) ||
-                Unsafe.Equals(type, LLVMTypeRef.Int8) ||
-                Unsafe.Equals(type, LLVMTypeRef.Int16) ||
-                Unsafe.Equals(type, LLVMTypeRef.Int32) ||
-                Unsafe.Equals(type, LLVMTypeRef.Int64);
+                type == LLVMTypeRef.Int1  ||
+                type == LLVMTypeRef.Int8  ||
+                type == LLVMTypeRef.Int16 ||
+                type == LLVMTypeRef.Int32 ||
+                type == LLVMTypeRef.Int64;
         }
 
         /// <summary>
@@ -110,7 +110,7 @@ namespace Mug.Models.Generator
 
         public bool MatchCharType(LLVMTypeRef ft)
         {
-            return Unsafe.Equals(ft, LLVMTypeRef.Int16);
+            return ft == LLVMTypeRef.Int16;
         }
 
         public ulong StringCharToIntChar(string value)
@@ -178,18 +178,19 @@ namespace Mug.Models.Generator
         public void ExpectSameTypes(LLVMTypeRef firstType, Range position, string error, params LLVMTypeRef[] types)
         {
             for (int i = 0; i < types.Length; i++)
-                if (!Unsafe.Equals(firstType, types[i]))
+                if (firstType != types[i])
                     Error(position, error);
         }
 
         public void ExpectBoolType(LLVMTypeRef type, Range position)
         {
-            ExpectSameTypes(type, position, "Expected `u1` type", LLVMTypeRef.Int1);
+            ExpectSameTypes(type, position, $"Expected `u1` type, got `{type}`", LLVMTypeRef.Int1);
         }
 
         public void ExpectIntType(LLVMTypeRef type, Range position)
         {
-            ExpectSameTypes(type, position, "Expected `i32`, `i64` type",
+            ExpectSameTypes(type, position, $"Expected `i32`, `i64` type, got `{type}`",
+                LLVMTypeRef.Int8,
                 LLVMTypeRef.Int32,
                 LLVMTypeRef.Int64);
         }
@@ -234,18 +235,19 @@ namespace Mug.Models.Generator
         {
             MugEmitter emitter = new MugEmitter(this);
 
-            var entry = Symbols[function.Name].AppendBasicBlock("");
+            var llvmfunction = Symbols[function.Name];
+            // basic block, won't be emitted any block because the name is empty
+            var entry = llvmfunction.AppendBasicBlock("");
 
             emitter.Builder.PositionAtEnd(entry);
 
-            var generator = new LocalGenerator(this, ref function, ref emitter);
-            generator.AllocParameters(GetSymbol(function.Name, function.Position), function.ParameterList);
+            var generator = new LocalGenerator(this, ref llvmfunction, ref function, ref emitter);
             generator.Generate();
 
             // implicit return with void functions
             if (function.Type.Kind == TypeKind.Void &&
                 // if the type is void check if the last statement was ret, if it was not ret add one implicitly
-                entry.LastInstruction.IsAReturnInst.Handle == IntPtr.Zero) // is null
+                entry.Terminator.IsAReturnInst.Handle == IntPtr.Zero) // is null
                 generator.AddImplicitRetVoid();
         }
 
@@ -290,6 +292,74 @@ namespace Mug.Models.Generator
             }
         }
 
+        private void DeclareFunction(FunctionNode function)
+        {
+            InstallFunction(function.Name, function.Type, function.Position, function.ParameterList);
+
+            // allowing to call entrypoint
+            if (function.Name == EntryPointName)
+                DeclareSymbol(EntryPointName + "()", Symbols[EntryPointName], function.Position);
+        }
+
+        private void EmitFunction(FunctionNode function)
+        {
+            // change the name of the function in the corresponding with the types of parameters, to allow overload of the methods
+            function.Name = BuildFunctionName(function.Name, ParameterTypesToLLVMTypes(function.ParameterList.Parameters));
+
+            DefineFunction(function);
+        }
+
+        private void EmitFunctionPrototype(FunctionPrototypeNode prototype)
+        {
+            var parameters = ParameterTypesToLLVMTypes(prototype.ParameterList.Parameters);
+            // search for the function
+            LLVMValueRef function = Module.GetNamedFunction(prototype.Name);
+
+            // if the function is not declared yet
+            if (function.Handle == IntPtr.Zero)
+                // declares it
+                function = Module.AddFunction(prototype.Name,
+                        LLVMTypeRef.CreateFunction(
+                            TypeToLLVMType(prototype.Type, prototype.Position),
+                            parameters));
+
+            // adding a new symbol
+            DeclareSymbol(
+                BuildFunctionName(prototype.Name, parameters),
+                function,
+                prototype.Position);
+        }
+
+        private void EmitImport(ImportDirective import)
+        {
+            CompilationUnit unit = null;
+
+            if (import.Mode == ImportMode.FromPackages) // dirof(mug.exe)/include/
+                unit = new CompilationUnit("include/" + ((Token)import.Member).Value + ".mug");
+            else
+            {
+                var path = (Token)import.Member;
+                var filekind = Path.GetExtension(path.Value);
+                var fullpath = Path.GetFullPath(path.Value, Path.GetDirectoryName(LocalPath));
+
+                if (filekind == ".bc") // llvm bitcode file
+                {
+                    ReadModule(fullpath);
+                    return;
+                }
+                else if (filekind == ".mug") // dirof(file.mug)
+                    unit = new CompilationUnit(fullpath);
+                else
+                    CompilationErrors.Throw("Unrecognized file kind: `", path.Value, "`");
+            }
+
+            // pass the current module to generate the llvm code together by the irgenerator
+            unit.IRGenerator.Module = Module;
+            // pass the current symbols to declare those in the module here
+            unit.IRGenerator.Symbols = Symbols;
+            unit.Generate();
+        }
+
         /// <summary>
         /// recognize the type of the AST node and depending on the type call methods
         /// to convert it to the corresponding low-level code
@@ -300,73 +370,17 @@ namespace Mug.Models.Generator
             {
                 case FunctionNode function:
                     if (declareOnly) // declares the prototype of the function
-                    {
-                        InstallFunction(function.Name, function.Type, function.Position, function.ParameterList);
-
-                        // allowing to call entrypoint
-                        if (function.Name == EntryPointName)
-                            DeclareSymbol(EntryPointName + "()", Symbols[EntryPointName], function.Position);
-                    }
+                        DeclareFunction(function);
                     else // defines the function body
-                    {
-                        // change the name of the function in the corresponding with the types of parameters, to allow overload of the methods
-                        function.Name = BuildFunctionName(function.Name, ParameterTypesToLLVMTypes(function.ParameterList.Parameters));
-
-                        DefineFunction(function);
-                    }
+                        EmitFunction(function);
                     break;
                 case FunctionPrototypeNode prototype:
                     if (declareOnly)
-                    {
-                        var parameters = ParameterTypesToLLVMTypes(prototype.ParameterList.Parameters);
-                        // search for the function
-                        LLVMValueRef function = Module.GetNamedFunction(prototype.Name);
-
-                        // if the function is not declared yet
-                        if (function.Handle == IntPtr.Zero)
-                            // declares it
-                            function = Module.AddFunction(prototype.Name,
-                                    LLVMTypeRef.CreateFunction(
-                                        TypeToLLVMType(prototype.Type, prototype.Position),
-                                        parameters));
-
-                        // adding a new symbol
-                        DeclareSymbol(
-                            BuildFunctionName(prototype.Name, parameters),
-                            function,
-                            prototype.Position);
-                    }
+                        EmitFunctionPrototype(prototype);
                     break;
                 case ImportDirective import:
                     if (declareOnly)
-                    {
-                        CompilationUnit unit = null;
-
-                        if (import.Mode == ImportMode.FromPackages) // dirof(mug.exe)/include/
-                            unit = new CompilationUnit("include/" + ((Token)import.Member).Value + ".mug");
-                        else
-                        {
-                            var path = (Token)import.Member;
-                            var filekind = Path.GetExtension(path.Value);
-                            var fullpath = Path.GetFullPath(path.Value, Path.GetDirectoryName(LocalPath));
-                            
-                            if (filekind == ".bc") // llvm bitcode file
-                            {
-                                ReadModule(fullpath);
-                                break;
-                            }
-                            else if (filekind == ".mug") // dirof(file.mug)
-                                unit = new CompilationUnit(fullpath);
-                            else
-                                CompilationErrors.Throw("Unrecognized file kind: `", path.Value, "`");
-                        }
-
-                        // pass the current module to generate the llvm code together by the irgenerator
-                        unit.IRGenerator.Module = Module;
-                        // pass the current symbols to declare those in the module here
-                        unit.IRGenerator.Symbols = Symbols;
-                        unit.Generate();
-                    }
+                        EmitImport(import);
                     break;
                 default:
                     Error(member.Position, "Declaration not supported yet");
