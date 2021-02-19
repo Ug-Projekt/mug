@@ -7,7 +7,6 @@ using Mug.Models.Parser.NodeKinds;
 using Mug.Models.Parser.NodeKinds.Statements;
 using Mug.TypeSystem;
 using System;
-using System.Runtime.CompilerServices;
 
 namespace Mug.Models.Generator
 {
@@ -370,7 +369,7 @@ namespace Mug.Models.Generator
             _generator.ExpectBoolType(_emitter.PeekType(), position);
         }
 
-        private void EmitConditionalStatement(ConditionalStatement i)
+        private void EmitIfStatement(ConditionalStatement i)
         {
             // evaluate expression
             EvaluateConditionExpression(i.Expression, i.Position);
@@ -381,7 +380,7 @@ namespace Mug.Models.Generator
             // else block
             var @else = _llvmfunction.AppendBasicBlock("");
 
-            LLVMBasicBlockRef endifelse = i.ElseNode is not null ? _llvmfunction.AppendBasicBlock("") : @else;
+            var endifelse = i.ElseNode is not null ? _llvmfunction.AppendBasicBlock("") : @else;
 
             // compare
             _emitter.CompareJump(then, @else);
@@ -390,8 +389,10 @@ namespace Mug.Models.Generator
             var oldemitter = _emitter;
 
             // define if and else bodies
+            // if
             DefineConditionBody(then, endifelse, i.Body, oldemitter);
 
+            // else
             if (i.ElseNode is not null)
                 DefineElseBody(@else, endifelse, i.ElseNode, oldemitter);
 
@@ -399,6 +400,49 @@ namespace Mug.Models.Generator
             _emitter = new(_generator, oldemitter.Memory);
             // re emit the entry block
             _emitter.Builder.PositionAtEnd(endifelse);
+        }
+
+        private void EmitWhileStatement(ConditionalStatement i)
+        {
+            // if block
+            var compare = _llvmfunction.AppendBasicBlock("");
+
+            var cycle = _llvmfunction.AppendBasicBlock("");
+
+            var endcycle = _llvmfunction.AppendBasicBlock("");
+
+            // jumping to the compare block
+            _emitter.Jump(compare);
+
+            // save the old emitter
+            var oldemitter = _emitter;
+
+            _emitter = new(_generator);
+
+            // evaluate expression
+            EvaluateConditionExpression(i.Expression, i.Position);
+
+            // locating the builder in the compare block
+            _emitter.Builder.PositionAtEnd(compare);
+
+            // compare
+            _emitter.CompareJump(cycle, endcycle);
+
+            // define if and else bodies
+            DefineConditionBody(cycle, compare, i.Body, oldemitter);
+
+            // restore old emitter
+            _emitter = new(_generator, oldemitter.Memory);
+            // re emit the entry block
+            _emitter.Builder.PositionAtEnd(endcycle);
+        }
+
+        private void EmitConditionalStatement(ConditionalStatement i)
+        {
+            if (i.Kind == TokenKind.KeyIf)
+                EmitIfStatement(i);
+            else
+                EmitWhileStatement(i);
         }
 
         private INode GetDefaultValueOf(MugType type)

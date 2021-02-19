@@ -9,14 +9,12 @@ try
 #if DEBUG
 
     var test = @"
-func fib(n: i32): i32 {
-  if n < 2
-    { return n; }
-  return fib(n - 1) + fib(n - 2);
-}
 
 func main() {
+  while 90 == 90 {
+  }
 }
+
 ";
 
     var unit = new CompilationUnit("test", test);

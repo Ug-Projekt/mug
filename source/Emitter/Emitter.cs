@@ -201,7 +201,12 @@ namespace Mug.Models.Generator.Emitter
         {
             // check if the block has not terminator yet
             if (terminator.Handle == IntPtr.Zero)
-                Builder.BuildBr(targetblock);
+                Jump(targetblock);
+        }
+
+        public void Jump(LLVMBasicBlockRef targetblock)
+        {
+            Builder.BuildBr(targetblock);
         }
     }
 }
