@@ -219,5 +219,24 @@ namespace Mug.Models.Generator.Emitter
         {
             return GetFromMemory(name, position).IsAAllocaInst.Handle == IntPtr.Zero;
         }
+
+        public void SelectArrayElement()
+        {
+            var index = Pop();
+            var array = Pop();
+
+            Load(
+                // load from pointer
+                Builder.BuildLoad(
+                    // selecting the element
+                    Builder.BuildGEP(
+                        array,
+                        new[]
+                        {
+                            index,
+                        })
+                    )
+                );
+        }
     }
 }

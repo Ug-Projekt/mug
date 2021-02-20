@@ -102,13 +102,14 @@ namespace Mug.Models.Generator
                 TypeKind.Void => LLVMTypeRef.Void,
                 TypeKind.Char => LLVMTypeRef.Int16,
                 TypeKind.String => LLVMTypeRef.CreatePointer(LLVMTypeRef.Int8, 0),
+                TypeKind.Array => LLVMTypeRef.CreatePointer(TypeToLLVMType(type.BaseType is TypeKind kind ? new MugType(kind) : (MugType)type.BaseType, position), 0),
                 _ => NotSupportedType<LLVMTypeRef>(type.Kind.ToString(), position)
             };
         }
 
-        public bool MatchCharType(LLVMTypeRef ft)
+        public bool MatchCharType(LLVMTypeRef type)
         {
-            return ft == LLVMTypeRef.Int16;
+            return type == LLVMTypeRef.Int16;
         }
 
         public ulong StringCharToIntChar(string value)

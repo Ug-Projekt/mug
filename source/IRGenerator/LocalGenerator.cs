@@ -34,6 +34,18 @@ namespace Mug.Models.Generator
             _generator.Parser.Lexer.Throw(position, error);
         }
 
+        private LLVMValueRef CreateConstString(string value)
+        {
+            return _emitter.Builder.BuildGEP(
+                    _emitter.Builder.BuildGlobalString(value),
+                    new[]
+                    {
+                        LLVMValueRef.CreateConstInt(LLVMTypeRef.Int32, 0),
+                        LLVMValueRef.CreateConstInt(LLVMTypeRef.Int32, 0),
+                    }
+                );
+        }
+
         /// <summary>
         /// converts a constant in token format to one in LLVMValueRef format
         /// </summary>
@@ -43,14 +55,7 @@ namespace Mug.Models.Generator
             {
                 TokenKind.ConstantDigit => LLVMValueRef.CreateConstInt(LLVMTypeRef.Int32, Convert.ToUInt64(constant.Value)),
                 TokenKind.ConstantBoolean => LLVMValueRef.CreateConstInt(LLVMTypeRef.Int1, _generator.StringBoolToIntBool(constant.Value)),
-                TokenKind.ConstantString => _emitter.Builder.BuildGEP(
-                    _emitter.Builder.BuildGlobalString(constant.Value),
-                    new[]
-                    {
-                        LLVMValueRef.CreateConstInt(LLVMTypeRef.Int32, 0),
-                        LLVMValueRef.CreateConstInt(LLVMTypeRef.Int32, 0),
-                    }
-                ),
+                TokenKind.ConstantString => CreateConstString(constant.Value),
                 TokenKind.ConstantChar => LLVMValueRef.CreateConstInt(LLVMTypeRef.Int16, _generator.StringCharToIntChar(constant.Value)),
                 _ => _generator.NotSupportedType<LLVMValueRef>(constant.Kind.ToString(), position)
             };
@@ -265,6 +270,34 @@ namespace Mug.Models.Generator
             EmitOperator(b.Operator, ft, st, b.Position);
         }
 
+        private void EmitExprArrayElemSelect(ArraySelectElemNode a)
+        {
+            // loading the array
+            var name = EvaluateInstanceName(a.Left);
+            _emitter.LoadFromMemory(name, a.Position);
+
+            // loading the index expression
+            EvaluateExpression(a.IndexExpression);
+
+            // loading the element
+            _emitter.SelectArrayElement();
+        }
+
+        private void EmitExprAllocateArray(ArrayAllocationNode aa)
+        {
+            EvaluateExpression();
+
+            // loading the array
+            _emitter.Load(
+                _emitter.Builder.BuildArrayMalloc(
+                    _generator.TypeToLLVMType(aa.Type, aa.Position),
+                    LLVMValueRef.CreateConstInt(LLVMTypeRef.Int32, 0))
+                );
+
+            // loading a new array with the
+            _emitter.StoreElementsInArray();
+        }
+
         /// <summary>
         /// the function evaluates an expression, looking at the given node type
         /// </summary>
@@ -296,6 +329,15 @@ namespace Mug.Models.Generator
                     break;
                 case BooleanExpressionNode b:
                     EmitExprBool(b);
+                    break;
+                /*case InlineConditionalExpression i:
+                    EmitExprTernary(i);
+                    break;*/
+                case ArraySelectElemNode a:
+                    EmitExprArrayElemSelect(a);
+                    break;
+                case ArrayAllocationNode aa:
+                    EmitExprAllocateArray(aa);
                     break;
                 default:
                     Error(expression.Position, "expression not supported yet");
@@ -473,6 +515,11 @@ namespace Mug.Models.Generator
                 TypeKind.UInt8 or TypeKind.UInt32 or TypeKind.UInt64 => new Token(TokenKind.ConstantDigit, "0", new()),
                 TypeKind.Bool => new Token(TokenKind.ConstantBoolean, "false", new()),
                 TypeKind.String => new Token(TokenKind.ConstantString, "", new()),
+                TypeKind.Array => new ArrayAllocationNode()
+                {
+                    Type = type.BaseType is TypeKind kind ? new MugType(kind) : (MugType)type.BaseType,
+                    Size = new Token(TokenKind.ConstantDigit, "0", new())
+                },
             };
         }
 
@@ -621,6 +668,8 @@ namespace Mug.Models.Generator
                 case ConstantStatement constant:
                     EmitConstantStatement(constant);
                     break;
+                /*case ForLoopStatement loop:
+                    break;*/
                 default:
                     Error(statement.Position, "Statement not supported yet");
                     break;

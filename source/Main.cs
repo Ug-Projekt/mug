@@ -9,10 +9,9 @@ try
 #if DEBUG
 
     var test = @"
-
 func main() {
+   var x = ""ciao"";
 }
-
 ";
 
     var unit = new CompilationUnit("test", test);
@@ -35,7 +34,7 @@ func main() {
 }
 catch (CompilationException e)
 {
-    Console.WriteLine($"{(e.Lexer is not null ? $"(`{e.Lexer.Source[e.Bad]}`: {e.Bad}): " : "")}{e.Message}");
+    Console.WriteLine($"{(e.Lexer is not null ? $"(`{e.Lexer.Source[e.Bad]}`: {e.Bad} in {e.Lexer.ModuleName}): " : "")}{e.Message}");
     /*if (e.Lexer is not null)
     {
         CompilationErrors.WriteModule(e.Lexer.ModuleName);
