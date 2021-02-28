@@ -518,66 +518,92 @@ namespace Mug.Models.Parser
                 MatchAdvance(TokenKind.KeyIn, out op);
         }
 
-        private INode ExpectExpression(bool isFirst, params TokenKind[] end)
+        private INode CollectTernary(Range ifposition)
         {
-            if (MatchAdvance(TokenKind.KeyIf))
+            var expression = ExpectExpression(true, TokenKind.KeyTVoid);
+            var ifBody = ExpectFactor();
+
+            Expect("In inline conditions there must be the else body: place it here;", TokenKind.KeyElse);
+
+            var elseBody = ExpectFactor();
+            _currentIndex++;
+
+            return new InlineConditionalExpression() { Expression = expression, IFBody = ifBody, ElseBody = elseBody, Position = ifposition };
+        }
+
+        private INode CollectNodeNew(Range newposition)
+        {
+            if (MatchAdvance(TokenKind.OpenBracket))
             {
-                var expression = ExpectExpression(true, TokenKind.KeyTVoid);
-                var ifBody = ExpectFactor();
+                var type = ExpectType();
+                Expect("Expected array size after its type;", TokenKind.Comma);
 
-                Expect("In inline conditions there must be the else body: place it here;", TokenKind.KeyElse);
+                var size = ExpectExpression(true, TokenKind.CloseBracket);
+                _currentIndex--;
 
-                var elseBody = ExpectFactor();
-                _currentIndex++;
+                Expect("Expected `]` and the array body;", TokenKind.CloseBracket);
 
-                return new InlineConditionalExpression() { Expression = expression, IFBody = ifBody, ElseBody = elseBody };
-            }
-            if (MatchAdvance(TokenKind.KeyNew, out var token))
-            {
-                if (MatchAdvance(TokenKind.OpenBracket))
+                var array = new ArrayAllocationNode() { Size = size, Type = type };
+                Expect("Expected the array body, empty (`{}`) if has to be instanced with type default values;", TokenKind.OpenBrace);
+
+                if (!Match(TokenKind.CloseBrace))
                 {
-                    var type = ExpectType();
-                    Expect("Expected array size after its type;", TokenKind.Comma);
-
-                    var size = ExpectExpression(true, TokenKind.CloseBracket);
-                    _currentIndex--;
-
-                    Expect("Expected `]` and the array body;", TokenKind.CloseBracket);
-
-                    var array = new ArrayAllocationNode() { Size = size, Type = type };
-                    Expect("Expected the array body, empty (`{}`) if has to be instanced with type default values;", TokenKind.OpenBrace);
-
-                    if (!Match(TokenKind.CloseBrace))
-                    {
-                        do
-                        {
-                            array.AddArrayElement(ExpectExpression(true, TokenKind.Comma, TokenKind.CloseBrace));
-                            _currentIndex--;
-                        }
-                        while (MatchAdvance(TokenKind.Comma));
-                    }
-
-                    Expect("", TokenKind.CloseBrace);
-                    _currentIndex++;
-
-                    return array;
-                }
-
-                var name = ExpectType();
-                var allocation = new TypeAllocationNode() { Name = name, Position = token.Position };
-
-                Expect("Type allocation requires `{}`;", TokenKind.OpenBrace);
-
-                if (Match(TokenKind.Identifier))
                     do
-                        allocation.AddFieldAssign(ExpectFieldAssign());
+                    {
+                        array.AddArrayElement(ExpectExpression(true, TokenKind.Comma, TokenKind.CloseBrace));
+                        _currentIndex--;
+                    }
                     while (MatchAdvance(TokenKind.Comma));
+                }
 
                 Expect("", TokenKind.CloseBrace);
                 _currentIndex++;
 
-                return allocation;
+                return array;
             }
+
+            var name = ExpectType();
+            var allocation = new TypeAllocationNode() { Name = name, Position = newposition };
+
+            Expect("Type allocation requires `{}`;", TokenKind.OpenBrace);
+
+            if (Match(TokenKind.Identifier))
+                do
+                    allocation.AddFieldAssign(ExpectFieldAssign());
+                while (MatchAdvance(TokenKind.Comma));
+
+            Expect("", TokenKind.CloseBrace);
+            _currentIndex++;
+
+            return allocation;
+        }
+
+        private INode CollectBooleanExpression(ref INode e, Token boolOP, bool isFirst, params TokenKind[] end)
+        {
+            if (!isFirst)
+                return e;
+
+            var right = ExpectExpression(false, end);
+            e = new BooleanExpressionNode() { Operator = ToOperatorKind(boolOP.Kind), Position = boolOP.Position, Left = e, Right = right };
+            _currentIndex--;
+
+            if (MatchBooleanOperator(out _))
+            {
+                _currentIndex--;
+                ParseError("Double boolean operator not allowed, to compare two boolean expressions please put two operand into `()`;");
+            }
+
+            _currentIndex++;
+            return e;
+        }
+
+        private INode ExpectExpression(bool isFirst, params TokenKind[] end)
+        {
+            if (MatchAdvance(TokenKind.KeyIf, out var token))
+                return CollectTernary(token.Position);
+
+            if (MatchAdvance(TokenKind.KeyNew, out token))
+                return CollectNodeNew(token.Position);
 
             INode e = null;
 
@@ -607,21 +633,8 @@ namespace Mug.Models.Parser
             if (e is null)
                 ParseError("Missing expression: `", Current.Value.ToString(), "` is not a valid symbol in expression;");
 
-            if (MatchBooleanOperator(out Token boolOP))
-            {
-                if (!isFirst)
-                    return e;
-                var right = ExpectExpression(false, end);
-                e = new BooleanExpressionNode() { Operator = ToOperatorKind(boolOP.Kind), Position = boolOP.Position, Left = e, Right = right };
-                _currentIndex--;
-                if (MatchBooleanOperator(out _))
-                {
-                    _currentIndex--;
-                    ParseError("Double boolean operator not allowed, to compare two boolean expressions please put two operand into `()`;");
-                }
-                _currentIndex++;
-                return e;
-            }
+            if (MatchBooleanOperator(out var boolOP))
+                return CollectBooleanExpression(ref e, boolOP, isFirst, end);
             else if (MatchAdvance(TokenKind.KeyAs, out var asToken))
                 e = new CastExpressionNode() { Expression = e, Type = ExpectType(), Position = asToken.Position };
 
@@ -632,7 +645,7 @@ namespace Mug.Models.Parser
 
         private MugType ExpectVariableType()
         {
-            return (MatchAdvance(TokenKind.Colon) ? ExpectType() : MugType.Automatic());
+            return MatchAdvance(TokenKind.Colon) ? ExpectType() : MugType.Automatic();
         }
 
         private bool VariableDefinition(out INode statement)

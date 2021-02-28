@@ -285,7 +285,7 @@ namespace Mug.Models.Generator
 
         private void EmitExprAllocateArray(ArrayAllocationNode aa)
         {
-            EvaluateExpression();
+            // EvaluateExpression();
 
             // loading the array
             _emitter.Load(
@@ -295,7 +295,7 @@ namespace Mug.Models.Generator
                 );
 
             // loading a new array with the
-            _emitter.StoreElementsInArray();
+            // _emitter.StoreElementsInArray();
         }
 
         /// <summary>
