@@ -5,6 +5,7 @@ namespace Mug.Models.Parser.NodeKinds
 {
     public class BooleanExpressionNode : INode
     {
+        public string NodeKind => "BooleanBinaryExpression";
         public INode Left { get; set; }
         public INode Right { get; set; }
         public OperatorKind Operator { get; set; }

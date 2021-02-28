@@ -6,6 +6,7 @@ namespace Mug.Models.Parser.NodeKinds.Statements
 {
     public class CallStatement : INode
     {
+        public string NodeKind => "Call";
         public NodeBuilder Parameters { get; set; } = new();
         public INode Name { get; set; }
 

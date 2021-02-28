@@ -5,6 +5,7 @@ namespace Mug.Models.Lexer
 {
     public struct Token : INode
     {
+        public string NodeKind => "Literal";
         public TokenKind Kind { get; }
         public string Value { get; }
         public Range Position { get; set; }

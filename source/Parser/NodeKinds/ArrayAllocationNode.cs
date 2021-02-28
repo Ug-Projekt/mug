@@ -6,6 +6,7 @@ namespace Mug.Models.Parser.NodeKinds
 {
     public class ArrayAllocationNode : INode
     {
+        public string NodeKind => "ArrayAllocationNode";
         public MugType Type { get; set; }
         public INode Size { get; set; }
         private List<INode> _body { get; set; } = new();

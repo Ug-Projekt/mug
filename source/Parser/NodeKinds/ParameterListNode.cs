@@ -7,6 +7,7 @@ namespace Mug.Models.Parser.NodeKinds
 {
     public struct ParameterNode : INode
     {
+        public string NodeKind => "Parameter";
         public MugType Type { get; }
         public String Name { get; }
         public Token DefaultConstantValue { get; }
@@ -30,6 +31,7 @@ namespace Mug.Models.Parser.NodeKinds
     }
     public class ParameterListNode : INode
     {
+        public string NodeKind => "ParameterList";
         public ParameterNode[] Parameters
         {
             get

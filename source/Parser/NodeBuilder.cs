@@ -5,6 +5,7 @@ namespace Mug.Models.Parser
 {
     public class NodeBuilder : INode
     {
+        public string NodeKind => "NodeBuilder";
         private readonly List<INode> nodes = new();
         public INode[] Nodes
         {
@@ -25,6 +26,11 @@ namespace Mug.Models.Parser
         public void Add(INode node)
         {
             nodes.Add(node);
+        }
+
+        public void Insert(int index, INode e)
+        {
+            nodes.Insert(index, e);
         }
     }
 }

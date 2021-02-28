@@ -5,6 +5,7 @@ namespace Mug.Models.Parser.NodeKinds
 {
     public class PrefixOperator : INode
     {
+        public string NodeKind => "PrefixOperator";
         public INode Expression { get; set; }
         public TokenKind Prefix { get; set; }
         public Range Position { get; set; }

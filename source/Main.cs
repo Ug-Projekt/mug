@@ -1,5 +1,6 @@
 ﻿using LLVMSharp;
 using Mug.Compilation;
+using Mug.Models.Parser;
 using System;
 using System.IO;
 
@@ -10,9 +11,11 @@ try
 
     var test = @"
 func main() {
-   var x = ""ciao"";
+   
 }
 ";
+    /*var parser = new MugParser("test", test);
+    Console.WriteLine(parser.Parse().Dump());*/
 
     var unit = new CompilationUnit("test", test);
     unit.Generate(true);

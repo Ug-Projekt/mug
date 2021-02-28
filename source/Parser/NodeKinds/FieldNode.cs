@@ -5,6 +5,7 @@ namespace Mug.Models.Parser.NodeKinds
 {
     public class FieldNode : INode
     {
+        public string NodeKind => "Field";
         public String Name { get; set; }
         public MugType Type { get; set; }
         public Range Position { get; set; }

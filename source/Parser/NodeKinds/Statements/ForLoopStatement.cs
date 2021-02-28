@@ -5,6 +5,7 @@ namespace Mug.Models.Parser.NodeKinds.Statements
 {
     public struct ForLoopStatement : INode
     {
+        public string NodeKind => "ForLoop";
         public TokenKind Operator { get; set; }
         // VariableStatement, AssignStatement, ForCounterReference
         public INode Counter { get; set; }

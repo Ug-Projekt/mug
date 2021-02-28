@@ -6,6 +6,7 @@ namespace Mug.Models.Parser.NodeKinds.Statements
 {
     public class TypeStatement : INode
     {
+        public string NodeKind => "Struct";
         public String Name { get; set; }
         private List<Token> _genericTypes { get; set; } = new();
         public Token[] GenericTypes

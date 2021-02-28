@@ -7,6 +7,7 @@ namespace Mug.Models.Parser.NodeKinds.Statements
 {
     public class FunctionPrototypeNode : INode
     {
+        public string NodeKind => "FunctionPrototype";
         public String Name { get; set; }
         public MugType Type { get; set; }
         public ParameterListNode ParameterList { get; set; } = new();

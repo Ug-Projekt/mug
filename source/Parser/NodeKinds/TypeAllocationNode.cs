@@ -6,6 +6,7 @@ namespace Mug.Models.Parser.NodeKinds
 {
     public class TypeAllocationNode : INode
     {
+        public string NodeKind => "StructAllocation";
         public MugType Name { get; set; }
         private List<FieldAssignmentNode> _body { get; set; } = new();
         public FieldAssignmentNode[] Body

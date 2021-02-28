@@ -5,6 +5,7 @@ namespace Mug.Models.Parser.NodeKinds.Statements
 {
     public class ConditionalStatement : INode
     {
+        public string NodeKind => "Condition";
         public TokenKind Kind { get; set; }
         public INode Expression { get; set; }
         public BlockNode Body { get; set; }

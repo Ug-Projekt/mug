@@ -5,6 +5,7 @@ namespace Mug.Models.Parser.NodeKinds
 {
     public class BlockNode : INode
     {
+        public string NodeKind => "Block";
         public INode[] Statements
         {
             get
