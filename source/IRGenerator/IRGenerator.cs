@@ -7,6 +7,7 @@ using Mug.Models.Parser;
 using Mug.Models.Parser.NodeKinds;
 using Mug.Models.Parser.NodeKinds.Directives;
 using Mug.Models.Parser.NodeKinds.Statements;
+using Mug.MugValueSystem;
 using Mug.TypeSystem;
 using System;
 using System.Collections.Generic;
@@ -19,7 +20,7 @@ namespace Mug.Models.Generator
         public readonly MugParser Parser;
         public LLVMModuleRef Module { get; set; }
 
-        private Dictionary<string, LLVMValueRef> Symbols { get; set; } = new();
+        private Dictionary<string, MugValue> Symbols { get; set; } = new();
 
         private const string EntryPointName = "main";
 
@@ -30,7 +31,6 @@ namespace Mug.Models.Generator
                 return Path.GetFullPath(Parser.Lexer.ModuleName);
             }
         }
-
 
         public IRGenerator(string moduleName, string source)
         {
@@ -65,51 +65,15 @@ namespace Mug.Models.Generator
             throw new Exception("unreachable");
         }
 
-        public bool MatchSameIntType(LLVMTypeRef ft, LLVMTypeRef st)
+        internal bool MatchSameIntType(MugValueType ft, MugValueType st)
         {
             return
-                // make sure it is an int
-                ft.Kind == LLVMTypeKind.LLVMIntegerTypeKind &&
                 // check are the same type
-                ft == st &&
+                ft.Equals(st) &&
                 // allowed int
-                (ft == LLVMTypeRef.Int32 ||
-                ft == LLVMTypeRef.Int64 ||
-                ft == LLVMTypeRef.Int8);
-        }
-
-        public bool MatchAnyTypeOfIntType(LLVMTypeRef type)
-        {
-            return
-                type == LLVMTypeRef.Int1  ||
-                type == LLVMTypeRef.Int8  ||
-                type == LLVMTypeRef.Int16 ||
-                type == LLVMTypeRef.Int32 ||
-                type == LLVMTypeRef.Int64;
-        }
-
-        /// <summary>
-        /// the function converts a Mugtype to the corresponding Llvmtyperef
-        /// </summary>
-        public LLVMTypeRef TypeToLLVMType(MugType type, Range position)
-        {
-            return type.Kind switch
-            {
-                TypeKind.Int32 => LLVMTypeRef.Int32,
-                TypeKind.UInt8 => LLVMTypeRef.Int8,
-                TypeKind.Int64 => LLVMTypeRef.Int64,
-                TypeKind.Bool => LLVMTypeRef.Int1,
-                TypeKind.Void => LLVMTypeRef.Void,
-                TypeKind.Char => LLVMTypeRef.Int16,
-                TypeKind.String => LLVMTypeRef.CreatePointer(LLVMTypeRef.Int8, 0),
-                TypeKind.Array => LLVMTypeRef.CreatePointer(TypeToLLVMType(type.BaseType is TypeKind kind ? new MugType(kind) : (MugType)type.BaseType, position), 0),
-                _ => NotSupportedType<LLVMTypeRef>(type.Kind.ToString(), position)
-            };
-        }
-
-        public bool MatchCharType(LLVMTypeRef type)
-        {
-            return type == LLVMTypeRef.Int16;
+                (ft.TypeKind == MugValueTypeKind.Int32 ||
+                ft.TypeKind == MugValueTypeKind.Int64 ||
+                ft.TypeKind == MugValueTypeKind.Int8);
         }
 
         public ulong StringCharToIntChar(string value)
@@ -120,20 +84,30 @@ namespace Mug.Models.Generator
         /// <summary>
         /// the function tries to declare the symbol: if it has already been declared launches a compilation-error
         /// </summary>
-        private void DeclareSymbol(string name, LLVMValueRef value, Range position)
+        private void DeclareSymbol(string name, MugValue value, Range position)
         {
             if (!Symbols.TryAdd(name, value))
                 Error(position, "`", name, "` member already declared");
         }
 
         /// <summary>
-        /// calls the function <see cref="TypeToLLVMType(MugType, Range)"/> for each parameter in the past array
+        /// calls the function <see cref="TypeToMugType(MugType, Range)"/> for each parameter in the past array
         /// </summary>
-        private LLVMTypeRef[] ParameterTypesToLLVMTypes(ParameterNode[] parameterTypes)
+        internal MugValueType[] ParameterTypesToMugTypes(ParameterNode[] parameterTypes)
+        {
+            var result = new MugValueType[parameterTypes.Length];
+            for (int i = 0; i < parameterTypes.Length; i++)
+                result[i] = parameterTypes[i].Type.ToMugType(parameterTypes[i].Position, NotSupportedType<MugValueType>);
+
+            return result;
+        }
+
+        internal LLVMTypeRef[] MugTypesToLLVMTypes(MugValueType[] parameterTypes)
         {
             var result = new LLVMTypeRef[parameterTypes.Length];
             for (int i = 0; i < parameterTypes.Length; i++)
-                result[i] = TypeToLLVMType(parameterTypes[i].Type, parameterTypes[i].Position);
+                result[i] = parameterTypes[i].LLVMType;
+
             return result;
         }
 
@@ -144,17 +118,20 @@ namespace Mug.Models.Generator
         /// </summary>
         private void InstallFunction(string name, MugType type, Range position, ParameterListNode paramTypes)
         {
-            var parameterTypes = ParameterTypesToLLVMTypes(paramTypes.Parameters);
+            var parameterTypes = ParameterTypesToMugTypes(paramTypes.Parameters);
+
+            var t = type.ToMugType(position, NotSupportedType<MugValueType>);
+
             var ft = LLVMTypeRef.CreateFunction(
-                    TypeToLLVMType(type, position),
-                    parameterTypes
+                    t.LLVMType,
+                    MugTypesToLLVMTypes(parameterTypes)
                 );
 
             name = BuildFunctionName(name, parameterTypes);
 
             var f = Module.AddFunction(name, ft);
 
-            DeclareSymbol(name, f, position);
+            DeclareSymbol(name, MugValue.From(f, t), position);
         }
 
         private bool IsVoid(MugType type)
@@ -171,27 +148,36 @@ namespace Mug.Models.Generator
             return Convert.ToUInt64(Convert.ToBoolean(value));
         }
 
+        internal LLVMValueRef[] MugValuesToLLVMValues(MugValue[] values)
+        {
+            var result = new LLVMValueRef[values.Length];
+            for (int i = 0; i < values.Length; i++)
+                result[i] = values[i].LLVMValue;
+
+            return result;
+        }
+
         /// <summary>
         /// the function checks that all the past types are the same, therefore compatible with each other
         /// </summary>
-        public void ExpectSameTypes(LLVMTypeRef firstType, Range position, string error, params LLVMTypeRef[] types)
+        internal void ExpectSameTypes(MugValueType firstType, Range position, string error, params MugValueType[] types)
         {
             for (int i = 0; i < types.Length; i++)
-                if (firstType != types[i])
+                if (!firstType.Equals(types[i]))
                     Error(position, error);
         }
 
-        public void ExpectBoolType(LLVMTypeRef type, Range position)
+        internal void ExpectBoolType(MugValueType type, Range position)
         {
-            ExpectSameTypes(type, position, $"Expected `u1` type, got `{type}`", LLVMTypeRef.Int1);
+            ExpectSameTypes(type, position, $"Expected `u1` type, got `{type}`", MugValueType.Bool);
         }
 
-        public void ExpectIntType(LLVMTypeRef type, Range position)
+        internal void ExpectIntType(MugValueType type, Range position)
         {
             ExpectSameTypes(type, position, $"Expected `i32`, `i64` type, got `{type}`",
-                LLVMTypeRef.Int8,
-                LLVMTypeRef.Int32,
-                LLVMTypeRef.Int64);
+                MugValueType.Int8,
+                MugValueType.Int32,
+                MugValueType.Int64);
         }
 
         /// <summary>
@@ -218,10 +204,11 @@ namespace Mug.Models.Generator
         /// <summary>
         /// the function verifies that a symbol is declared and a compilation-error if it is not
         /// </summary>
-        public LLVMValueRef GetSymbol(string name, Range position)
+        internal MugValue GetSymbol(string name, Range position)
         {
             if (!Symbols.TryGetValue(name, out var member))
                 Error(position, "`", name, "` undeclared member");
+
             return member;
         }
 
@@ -234,7 +221,7 @@ namespace Mug.Models.Generator
         {
             MugEmitter emitter = new MugEmitter(this);
 
-            var llvmfunction = Symbols[function.Name];
+            var llvmfunction = Symbols[function.Name].LLVMValue;
             // basic block, won't be emitted any block because the name is empty
             var entry = llvmfunction.AppendBasicBlock("");
 
@@ -265,7 +252,7 @@ namespace Mug.Models.Generator
         /// <summary>
         /// create a string representing the name of a function that includes its id and the list of parameters, separated by ', ', in brackets
         /// </summary>
-        private string BuildFunctionName(string name, LLVMTypeRef[] types)
+        private string BuildFunctionName(string name, MugValueType[] types)
         {
             return
                 IsEntryPoint(name, types.Length) ? name : $"{name}({string.Join(", ", types)})";
@@ -303,29 +290,31 @@ namespace Mug.Models.Generator
         private void EmitFunction(FunctionNode function)
         {
             // change the name of the function in the corresponding with the types of parameters, to allow overload of the methods
-            function.Name = BuildFunctionName(function.Name, ParameterTypesToLLVMTypes(function.ParameterList.Parameters));
+            function.Name = BuildFunctionName(function.Name, ParameterTypesToMugTypes(function.ParameterList.Parameters));
 
             DefineFunction(function);
         }
 
         private void EmitFunctionPrototype(FunctionPrototypeNode prototype)
         {
-            var parameters = ParameterTypesToLLVMTypes(prototype.ParameterList.Parameters);
+            var parameters = ParameterTypesToMugTypes(prototype.ParameterList.Parameters);
             // search for the function
-            LLVMValueRef function = Module.GetNamedFunction(prototype.Name);
+            var function = Module.GetNamedFunction(prototype.Name);
+
+            var type = prototype.Type.ToMugType(prototype.Position, NotSupportedType<MugValueType>);
 
             // if the function is not declared yet
             if (function.Handle == IntPtr.Zero)
                 // declares it
                 function = Module.AddFunction(prototype.Name,
                         LLVMTypeRef.CreateFunction(
-                            TypeToLLVMType(prototype.Type, prototype.Position),
-                            parameters));
+                            type.LLVMType,
+                            MugTypesToLLVMTypes(parameters)));
 
             // adding a new symbol
             DeclareSymbol(
                 BuildFunctionName(prototype.Name, parameters),
-                function,
+                MugValue.From(function, type),
                 prototype.Position);
         }
 
@@ -400,15 +389,6 @@ namespace Mug.Models.Generator
             // memebers' definition
             foreach (var member in Parser.Module.Members.Nodes)
                 RecognizeMember(member, false);
-        }
-
-        public bool MatchIntType(LLVMTypeRef variableType)
-        {
-            return
-                variableType.Kind == LLVMTypeKind.LLVMIntegerTypeKind &&
-                variableType == LLVMTypeRef.Int8 ||
-                (variableType == LLVMTypeRef.Int32 ||
-                variableType == LLVMTypeRef.Int64);
         }
     }
 }

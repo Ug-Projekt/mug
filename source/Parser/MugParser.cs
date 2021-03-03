@@ -341,7 +341,7 @@ namespace Mug.Models.Parser
                     _currentIndex++;
             }
 
-            e = new CallStatement() { Name = name, Parameters = parameters, Position = previousMember is null ? name.Position : 0..0 };
+            e = new CallStatement() { Name = name, Parameters = parameters, Position = previousMember is null ? name.Position : previousMember.Position };
 
             if (isImperativeStatement)
                 Expect("", TokenKind.Semicolon);

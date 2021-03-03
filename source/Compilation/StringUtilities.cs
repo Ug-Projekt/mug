@@ -57,25 +57,4 @@ namespace Mug.Compilation
             return span.ToString();
         }
     }
-
-    internal static class Extensions
-    {
-        public static string ToMugTypeString(this LLVMTypeRef Type)
-        {
-            if (Type == LLVMTypeRef.Int1)
-                return "u1";
-            if (Type == LLVMTypeRef.Int16)
-                return "chr";
-            if (Type == LLVMTypeRef.Int32)
-                return "i32";
-            if (Type == LLVMTypeRef.Int64)
-                return "i64";
-            if (Type == LLVMTypeRef.Int8)
-                return "u8";
-            if (Type == LLVMTypeRef.CreatePointer(LLVMTypeRef.Int8, 0))
-                return "str";
-
-            return Type.ToString();
-        }
-    }
 }

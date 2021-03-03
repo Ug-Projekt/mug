@@ -5,6 +5,7 @@ using Mug.Models.Lexer;
 using Mug.Models.Parser;
 using Mug.Models.Parser.NodeKinds;
 using Mug.Models.Parser.NodeKinds.Statements;
+using Mug.MugValueSystem;
 using Mug.TypeSystem;
 using System;
 using System.Diagnostics;
@@ -21,7 +22,7 @@ namespace Mug.Models.Generator
         private readonly IRGenerator _generator;
         private readonly LLVMValueRef _llvmfunction;
 
-        public LocalGenerator(IRGenerator errorHandler, ref LLVMValueRef llvmfunction, ref FunctionNode function, ref MugEmitter emitter)
+        internal LocalGenerator(IRGenerator errorHandler, ref LLVMValueRef llvmfunction, ref FunctionNode function, ref MugEmitter emitter)
         {
             _generator = errorHandler;
             _emitter = emitter;
@@ -49,19 +50,38 @@ namespace Mug.Models.Generator
         /// <summary>
         /// converts a constant in token format to one in LLVMValueRef format
         /// </summary>
-        public LLVMValueRef ConstToLLVMConst(Token constant, Range position)
+        internal MugValue ConstToMugConst(Token constant, Range position)
         {
-            return constant.Kind switch
+            LLVMValueRef llvmvalue = new();
+            MugValueType type = new();
+            
+            switch (constant.Kind)
             {
-                TokenKind.ConstantDigit => LLVMValueRef.CreateConstInt(LLVMTypeRef.Int32, Convert.ToUInt64(constant.Value)),
-                TokenKind.ConstantBoolean => LLVMValueRef.CreateConstInt(LLVMTypeRef.Int1, _generator.StringBoolToIntBool(constant.Value)),
-                TokenKind.ConstantString => CreateConstString(constant.Value),
-                TokenKind.ConstantChar => LLVMValueRef.CreateConstInt(LLVMTypeRef.Int16, _generator.StringCharToIntChar(constant.Value)),
-                _ => _generator.NotSupportedType<LLVMValueRef>(constant.Kind.ToString(), position)
-            };
+                case TokenKind.ConstantDigit:
+                    llvmvalue = LLVMValueRef.CreateConstInt(LLVMTypeRef.Int32, Convert.ToUInt64(constant.Value));
+                    type = MugValueType.Int32;
+                    break;
+                case TokenKind.ConstantBoolean:
+                    llvmvalue = LLVMValueRef.CreateConstInt(LLVMTypeRef.Int1, _generator.StringBoolToIntBool(constant.Value));
+                    type = MugValueType.Bool;
+                    break;
+                case TokenKind.ConstantString:
+                    llvmvalue = CreateConstString(constant.Value);
+                    type = MugValueType.String;
+                    break;
+                case TokenKind.ConstantChar:
+                    llvmvalue = LLVMValueRef.CreateConstInt(LLVMTypeRef.Int8, _generator.StringCharToIntChar(constant.Value));
+                    type = MugValueType.Char;
+                    break;
+                default:
+                    _generator.NotSupportedType<LLVMValueRef>(constant.Kind.ToString(), position);
+                    break;
+            }
+
+            return MugValue.From(llvmvalue, type);
         }
 
-        private void EmitSum(LLVMTypeRef ft, LLVMTypeRef st, Range position)
+        private void EmitSum(MugValueType ft, MugValueType st, Range position)
         {
             if (_generator.MatchSameIntType(ft, st))
                 _emitter.AddInt();
@@ -69,7 +89,7 @@ namespace Mug.Models.Generator
                 _emitter.CallOperator("+", position, ft, st);
         }
 
-        private void EmitSub(LLVMTypeRef ft, LLVMTypeRef st, Range position)
+        private void EmitSub(MugValueType ft, MugValueType st, Range position)
         {
             if (_generator.MatchSameIntType(ft, st))
                 _emitter.SubInt();
@@ -77,7 +97,7 @@ namespace Mug.Models.Generator
                 _emitter.CallOperator("-", position, ft, st);
         }
 
-        private void EmitMul(LLVMTypeRef ft, LLVMTypeRef st, Range position)
+        private void EmitMul(MugValueType ft, MugValueType st, Range position)
         {
             if (_generator.MatchSameIntType(ft, st))
                 _emitter.MulInt();
@@ -85,7 +105,7 @@ namespace Mug.Models.Generator
                 _emitter.CallOperator("*", position, ft, st);
         }
 
-        private void EmitDiv(LLVMTypeRef ft, LLVMTypeRef st, Range position)
+        private void EmitDiv(MugValueType ft, MugValueType st, Range position)
         {
             if (_generator.MatchSameIntType(ft, st))
                 _emitter.DivInt();
@@ -96,7 +116,7 @@ namespace Mug.Models.Generator
         /// <summary>
         /// the function manages the operator implementations for all the types
         /// </summary>
-        private void EmitOperator(OperatorKind kind, LLVMTypeRef ft, LLVMTypeRef st, Range position)
+        private void EmitOperator(OperatorKind kind, MugValueType ft, MugValueType st, Range position)
         {
             switch (kind)
             {
@@ -161,10 +181,10 @@ namespace Mug.Models.Generator
         {
             // the expression type to cast
             var expressionType = _emitter.PeekType();
-            var castType = _generator.TypeToLLVMType(type, position);
+            var castType = type.ToMugType(position, _generator.NotSupportedType<MugValueType>);
 
-            if (_generator.MatchAnyTypeOfIntType(expressionType) &&
-                _generator.MatchAnyTypeOfIntType(castType)) // LLVM has different instructions for each type convertion
+            if (expressionType.MatchAnyTypeOfIntType() &&
+                castType.MatchAnyTypeOfIntType()) // LLVM has different instructions for each type convertion
                 _emitter.CastInt(castType);
             else
                 _emitter.CallOperator($"as {type}", position, expressionType);
@@ -191,7 +211,7 @@ namespace Mug.Models.Generator
         /// parameter types in parentheses separated by ', ',
         /// to allow overload of functions
         /// </summary>
-        private string BuildName(string name, LLVMTypeRef[] parameters)
+        private string BuildName(string name, MugValueType[] parameters)
         {
             return $"{name}({string.Join(", ", parameters)})";
         }
@@ -202,7 +222,7 @@ namespace Mug.Models.Generator
         private void EmitCallStatement(CallStatement c, bool expectedNonVoid)
         {
             // an array is prepared for the parameter types of function to call
-            var parameters = new LLVMTypeRef[c.Parameters.Lenght];
+            var parameters = new MugValueType[c.Parameters.Lenght];
 
             /* the array is cycled with the expressions of the respective parameters and each expression
              * is evaluated and assigned its type to the array of parameter types
@@ -220,15 +240,15 @@ namespace Mug.Models.Generator
             var function = _generator.GetSymbol(BuildName(EvaluateInstanceName(c.Name), parameters), c.Position);
             
             // function type: <ret_type> <param_types>
-            var functionType = function.TypeOf.ElementType;
+            var functionType = function.Type.LLVMType;
 
             if (expectedNonVoid)
                 _generator.ExpectNonVoidType(
                     // (<ret_type> <param_types>).GetElementType() -> <ret_type>
-                    functionType.ReturnType,
+                    functionType,
                     c.Position);
 
-            _emitter.Call(function, c.Parameters.Lenght);
+            _emitter.Call(function.LLVMValue, c.Parameters.Lenght, function.Type);
         }
 
         private void EmitExprPrefixOperator(PrefixOperator p)
@@ -287,12 +307,16 @@ namespace Mug.Models.Generator
         {
             // EvaluateExpression();
 
+            var type = aa.Type.ToMugType(aa.Position, _generator.NotSupportedType<MugValueType>);
+
             // loading the array
+
             _emitter.Load(
+                MugValue.From(
                 _emitter.Builder.BuildArrayMalloc(
-                    _generator.TypeToLLVMType(aa.Type, aa.Position),
+                    type.LLVMType,
                     LLVMValueRef.CreateConstInt(LLVMTypeRef.Int32, 0))
-                );
+                , type));
 
             // loading a new array with the
             // _emitter.StoreElementsInArray();
@@ -312,7 +336,7 @@ namespace Mug.Models.Generator
                     if (t.Kind == TokenKind.Identifier) // reference value
                         _emitter.LoadFromMemory(t.Value, t.Position);
                     else // constant value
-                        _emitter.Load(ConstToLLVMConst(t, t.Position));
+                        _emitter.Load(ConstToMugConst(t, t.Position));
                     break;
                 case PrefixOperator p:
                     EmitExprPrefixOperator(p);
@@ -365,10 +389,16 @@ namespace Mug.Models.Generator
                 // alias for ...
                 var parameter = parameters[i];
 
+                var parametertype = parameter.Type.ToMugType(parameter.Position, _generator.NotSupportedType<MugValueType>);
+
                 // allocating the local variable
-                _emitter.DeclareVariable(parameter.Name, _generator.TypeToLLVMType(parameter.Type, parameter.Position), parameter.Position);
+                _emitter.DeclareVariable(
+                    parameter.Name,
+                    parametertype,
+                    parameter.Position);
+
                 // loading onto the stack the parameter
-                _emitter.Load(_llvmfunction.GetParam((uint)i));
+                _emitter.Load(MugValue.From(_llvmfunction.GetParam((uint)i), parametertype));
 
                 // storing the parameter into the variable
                 _emitter.StoreVariable(parameter.Name, parameter.Position);
@@ -531,7 +561,12 @@ namespace Mug.Models.Generator
              */
             if (@return.IsVoid())
             {
-                _generator.ExpectSameTypes(_generator.TypeToLLVMType(_function.Type, @return.Position), @return.Position, "Expected non-void expression", LLVMTypeRef.Void);
+                _generator.ExpectSameTypes(
+                    _function.Type.ToMugType(@return.Position, _generator.NotSupportedType<MugValueType>),
+                    @return.Position,
+                    "Expected non-void expression",
+                    MugValueType.Void);
+
                 _emitter.RetVoid();
             }
             else
@@ -541,8 +576,10 @@ namespace Mug.Models.Generator
                  * it will be evaluated and then it will be compared the type of the result with the type of return of the function
                  */
                 EvaluateExpression(@return.Body);
-                var type = _generator.TypeToLLVMType(_function.Type, @return.Position);
-                _generator.ExpectSameTypes(type, @return.Position, $"Expected {type.ToMugTypeString()} type, got {_emitter.PeekType().ToMugTypeString()} type", _emitter.PeekType());
+
+                var type = _function.Type.ToMugType(@return.Position, _generator.NotSupportedType<MugValueType>);
+
+                _generator.ExpectSameTypes(type, @return.Position, $"Expected {type} type, got {_emitter.PeekType()} type", _emitter.PeekType());
                 _emitter.Ret();
             }
         }
@@ -612,9 +649,9 @@ namespace Mug.Models.Generator
                     else if (a.Operator == TokenKind.DivAssignment)
                         EmitDiv(variableType, expressionType, a.Position);
                 }
-                else if (_generator.MatchIntType(variableType))
+                else if (variableType.MatchIntType())
                 {
-                    _emitter.Load(LLVMValueRef.CreateConstInt(variableType, 1));
+                    _emitter.Load(LLVMValueRef.CreateConstInt(variableType.LLVMType, 1));
 
                     if (a.Operator == TokenKind.OperatorIncrement)
                         _emitter.AddInt();
@@ -637,7 +674,10 @@ namespace Mug.Models.Generator
 
             // match the constant explicit type and expression type are the same
             if (!constant.Type.IsAutomatic())
-                _generator.ExpectSameTypes(_generator.TypeToLLVMType(constant.Type, constant.Position), constant.Body.Position, $"Expected {constant.Type} type, got {_emitter.PeekType().ToMugTypeString()} type", _emitter.PeekType());
+                _generator.ExpectSameTypes(
+                    constant.Type.ToMugType(
+                        constant.Position,
+                        _generator.NotSupportedType<MugValueType>), constant.Body.Position, $"Expected {constant.Type} type, got {_emitter.PeekType()} type", _emitter.PeekType());
 
             // declaring the constant with a name
             _emitter.DeclareConstant(constant.Name, constant.Position);

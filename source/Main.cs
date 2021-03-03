@@ -11,7 +11,7 @@ try
 
     var test = @"
 func main() {
-   
+   var x = 2*2;
 }
 ";
     /*var parser = new MugParser("test", test);

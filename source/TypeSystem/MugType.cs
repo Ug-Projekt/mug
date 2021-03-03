@@ -1,5 +1,7 @@
-﻿using Mug.Compilation;
+﻿using LLVMSharp.Interop;
+using Mug.Compilation;
 using Mug.Models.Lexer;
+using Mug.MugValueSystem;
 using System;
 
 namespace Mug.TypeSystem
@@ -92,6 +94,24 @@ namespace Mug.TypeSystem
                 Kind == TypeKind.UInt8  ||
                 Kind == TypeKind.UInt32 ||
                 Kind == TypeKind.UInt64;
+        }
+
+        /// <summary>
+        /// the function converts a Mugtype to the corresponding Llvmtyperef
+        /// </summary>
+        public MugValueType ToMugType(Range position, Func<string, Range, MugValueType> notsupportedtype)
+        {
+            return Kind switch
+            {
+                TypeKind.Int32 => MugValueType.Int32,
+                TypeKind.UInt8 => MugValueType.Int8,
+                TypeKind.Int64 => MugValueType.Int64,
+                TypeKind.Bool => MugValueType.Bool,
+                TypeKind.Void => MugValueType.Void,
+                TypeKind.Char => MugValueType.Char,
+                TypeKind.String => MugValueType.String,
+                _ => notsupportedtype(Kind.ToString(), position)
+            };
         }
     }
 }
