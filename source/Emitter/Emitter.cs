@@ -164,7 +164,7 @@ namespace Mug.Models.Generator.Emitter
             var function = _generator.GetSymbol($"{op}({string.Join(", ", types)})", position);
             
             // check the operator overloading is not void
-            _generator.ExpectNonVoidType(function.Type.LLVMType.ElementType.ReturnType, position);
+            _generator.ExpectNonVoidType(function.Type.LLVMType.ElementType, position);
 
             Call(function.LLVMValue, types.Length, function.Type);
         }
