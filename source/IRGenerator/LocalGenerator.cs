@@ -227,6 +227,7 @@ namespace Mug.Models.Generator
             /* the array is cycled with the expressions of the respective parameters and each expression
              * is evaluated and assigned its type to the array of parameter types
              */
+            Console.WriteLine(c.Parameters.Lenght);
             for (int i = 0; i < c.Parameters.Lenght; i++)
             {
                 EvaluateExpression(c.Parameters.Nodes[i]);

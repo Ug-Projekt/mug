@@ -337,8 +337,6 @@ namespace Mug.Models.Parser
 
                 if (Back.Kind == TokenKind.ClosePar)
                     _currentIndex--;
-                else
-                    _currentIndex++;
             }
 
             e = new CallStatement() { Name = name, Parameters = parameters, Position = previousMember is null ? name.Position : previousMember.Position };
