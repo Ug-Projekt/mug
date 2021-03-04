@@ -51,9 +51,15 @@ namespace Mug.Models.Generator
             Parser.Lexer.Throw(position, error);
         }
 
-        public bool MatchStringType(LLVMTypeRef exprType)
+        internal MugValue RequireStandardSymbol(string symbol, string lib)
         {
-            return exprType == LLVMTypeRef.CreatePointer(LLVMTypeRef.Int8, 0);
+            if (!Symbols.ContainsKey(symbol))
+                ReadModule($"{lib}.bc");
+
+            if (!Symbols.ContainsKey(symbol))
+                CompilationErrors.Throw("Cannot load symbol ", symbol, " from lib ", lib);
+
+            return Symbols[symbol];
         }
 
         /// <summary>
@@ -108,7 +114,7 @@ namespace Mug.Models.Generator
             return result;
         }
 
-        internal LLVMTypeRef[] MugTypesToLLVMTypes(MugValueType[] parameterTypes)
+        internal static LLVMTypeRef[] MugTypesToLLVMTypes(MugValueType[] parameterTypes)
         {
             var result = new LLVMTypeRef[parameterTypes.Length];
             for (int i = 0; i < parameterTypes.Length; i++)
@@ -135,6 +141,9 @@ namespace Mug.Models.Generator
             name = BuildFunctionName(name, parameterTypes, t);
 
             var f = Module.AddFunction(name, ft);
+
+            // private llvm member
+            f.Linkage = LLVMLinkage.LLVMLinkerPrivateLinkage;
 
             DeclareSymbol(name, MugValue.From(f, t), position);
         }
@@ -174,10 +183,8 @@ namespace Mug.Models.Generator
 
         internal void ExpectIntType(MugValueType type, Range position)
         {
-            ExpectSameTypes(type, position, $"Expected `i32`, `i64` type, got `{type}`",
-                MugValueType.Int8,
-                MugValueType.Int32,
-                MugValueType.Int64);
+            if (!type.MatchIntType())
+                Error(position, $"Expected `u8`, `i32`, `i64` type, got `{type}`");
         }
 
         /// <summary>
@@ -212,6 +219,11 @@ namespace Mug.Models.Generator
             return member;
         }
 
+        private bool MatchAllPathsReturnAValue(LLVMValueRef function)
+        {
+            return function.LastBasicBlock.Terminator.IsAReturnInst.Handle == IntPtr.Zero;
+        }
+
         /// <summary>
         /// defines the body of a function by taking from the declared symbols its own previously defined symbol,
         /// to allow the call of a method declared under the caller.
@@ -230,13 +242,16 @@ namespace Mug.Models.Generator
             var generator = new LocalGenerator(this, ref llvmfunction, ref function, ref emitter);
             generator.Generate();
 
-            // implicit return with void functions
-            if (function.Type.Kind == TypeKind.Void &&
-                // if the type is void check if the last statement was ret, if it was not ret add one implicitly
-                entry.Terminator.IsAReturnInst.Handle == IntPtr.Zero) // is null
-                generator.AddImplicitRetVoid();
+            // if the type is void check if the last statement was ret, if it was not ret add one implicitly
+            if (llvmfunction.LastBasicBlock.Terminator.IsAReturnInst.Handle == IntPtr.Zero)
+            {
+                // implicit return with void functions
+                if (function.Type.Kind == TypeKind.Void) // is null
+                    generator.AddImplicitRetVoid();
+                else if (!MatchAllPathsReturnAValue(llvmfunction))
+                    Error(function.Position, "Not all paths return a value");
+            }
         }
-
 
         /// <summary>
         /// check if an id is equal to the id of the entry point and if the parameters are 0,
@@ -331,6 +346,16 @@ namespace Mug.Models.Generator
 
         private void EmitImport(ImportDirective import)
         {
+            if (import.Member is not Token)
+                Error(import.Position, "Unsupported import member");
+
+            // pragma once
+            var symbol = $"@import: {((Token)import.Member).Value}";
+            if (Symbols.ContainsKey(symbol))
+                return;
+
+            Symbols.Add(symbol, new());
+
             CompilationUnit unit = null;
 
             if (import.Mode == ImportMode.FromPackages) // dirof(mug.exe)/include/
@@ -359,6 +384,23 @@ namespace Mug.Models.Generator
             unit.Generate();
         }
 
+        private void EmitStructure(TypeStatement structure)
+        {
+            var body = new MugValueType[structure.Body.Length];
+
+            for (int i = 0; i < structure.Body.Length; i++)
+            {
+                var field = structure.Body[i];
+                body[i] = field.Type.ToMugType(field.Position, NotSupportedType<MugValueType>);
+            }
+
+            var st = MugValueType.Struct(body, structure);
+
+            var s = Module.AddGlobal(st.LLVMType, structure.Name);
+
+            DeclareSymbol(structure.Name, MugValue.Struct(s, st), structure.Position);
+        }
+
         /// <summary>
         /// recognize the type of the AST node and depending on the type call methods
         /// to convert it to the corresponding low-level code
@@ -376,6 +418,10 @@ namespace Mug.Models.Generator
                 case FunctionPrototypeNode prototype:
                     if (declareOnly)
                         EmitFunctionPrototype(prototype);
+                    break;
+                case TypeStatement structure:
+                    if (declareOnly)
+                        EmitStructure(structure);
                     break;
                 case ImportDirective import:
                     if (declareOnly)

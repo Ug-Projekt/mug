@@ -450,6 +450,7 @@ namespace Mug.Models.Generator
 
             // generating the low-level code
             Generate(body);
+
             // back to the main block, jump ou of the if scope
             _emitter.JumpOutOfScope(then.Terminator, endifelse);
         }
@@ -664,6 +665,12 @@ namespace Mug.Models.Generator
             }
             else
                 EvaluateExpression(a.Body);
+
+            if (variableType.IsPointer())
+            {
+                _emitter.LoadFromMemory(name, a.Position);
+                _emitter.EmitGCDecrementReferenceCounter();
+            }
 
             _emitter.StoreVariable(name, a.Position);
         }

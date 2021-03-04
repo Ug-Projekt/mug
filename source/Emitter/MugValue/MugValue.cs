@@ -15,6 +15,11 @@ namespace Mug.MugValueSystem
             return new MugValue() { LLVMValue = value, Type = type };
         }
 
+        internal static MugValue Struct(LLVMValueRef structure, MugValueType type)
+        {
+            return From(structure, type);
+        }
+
         public bool IsAllocaInstruction()
         {
             return LLVMValue.IsAAllocaInst.Handle != IntPtr.Zero;

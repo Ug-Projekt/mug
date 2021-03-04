@@ -16,6 +16,10 @@ namespace Mug.Models.Generator.Emitter
         private readonly IRGenerator _generator;
         public Dictionary<string, MugValue> Memory { get; }
 
+        private const string GCMugLibSymbol = "include/standard_symbols/mug_gc";
+        private const string GCPointerIncrementStandardSymbol = "gc_ptr_inc";
+        private const string GCPointerDecrementStandardSymbol = "gc_ptr_dec";
+
         public MugEmitter(IRGenerator generator, Dictionary<string, MugValue> memory)
         {
             _generator = generator;
@@ -83,8 +87,7 @@ namespace Mug.Models.Generator.Emitter
         public void CastInt(MugValueType type)
         {
             Load(
-                MugValue.From(Builder.BuildIntCast(Pop().LLVMValue, type.LLVMType), type)
-                );
+                MugValue.From(Builder.BuildIntCast(Pop().LLVMValue, type.LLVMType), type));
         }
 
         private MugValue GetFromMemory(string name, Range position)
@@ -148,13 +151,32 @@ namespace Mug.Models.Generator.Emitter
             return Memory.ContainsKey(name);
         }
 
+        private void EmitGCIncrementReferenceCounter(LLVMValueRef pointer)
+        {
+            /*Builder.BuildCall(
+                _generator.RequireStandardSymbol(GCPointerIncrementStandardSymbol, GCMugLibSymbol).LLVMValue,
+                new[] { pointer });*/
+        }
+
+        public void EmitGCDecrementReferenceCounter()
+        {
+            /*Builder.BuildCall(
+                _generator.RequireStandardSymbol(GCPointerDecrementStandardSymbol, GCMugLibSymbol).LLVMValue,
+                new[] { Pop().LLVMValue });*/
+        }
+
         public void LoadFromMemory(string name, Range position)
         {
             var variable = GetFromMemory(name, position);
 
             // variable
             if (variable.IsAllocaInstruction())
+            {
+                if (variable.Type.IsPointer())
+                    EmitGCIncrementReferenceCounter(variable.LLVMValue);
+
                 Load(MugValue.From(Builder.BuildLoad(variable.LLVMValue), variable.Type));
+            }
             else // constant
                 Load(variable);
         }

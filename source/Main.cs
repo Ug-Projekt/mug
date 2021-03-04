@@ -10,13 +10,19 @@ try
 #if DEBUG
 
     var test = @"
+type Person {
+   name: str,
+   age: u8
+}
+
+type Person {
+   d: i32
+}
+
 func main() {
-   var x = ""c"";
+   # var x = new Person {};
 }
 ";
-    /*var parser = new MugParser("test", test);
-    Console.WriteLine(parser.Parse().Dump());*/
-
     var unit = new CompilationUnit("test", test);
     unit.Generate(true);
 

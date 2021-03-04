@@ -13,6 +13,7 @@ namespace Mug.MugValueSystem
         Char,
         Void,
         String,
-        Pointer
+        Pointer,
+        Struct
     }
 }

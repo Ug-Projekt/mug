@@ -1,4 +1,6 @@
 ﻿using LLVMSharp.Interop;
+using Mug.Models.Generator;
+using Mug.Models.Parser.NodeKinds.Statements;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -15,6 +17,9 @@ namespace Mug.MugValueSystem
             {
                 if (TypeKind == MugValueTypeKind.Pointer)
                     return LLVMTypeRef.CreatePointer(((MugValueType)BaseType).LLVMType, 0);
+
+                if (TypeKind == MugValueTypeKind.Struct)
+                    return ((Tuple<LLVMTypeRef, TypeStatement>)BaseType).Item1;
 
                 return (LLVMTypeRef)BaseType;
             }
@@ -41,6 +46,15 @@ namespace Mug.MugValueSystem
             return new MugValueType() { TypeKind = MugValueTypeKind.Pointer, BaseType = type };
         }
 
+        public static MugValueType Struct(MugValueType[] body, TypeStatement structure)
+        {
+            return new MugValueType()
+            {
+                BaseType = new Tuple<LLVMTypeRef, TypeStatement>(LLVMTypeRef.CreateStruct(IRGenerator.MugTypesToLLVMTypes(body), false), structure),
+                TypeKind = MugValueTypeKind.Struct
+            };
+        }
+
         public static MugValueType Bool => From(LLVMTypeRef.Int1, MugValueTypeKind.Bool);
         public static MugValueType Int8 => From(LLVMTypeRef.Int8, MugValueTypeKind.Int8);
         public static MugValueType Int32 => From(LLVMTypeRef.Int32, MugValueTypeKind.Int32);
@@ -60,6 +74,7 @@ namespace Mug.MugValueSystem
                 MugValueTypeKind.Void => "?",
                 MugValueTypeKind.Char => "chr",
                 MugValueTypeKind.String => "str",
+                MugValueTypeKind.Struct => $"{((Tuple<LLVMTypeRef, TypeStatement>)BaseType).Item2.Name}",
                 MugValueTypeKind.Pointer => $"ptr {BaseType}".Replace("*", "")
             };
         }
@@ -79,6 +94,11 @@ namespace Mug.MugValueSystem
                 TypeKind == MugValueTypeKind.Int8 ||
                 TypeKind == MugValueTypeKind.Int32 ||
                 TypeKind == MugValueTypeKind.Int64;
+        }
+
+        public bool IsPointer()
+        {
+            return TypeKind == MugValueTypeKind.Pointer;
         }
     }
 }
