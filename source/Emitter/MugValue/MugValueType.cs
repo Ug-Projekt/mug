@@ -7,12 +7,38 @@ namespace Mug.MugValueSystem
 {
     public struct MugValueType
     {
-        public LLVMTypeRef LLVMType { get; set; }
+        private object BaseType { get; set; }
         public MugValueTypeKind TypeKind { get; set; }
+        public LLVMTypeRef LLVMType
+        {
+            get
+            {
+                if (TypeKind == MugValueTypeKind.Pointer)
+                    return LLVMTypeRef.CreatePointer(((MugValueType)BaseType).LLVMType, 0);
+
+                return (LLVMTypeRef)BaseType;
+            }
+        }
+
+        public MugValueType ArrayBaseElementType
+        {
+            get
+            {
+                if (TypeKind == MugValueTypeKind.String)
+                    return Char;
+
+                throw new("");
+            }
+        }
 
         public static MugValueType From(LLVMTypeRef type, MugValueTypeKind kind)
         {
-            return new MugValueType() { LLVMType = type, TypeKind = kind };
+            return new MugValueType() { BaseType = type, TypeKind = kind };
+        }
+
+        public static MugValueType Pointer(MugValueType type)
+        {
+            return new MugValueType() { TypeKind = MugValueTypeKind.Pointer, BaseType = type };
         }
 
         public static MugValueType Bool => From(LLVMTypeRef.Int1, MugValueTypeKind.Bool);
@@ -33,7 +59,8 @@ namespace Mug.MugValueSystem
                 MugValueTypeKind.Int64 => "i64",
                 MugValueTypeKind.Void => "?",
                 MugValueTypeKind.Char => "chr",
-                MugValueTypeKind.String => "str"
+                MugValueTypeKind.String => "str",
+                MugValueTypeKind.Pointer => $"ptr {BaseType}".Replace("*", "")
             };
         }
 

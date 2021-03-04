@@ -23,6 +23,7 @@ namespace Mug.Models.Generator
         private Dictionary<string, MugValue> Symbols { get; set; } = new();
 
         private const string EntryPointName = "main";
+        private const string AsOperatorOverloading = "as";
 
         public string LocalPath
         {
@@ -59,9 +60,14 @@ namespace Mug.Models.Generator
         /// the function launches an exception and returns a generic value,
         /// this function comes in statement switch in expressions
         /// </summary>
-        public T NotSupportedType<T>(string type, Range position)
+        internal T NotSupportedType<T>(string type, Range position)
         {
-            Error(position, "`", type, "` type is not supported yet");
+            return Error<T>(position, "`", type, "` type is not supported yet");
+        }
+
+        internal T Error<T>(Range position, params string[] error)
+        {
+            Error(position, error);
             throw new Exception("unreachable");
         }
 
@@ -124,19 +130,13 @@ namespace Mug.Models.Generator
 
             var ft = LLVMTypeRef.CreateFunction(
                     t.LLVMType,
-                    MugTypesToLLVMTypes(parameterTypes)
-                );
+                    MugTypesToLLVMTypes(parameterTypes));
 
-            name = BuildFunctionName(name, parameterTypes);
+            name = BuildFunctionName(name, parameterTypes, t);
 
             var f = Module.AddFunction(name, ft);
 
             DeclareSymbol(name, MugValue.From(f, t), position);
-        }
-
-        private bool IsVoid(MugType type)
-        {
-            return type.Kind == TypeKind.Void;
         }
 
         /// <summary>
@@ -186,7 +186,7 @@ namespace Mug.Models.Generator
         /// </summary>
         public void ExpectNonVoidType(MugType type, Range position)
         {
-            if (IsVoid(type))
+            if (type.Kind == TypeKind.Void)
                 Error(position, "In the current context `void` is not allowed");
         }
 
@@ -242,20 +242,28 @@ namespace Mug.Models.Generator
         /// check if an id is equal to the id of the entry point and if the parameters are 0,
         /// to allow overload of the main function
         /// </summary>
-        public bool IsEntryPoint(string name, int paramsLen)
+        internal bool IsEntryPoint(string name, int paramsLen)
         {
             return
                 name == EntryPointName && paramsLen == 0;
         }
 
+        internal bool IsAsOperatorOverloading(string name)
+        {
+            return name == AsOperatorOverloading;
+        }
 
         /// <summary>
         /// create a string representing the name of a function that includes its id and the list of parameters, separated by ', ', in brackets
         /// </summary>
-        private string BuildFunctionName(string name, MugValueType[] types)
+        private string BuildFunctionName(string name, MugValueType[] types, MugValueType returntype)
         {
-            return
-                IsEntryPoint(name, types.Length) ? name : $"{name}({string.Join(", ", types)})";
+            if (IsEntryPoint(name, types.Length))
+                return name;
+            else if (IsAsOperatorOverloading(name))
+                return $"as({string.Join(", ", types)}): {returntype}";
+            else
+                return $"{name}({string.Join(", ", types)})";
         }
 
         private void ReadModule(string filename)
@@ -290,7 +298,10 @@ namespace Mug.Models.Generator
         private void EmitFunction(FunctionNode function)
         {
             // change the name of the function in the corresponding with the types of parameters, to allow overload of the methods
-            function.Name = BuildFunctionName(function.Name, ParameterTypesToMugTypes(function.ParameterList.Parameters));
+            function.Name = BuildFunctionName(
+                function.Name,
+                ParameterTypesToMugTypes(function.ParameterList.Parameters),
+                function.Type.ToMugType(function.Position, NotSupportedType<MugValueType>));
 
             DefineFunction(function);
         }
@@ -313,7 +324,7 @@ namespace Mug.Models.Generator
 
             // adding a new symbol
             DeclareSymbol(
-                BuildFunctionName(prototype.Name, parameters),
+                BuildFunctionName(prototype.Name, parameters, type),
                 MugValue.From(function, type),
                 prototype.Position);
         }

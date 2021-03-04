@@ -70,6 +70,7 @@
         OperatorIncrement,
         OperatorDecrement,
         BooleanOR,
-        BooleanAND
+        BooleanAND,
+        KeyTPtr
     }
 }

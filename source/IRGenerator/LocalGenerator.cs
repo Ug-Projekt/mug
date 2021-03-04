@@ -187,7 +187,7 @@ namespace Mug.Models.Generator
                 castType.MatchAnyTypeOfIntType()) // LLVM has different instructions for each type convertion
                 _emitter.CastInt(castType);
             else
-                _emitter.CallOperator($"as {type}", position, expressionType);
+                _emitter.CallAsOperator(position, expressionType, type.ToMugType(position, _generator.NotSupportedType<MugValueType>));
         }
 
         /// <summary>
@@ -227,7 +227,6 @@ namespace Mug.Models.Generator
             /* the array is cycled with the expressions of the respective parameters and each expression
              * is evaluated and assigned its type to the array of parameter types
              */
-            Console.WriteLine(c.Parameters.Lenght);
             for (int i = 0; i < c.Parameters.Lenght; i++)
             {
                 EvaluateExpression(c.Parameters.Nodes[i]);
@@ -538,7 +537,7 @@ namespace Mug.Models.Generator
                 EmitWhileStatement(i);
         }
 
-        private INode GetDefaultValueOf(MugType type)
+        private INode GetDefaultValueOf(MugType type, Range position)
         {
             return type.Kind switch
             {
@@ -551,6 +550,7 @@ namespace Mug.Models.Generator
                     Type = type.BaseType is TypeKind kind ? new MugType(kind) : (MugType)type.BaseType,
                     Size = new Token(TokenKind.ConstantDigit, "0", new())
                 },
+                TypeKind.Pointer => _generator.Error<INode>(position, "Pointers must be initialized")
             };
         }
 
@@ -594,7 +594,7 @@ namespace Mug.Models.Generator
                 if (variable.Type.IsAutomatic())
                     Error(variable.Position, "Unable to allocate a new variable of `Auto` type");
 
-                variable.Body = GetDefaultValueOf(variable.Type);
+                variable.Body = GetDefaultValueOf(variable.Type, variable.Position);
             }
             
             // the expression in the variable’s body is evaluated
@@ -652,7 +652,7 @@ namespace Mug.Models.Generator
                 }
                 else if (variableType.MatchIntType())
                 {
-                    _emitter.Load(LLVMValueRef.CreateConstInt(variableType.LLVMType, 1));
+                    _emitter.Load(MugValue.From(LLVMValueRef.CreateConstInt(variableType.LLVMType, 1), variableType));
 
                     if (a.Operator == TokenKind.OperatorIncrement)
                         _emitter.AddInt();

@@ -119,6 +119,8 @@ namespace Mug.Models.Parser
                 Expect("An array type definition must end by `]`;", TokenKind.CloseBracket);
                 return new MugType(TypeKind.Array, type);
             }
+            else if (MatchAdvance(TokenKind.KeyTPtr))
+                return new MugType(TypeKind.Pointer, ExpectType());
 
             MugType find;
             find = ExpectBaseType();

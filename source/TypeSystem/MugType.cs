@@ -110,6 +110,7 @@ namespace Mug.TypeSystem
                 TypeKind.Void => MugValueType.Void,
                 TypeKind.Char => MugValueType.Char,
                 TypeKind.String => MugValueType.String,
+                TypeKind.Pointer => MugValueType.Pointer(((MugType)BaseType).ToMugType(position, notsupportedtype)),
                 _ => notsupportedtype(Kind.ToString(), position)
             };
         }

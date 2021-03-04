@@ -81,6 +81,7 @@ namespace Mug.Models.Lexer
             "u8" => AddKeyword(TokenKind.KeyTu8, s),
             "u32" => AddKeyword(TokenKind.KeyTu32, s),
             "u64" => AddKeyword(TokenKind.KeyTu64, s),
+            "ptr" => AddKeyword(TokenKind.KeyTPtr, s),
             "unknown" => AddKeyword(TokenKind.KeyTunknown, s),
             _ => false
         };

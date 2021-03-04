@@ -169,6 +169,13 @@ namespace Mug.Models.Generator.Emitter
             Call(function.LLVMValue, types.Length, function.Type);
         }
 
+        public void CallAsOperator(Range position, MugValueType type, MugValueType returntype)
+        {
+            var function = _generator.GetSymbol($"as({type}): {returntype}", position);
+
+            Call(function.LLVMValue, 1, returntype);
+        }
+
         public void Ret()
         {
             Builder.BuildRet(Pop().LLVMValue);
@@ -242,26 +249,23 @@ namespace Mug.Models.Generator.Emitter
 
         public void SelectArrayElement()
         {
-            /*var index = Pop();
+            var index = Pop();
             var array = Pop();
 
             Load(
-                // load from pointer
-                Builder.BuildLoad(
-                    // selecting the element
-                    Builder.BuildGEP(
-                        array.LLVMValue,
-                        new[]
-                        {
-                            index.LLVMValue,
-                        })
-                    )
-                );*/
-        }
-
-        internal void Load(LLVMValueRef lLVMValueRef)
-        {
-            throw new NotImplementedException();
+                MugValue.From(
+                    // load from pointer
+                    Builder.BuildLoad(
+                        // selecting the element
+                        Builder.BuildGEP(
+                            array.LLVMValue,
+                            new[]
+                            {
+                                index.LLVMValue,
+                            })
+                        )
+                    , array.Type.ArrayBaseElementType)
+                );
         }
     }
 }

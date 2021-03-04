@@ -10,12 +10,8 @@ try
 #if DEBUG
 
     var test = @"
-func a(left: chr, right: str): str {
-   return ""c"";
-}
-
 func main() {
-   var x = a(2 as chr, ""c"");
+   var x = ""c"";
 }
 ";
     /*var parser = new MugParser("test", test);
