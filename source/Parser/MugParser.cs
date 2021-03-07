@@ -3,6 +3,7 @@ using Mug.Models.Lexer;
 using Mug.Models.Parser.NodeKinds;
 using Mug.Models.Parser.NodeKinds.Directives;
 using Mug.Models.Parser.NodeKinds.Statements;
+using Mug.Models.Parser;
 using Mug.TypeSystem;
 using System;
 using System.Collections.Generic;
@@ -14,6 +15,8 @@ namespace Mug.Models.Parser
         public readonly NamespaceNode Module = new();
         public readonly MugLexer Lexer;
         private int _currentIndex = 0;
+        private Pragmas _pragmas;
+        private INode _leftvalue;
 
         private void ParseError(params string[] error)
         {
@@ -200,6 +203,8 @@ namespace Mug.Models.Parser
                 TokenKind.BooleanMajEQ => OperatorKind.CompareMajorEQ,
                 TokenKind.BooleanMinor => OperatorKind.CompareMinor,
                 TokenKind.BooleanMinEQ => OperatorKind.CompareMinorEQ,
+                TokenKind.BooleanAND => OperatorKind.And,
+                TokenKind.BooleanOR => OperatorKind.Or,
                 _ => throw new Exception($"Unable to perform cast from TokenKind(`{op}`) to OperatorKind, if you see this error please open an issue on github")
             };
         }
@@ -307,22 +312,17 @@ namespace Mug.Models.Parser
             
             if (previousMember is null)
             {
-                if (!MatchMember(out name))
-                {
-                    _currentIndex--;
-                    return false;
-                }
+                if (!MatchTerm(out _leftvalue, false))
+                    ParseError("Unknown local statement");
             }
             else
                 name = previousMember;
 
             if (!MatchAdvance(TokenKind.OpenPar))
-            {
-                if (previousMember is null)
-                    _currentIndex--;
-
                 return false;
-            }
+
+            if (previousMember is null)
+                name = GetLeftValue();
 
             NodeBuilder parameters = new();
             
@@ -349,7 +349,7 @@ namespace Mug.Models.Parser
             return true;
         }
 
-        private bool MatchTerm(out INode e)
+        private bool MatchTerm(out INode e, bool allowCallStatement = true)
         {
             if (MatchAdvance(TokenKind.Minus) ||
                 MatchAdvance(TokenKind.Plus) ||
@@ -357,7 +357,7 @@ namespace Mug.Models.Parser
             {
                 var prefixOp = Back;
 
-                if (!MatchTerm(out e))
+                if (!MatchTerm(out e, allowCallStatement))
                 {
                     _currentIndex--;
                     ParseError("Unexpected prefix operator;");
@@ -381,7 +381,7 @@ namespace Mug.Models.Parser
                     return false;
                 }
                 
-                if (MatchCallStatement(out var call, false, e))
+                if (allowCallStatement && MatchCallStatement(out var call, false, e))
                 {
                     e = call;
                 }
@@ -389,7 +389,7 @@ namespace Mug.Models.Parser
 
             while (MatchAdvance(TokenKind.Dot))
             {
-                if (MatchCallStatement(out var call, false))
+                if (allowCallStatement && MatchCallStatement(out var call, false))
                 {
                     (call as CallStatement).Parameters.Insert(0, e);
                     e = call;
@@ -689,12 +689,8 @@ namespace Mug.Models.Parser
         private bool ValueAssignment(out INode statement)
         {
             statement = null;
-            
-            if (!MatchTerm(out var name))
-            {
-                _currentIndex--;
-                return false;
-            }
+
+            var name = GetLeftValue();
 
             if (!MatchAssigmentOperators())
             {
@@ -844,6 +840,21 @@ namespace Mug.Models.Parser
             return parameters;
         }
 
+        private Pragmas GetPramas()
+        {
+            var result = _pragmas;
+            _pragmas = null;
+            return result is not null ? result : new();
+        }
+
+        private INode GetLeftValue()
+        {
+            var result = _leftvalue;
+            _leftvalue = null;
+
+            return result;
+        }
+
         private bool FunctionDefinition(out INode node)
         {
             node = null;
@@ -851,6 +862,7 @@ namespace Mug.Models.Parser
             if (!MatchAdvance(TokenKind.KeyFunc)) // <func>
                 return false;
 
+            var pragmas = GetPramas();
             var generics = new List<Token>();
             var name = Expect("In function definition must specify the name;", TokenKind.Identifier); // func <name>
 
@@ -881,7 +893,7 @@ namespace Mug.Models.Parser
             {
                 var body = ExpectBlock();
 
-                var f = new FunctionNode() { Body = body, Name = name.Value.ToString(), ParameterList = parameters, Type = type, Position = name.Position };
+                var f = new FunctionNode() { Pragmas = pragmas, Body = body, Name = name.Value.ToString(), ParameterList = parameters, Type = type, Position = name.Position };
 
                 f.SetGenericTypes(generics);
 
@@ -891,7 +903,7 @@ namespace Mug.Models.Parser
             {
                 Expect("", TokenKind.Semicolon);
 
-                var f = new FunctionPrototypeNode() { Name = name.Value.ToString(), ParameterList = parameters, Type = type, Position = name.Position };
+                var f = new FunctionPrototypeNode() { Pragmas = pragmas, Name = name.Value.ToString(), ParameterList = parameters, Type = type, Position = name.Position };
                 f.SetGenericTypes(generics);
 
                 node = f;
@@ -987,8 +999,9 @@ namespace Mug.Models.Parser
                 return false;
 
             // required an identifier
+            var pragmas = GetPramas();
             var name = Expect("Expected the type name after `type` keyword;", TokenKind.Identifier);
-            var statement = new TypeStatement() { Name = name.Value.ToString(), Position = name.Position };
+            var statement = new TypeStatement() { Pragmas = pragmas, Name = name.Value.ToString(), Position = name.Position };
 
             // struct generics
             if (MatchAdvance(TokenKind.OpenBracket))
@@ -1021,6 +1034,26 @@ namespace Mug.Models.Parser
             return true;
         }
 
+        private void CollectPragmas()
+        {
+            if (!MatchAdvance(TokenKind.OpenPragmas))
+                return;
+
+            _pragmas = new();
+
+            do
+            {
+                var name = Expect("", TokenKind.Identifier).Value;
+                Expect("", TokenKind.OpenPar);
+                var value = ExpectConstantMute("non-constant expressions not allowed in pragmas");
+                Expect("", TokenKind.ClosePar);
+
+                _pragmas.SetPragma(name, value, ParseError, ref _currentIndex);
+            } while (MatchAdvance(TokenKind.Comma));
+
+            Expect("Expected pragmas close", TokenKind.CloseBracket);
+        }
+
         /// <summary>
         /// expects at least one member
         /// </summary>
@@ -1031,18 +1064,25 @@ namespace Mug.Models.Parser
             // while the current token is not end
             while (!Match(end))
             {
-                // searches for a global statement
+                // collecting pragmas for first two statements (function and type)
+                CollectPragmas();
 
+                // searches for a global statement
                 // func id() {}
                 if (!FunctionDefinition(out INode statement))
-                    // var id = constant;
-                    if (!VariableDefinition(out statement))
-                        // (c struct) type MyStruct {}
-                        if (!TypeDefinition(out statement))
+                    // (c struct) type MyStruct {}
+                    if (!TypeDefinition(out statement))
+                    {
+                        if (_pragmas is not null)
+                            ParseError("Invalid pragmas for this member");
+
+                        // var id = constant;
+                        if (!VariableDefinition(out statement))
                             // import "", import path, use x as y
                             if (!DirectiveDefinition(out statement))
                                 // if there is not global statement
                                 ParseError("In the current global context, this is not a valid global statement;");
+                    }
 
                 // adds the statement to the members
                 nodes.Add(statement);

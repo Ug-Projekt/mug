@@ -10,20 +10,15 @@ try
 #if DEBUG
 
     var test = @"
-func main() {
-  var x: i32;
 
-  if x < 90 {
-    x = 0;
-    while x < 10 {
-       if x != 1 { x++; }
-    }
-    x = 1;
-  }
+func main() {
 }
+
 ";
     var unit = new CompilationUnit("test", test);
-    unit.Generate(true, true);
+    unit.IRGenerator.Parser.Lexer.Tokenize();
+    Console.WriteLine(unit.IRGenerator.Parser.Parse().Dump());
+    //unit.Generate(true, true);
 
 #else
 

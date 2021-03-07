@@ -130,7 +130,6 @@ namespace Mug.Models.Lexer
             ';' => TokenKind.Semicolon,
             ':' => TokenKind.Colon,
             '.' => TokenKind.Dot,
-            '@' => TokenKind.DirectiveSymbol,
             '?' => TokenKind.KeyTVoid,
             _ => InExpressionError<TokenKind>("In the current context, this is not a valid char")
         };
@@ -435,22 +434,29 @@ namespace Mug.Models.Lexer
             var doubleToken = current.ToString() + GetNext();
 
             // checks if there is a double token
-            if (doubleToken == "==") AddDouble(TokenKind.BooleanEQ, doubleToken);
-            else if (doubleToken == "!=") AddDouble(TokenKind.BooleanNEQ, doubleToken);
-            else if (doubleToken == "++") AddDouble(TokenKind.OperatorIncrement, doubleToken);
-            else if (doubleToken == "+=") AddDouble(TokenKind.AddAssignment, doubleToken);
-            else if (doubleToken == "--") AddDouble(TokenKind.OperatorDecrement, doubleToken);
-            else if (doubleToken == "-=") AddDouble(TokenKind.SubAssignment, doubleToken);
-            else if (doubleToken == "*=") AddDouble(TokenKind.MulAssignment, doubleToken);
-            else if (doubleToken == "/=") AddDouble(TokenKind.DivAssignment, doubleToken);
-            else if (doubleToken == "<=") AddDouble(TokenKind.BooleanMinEQ, doubleToken);
-            else if (doubleToken == ">=") AddDouble(TokenKind.BooleanMajEQ, doubleToken);
-            else if (doubleToken == "..") AddDouble(TokenKind.RangeDots, doubleToken);
-            else if (current == '"') CollectString();
-            else if (current == '\'') CollectChar();
-            else if (current == '`') CollectBacktick();
-            else
-                AddSingle(GetSingle(current), current.ToString());
+            switch (doubleToken)
+            {
+                case "==": AddDouble(TokenKind.BooleanEQ, doubleToken);         break;
+                case "!=": AddDouble(TokenKind.BooleanNEQ, doubleToken);        break;
+                case "++": AddDouble(TokenKind.OperatorIncrement, doubleToken); break;
+                case "+=": AddDouble(TokenKind.AddAssignment, doubleToken);     break;
+                case "--": AddDouble(TokenKind.OperatorDecrement, doubleToken); break;
+                case "-=": AddDouble(TokenKind.SubAssignment, doubleToken);     break;
+                case "*=": AddDouble(TokenKind.MulAssignment, doubleToken);     break;
+                case "/=": AddDouble(TokenKind.DivAssignment, doubleToken);     break;
+                case "<=": AddDouble(TokenKind.BooleanMinEQ, doubleToken);      break;
+                case ">=": AddDouble(TokenKind.BooleanMajEQ, doubleToken);      break;
+                case "..": AddDouble(TokenKind.RangeDots, doubleToken);         break;
+                case "@[": AddDouble(TokenKind.OpenPragmas, doubleToken);       break;
+                default:
+                    if (current == '"') CollectString();
+                    else if (current == '\'') CollectChar();
+                    else if (current == '`') CollectBacktick();
+                    else
+                        AddSingle(GetSingle(current), current.ToString());
+
+                    break;
+            }
         }
 
         /// <summary>

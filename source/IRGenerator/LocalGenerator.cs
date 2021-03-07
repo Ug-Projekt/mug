@@ -170,6 +170,8 @@ namespace Mug.Models.Generator
                     else
                         _emitter.CallOperator("<=", position, ft, st);
                     break;
+                /*case OperatorKind.And
+                    break;*/
                 default:
                     Error(position, "`", kind.ToString(), "` operator not supported yet");
                     break;

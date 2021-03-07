@@ -17,6 +17,11 @@ namespace Mug.Models.Lexer
             Position = position;
         }
 
+        public static Token NewInfo(TokenKind kind, string value)
+        {
+            return new Token(kind, value, new());
+        }
+
         public override string ToString()
         {
             return $"{Position} {Kind}: {Value}";

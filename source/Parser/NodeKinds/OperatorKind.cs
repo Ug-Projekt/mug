@@ -13,6 +13,8 @@ namespace Mug.Models.Parser.NodeKinds
         CompareMajorEQ,
         CompareMajor,
         CompareMinorEQ,
-        CompareMinor
+        CompareMinor,
+        And,
+        Or
     }
 }

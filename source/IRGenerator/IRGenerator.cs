@@ -129,7 +129,7 @@ namespace Mug.Models.Generator
         /// in this function and will convert the ast of the function node into the corresponding low-level code appending the result to the symbol
         /// body
         /// </summary>
-        private void InstallFunction(string name, MugType type, Range position, ParameterListNode paramTypes)
+        private void InstallFunction(Pragmas pragmas, string name, MugType type, Range position, ParameterListNode paramTypes)
         {
             var parameterTypes = ParameterTypesToMugTypes(paramTypes.Parameters);
 
@@ -139,9 +139,9 @@ namespace Mug.Models.Generator
                     t.LLVMType,
                     MugTypesToLLVMTypes(parameterTypes));
 
-            name = BuildFunctionName(name, parameterTypes, t);
+            pragmas.SetName(name = BuildFunctionName(name, parameterTypes, t));
 
-            var f = Module.AddFunction(name, ft);
+            var f = Module.AddFunction(pragmas.GetPragma("export"), ft);
 
             DeclareSymbol(name, MugValue.From(f, t), position);
         }
@@ -302,7 +302,7 @@ namespace Mug.Models.Generator
 
         private void DeclareFunction(FunctionNode function)
         {
-            InstallFunction(function.Name, function.Type, function.Position, function.ParameterList);
+            InstallFunction(function.Pragmas, function.Name, function.Type, function.Position, function.ParameterList);
 
             // allowing to call entrypoint
             if (function.Name == EntryPointName)
@@ -322,16 +322,30 @@ namespace Mug.Models.Generator
 
         private void EmitFunctionPrototype(FunctionPrototypeNode prototype)
         {
+            var header = prototype.Pragmas.GetPragma("header");
+            if (header != "")
+            {
+                var path = Path.GetFullPath(header, Path.GetDirectoryName(LocalPath));
+
+                if (!AlreadyIncluded(path))
+                {
+                    EmitIncludeGuard(path);
+                    IncludeCHeader(path);
+                }
+            }
+
+            prototype.Pragmas.SetExtern(prototype.Name);
+
             var parameters = ParameterTypesToMugTypes(prototype.ParameterList.Parameters);
             // search for the function
-            var function = Module.GetNamedFunction(prototype.Name);
+            var function = Module.GetNamedFunction(prototype.Pragmas.GetPragma("extern"));
 
             var type = prototype.Type.ToMugValueType(prototype.Position, this);
-
+                
             // if the function is not declared yet
             if (function.Handle == IntPtr.Zero)
                 // declares it
-                function = Module.AddFunction(prototype.Name,
+                function = Module.AddFunction(prototype.Pragmas.GetPragma("extern"),
                         LLVMTypeRef.CreateFunction(
                             type.LLVMType,
                             MugTypesToLLVMTypes(parameters)));
@@ -343,27 +357,63 @@ namespace Mug.Models.Generator
                 prototype.Position);
         }
 
+        private void IncludeCHeader(string path)
+        {
+            // compiling c code to llvm bit code
+            CompilationUnit.CallClang($"-emit-llvm -c {path}", 3);
+
+            // targetting bitcode file
+            path = Path.ChangeExtension(path, "bc");
+
+            // loading bitcode file
+            ReadModule(path);
+
+            // delete bitcode file
+            File.Delete(path);
+        }
+
+        private bool AlreadyIncluded(string path)
+        {
+            return Symbols.ContainsKey($"@import: {path}");
+        }
+
+        private void EmitIncludeGuard(string path)
+        {
+            // pragma once
+            var symbol = $"@import: {path}";
+            if (Symbols.ContainsKey(symbol))
+                return;
+
+            Symbols.Add(symbol, new());
+        }
+
         private void EmitImport(ImportDirective import)
         {
             if (import.Member is not Token)
                 Error(import.Position, "Unsupported import member");
 
-            // pragma once
-            var symbol = $"@import: {((Token)import.Member).Value}";
-            if (Symbols.ContainsKey(symbol))
-                return;
-
-            Symbols.Add(symbol, new());
-
             CompilationUnit unit = null;
 
             if (import.Mode == ImportMode.FromPackages) // dirof(mug.exe)/include/
-                unit = new CompilationUnit("include/" + ((Token)import.Member).Value + ".mug");
+            {
+                var path = "include/" + ((Token)import.Member).Value + ".mug";
+
+                if (AlreadyIncluded(path))
+                    return;
+
+                EmitIncludeGuard(path);
+                unit = new CompilationUnit(path);
+            }
             else
             {
                 var path = (Token)import.Member;
                 var filekind = Path.GetExtension(path.Value);
                 var fullpath = Path.GetFullPath(path.Value, Path.GetDirectoryName(LocalPath));
+
+                if (AlreadyIncluded(fullpath))
+                    return;
+
+                EmitIncludeGuard(fullpath);
 
                 if (filekind == ".bc") // llvm bitcode file
                 {
@@ -372,6 +422,11 @@ namespace Mug.Models.Generator
                 }
                 else if (filekind == ".mug") // dirof(file.mug)
                     unit = new CompilationUnit(fullpath);
+                else if (filekind == ".c") // c code
+                {
+                    IncludeCHeader(fullpath);
+                    return;
+                }
                 else
                     CompilationErrors.Throw("Unrecognized file kind: `", path.Value, "`");
             }

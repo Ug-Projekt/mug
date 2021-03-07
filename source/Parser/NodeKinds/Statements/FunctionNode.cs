@@ -8,7 +8,8 @@ namespace Mug.Models.Parser.NodeKinds.Statements
     public class FunctionNode : INode
     {
         public string NodeKind => "Function";
-        public String Name { get; set; }
+        public Pragmas Pragmas { get; set; }
+        public string Name { get; set; }
         public MugType Type { get; set; }
         public ParameterListNode ParameterList { get; set; } = new();
         private List<Token> _genericTypes { get; set; } = new();

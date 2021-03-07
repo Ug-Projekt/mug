@@ -56,7 +56,6 @@
         KeyIn,
         KeyFor,
         RangeDots,
-        DirectiveSymbol,
         KeyAs,
         KeyContinue,
         KeyBreak,
@@ -71,6 +70,7 @@
         OperatorDecrement,
         BooleanOR,
         BooleanAND,
-        KeyTPtr
+        KeyTPtr,
+        OpenPragmas
     }
 }
