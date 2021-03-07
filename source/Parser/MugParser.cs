@@ -971,7 +971,7 @@ namespace Mug.Models.Parser
 
             var type = ExpectType(); // field: <error>
 
-            return new FieldNode() { Name = name.Value.ToString(), Type = type };
+            return new FieldNode() { Name = name.Value.ToString(), Type = type, Position = name.Position };
         }
 
         /// <summary>

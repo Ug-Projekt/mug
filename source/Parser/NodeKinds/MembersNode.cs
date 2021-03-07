@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Mug.Models.Lexer;
+using System;
 
 namespace Mug.Models.Parser.NodeKinds
 {
@@ -6,7 +7,7 @@ namespace Mug.Models.Parser.NodeKinds
     {
         public string NodeKind => "Member";
         public INode Base { get; set; }
-        public INode Member { get; set; }
+        public Token Member { get; set; }
         public Range Position { get; set; }
     }
 }

@@ -12,6 +12,7 @@ using Mug.TypeSystem;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Runtime.InteropServices;
 
 namespace Mug.Models.Generator
 {
@@ -109,7 +110,7 @@ namespace Mug.Models.Generator
         {
             var result = new MugValueType[parameterTypes.Length];
             for (int i = 0; i < parameterTypes.Length; i++)
-                result[i] = parameterTypes[i].Type.ToMugType(parameterTypes[i].Position, NotSupportedType<MugValueType>);
+                result[i] = parameterTypes[i].Type.ToMugValueType(parameterTypes[i].Position, this);
 
             return result;
         }
@@ -132,7 +133,7 @@ namespace Mug.Models.Generator
         {
             var parameterTypes = ParameterTypesToMugTypes(paramTypes.Parameters);
 
-            var t = type.ToMugType(position, NotSupportedType<MugValueType>);
+            var t = type.ToMugValueType(position, this);
 
             var ft = LLVMTypeRef.CreateFunction(
                     t.LLVMType,
@@ -141,9 +142,6 @@ namespace Mug.Models.Generator
             name = BuildFunctionName(name, parameterTypes, t);
 
             var f = Module.AddFunction(name, ft);
-
-            // private llvm member
-            f.Linkage = LLVMLinkage.LLVMLinkerPrivateLinkage;
 
             DeclareSymbol(name, MugValue.From(f, t), position);
         }
@@ -204,7 +202,7 @@ namespace Mug.Models.Generator
         /// </summary>
         public void ExpectNonVoidType(LLVMTypeRef type, Range position)
         {
-            if (type.Kind == LLVMTypeKind.LLVMVoidTypeKind)
+            if (type == LLVMTypeRef.Void)
                 Error(position, "Expected a non-void type");
         }
 
@@ -231,11 +229,12 @@ namespace Mug.Models.Generator
         /// </summary>
         private void DefineFunction(FunctionNode function)
         {
-            MugEmitter emitter = new MugEmitter(this);
-
+            
             var llvmfunction = Symbols[function.Name].LLVMValue;
             // basic block, won't be emitted any block because the name is empty
             var entry = llvmfunction.AppendBasicBlock("");
+
+            MugEmitter emitter = new MugEmitter(this, entry, false);
 
             emitter.Builder.PositionAtEnd(entry);
 
@@ -316,7 +315,7 @@ namespace Mug.Models.Generator
             function.Name = BuildFunctionName(
                 function.Name,
                 ParameterTypesToMugTypes(function.ParameterList.Parameters),
-                function.Type.ToMugType(function.Position, NotSupportedType<MugValueType>));
+                function.Type.ToMugValueType(function.Position, this));
 
             DefineFunction(function);
         }
@@ -327,7 +326,7 @@ namespace Mug.Models.Generator
             // search for the function
             var function = Module.GetNamedFunction(prototype.Name);
 
-            var type = prototype.Type.ToMugType(prototype.Position, NotSupportedType<MugValueType>);
+            var type = prototype.Type.ToMugValueType(prototype.Position, this);
 
             // if the function is not declared yet
             if (function.Handle == IntPtr.Zero)
@@ -387,11 +386,18 @@ namespace Mug.Models.Generator
         private void EmitStructure(TypeStatement structure)
         {
             var body = new MugValueType[structure.Body.Length];
+            var fields = new List<string>();
 
             for (int i = 0; i < structure.Body.Length; i++)
             {
                 var field = structure.Body[i];
-                body[i] = field.Type.ToMugType(field.Position, NotSupportedType<MugValueType>);
+
+                if (fields.Contains(field.Name))
+                    Error(field.Position, "Redeclaration of previous field");
+
+                fields.Add(field.Name);
+
+                body[i] = field.Type.ToMugValueType(field.Position, this);
             }
 
             var st = MugValueType.Struct(body, structure);

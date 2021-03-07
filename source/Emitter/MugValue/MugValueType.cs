@@ -100,5 +100,10 @@ namespace Mug.MugValueSystem
         {
             return TypeKind == MugValueTypeKind.Pointer;
         }
+
+        public TypeStatement GetStructure()
+        {
+            return ((Tuple<LLVMTypeRef, TypeStatement>)BaseType).Item2;
+        }
     }
 }

@@ -1,6 +1,7 @@
 ﻿using Mug.TypeSystem;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Mug.Models.Parser.NodeKinds
 {
@@ -14,6 +15,10 @@ namespace Mug.Models.Parser.NodeKinds
             get
             {
                 return _body.ToArray();
+            }
+            set
+            {
+                _body = value.ToList();
             }
         }
         public Range Position { get; set; }

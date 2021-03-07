@@ -105,11 +105,14 @@ namespace Mug.Compilation
         /// <param name="verifyLLVMModule">
         /// false only when debugs to see the module when llvm finds an error
         /// </param>
-        public void Generate(bool verifyLLVMModule = true)
+        public void Generate(bool verifyLLVMModule = true, bool dumpModule = false)
         {
             IRGenerator.Parser.Lexer.Tokenize();
             IRGenerator.Parser.Parse();
             IRGenerator.Generate();
+
+            if (dumpModule)
+                IRGenerator.Module.Dump();
 
             if (verifyLLVMModule)
                 if (!IRGenerator.Module.TryVerify(LLVMVerifierFailureAction.LLVMReturnStatusAction, out var error))

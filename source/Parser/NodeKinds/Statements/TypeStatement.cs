@@ -1,4 +1,5 @@
 ﻿using Mug.Models.Lexer;
+using Mug.TypeSystem;
 using System;
 using System.Collections.Generic;
 
@@ -40,6 +41,42 @@ namespace Mug.Models.Parser.NodeKinds.Statements
         public void AddField(FieldNode field)
         {
             _body.Add(field);
+        }
+        
+        public int GetFieldIndexFromName(string name)
+        {
+            for (int i = 0; i < _body.Count; i++)
+                if (_body[i].Name == name)
+                    return i;
+
+            throw new();
+        }
+
+        public MugType GetFieldTypeFromName(string name)
+        {
+            for (int i = 0; i < _body.Count; i++)
+                if (_body[i].Name == name)
+                    return _body[i].Type;
+
+            throw new();
+        }
+
+        public Range GetFieldPositionFromName(string name)
+        {
+            for (int i = 0; i < _body.Count; i++)
+                if (_body[i].Name == name)
+                    return _body[i].Position;
+
+            throw new();
+        }
+
+        public bool ContainsFieldWithName(string name)
+        {
+            for (int i = 0; i < _body.Count; i++)
+                if (_body[i].Name == name)
+                    return true;
+
+            return false;
         }
     }
 }

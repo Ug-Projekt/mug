@@ -1,5 +1,6 @@
 ﻿using LLVMSharp.Interop;
 using Mug.Compilation;
+using Mug.Models.Generator;
 using Mug.Models.Lexer;
 using Mug.MugValueSystem;
 using System;
@@ -36,7 +37,7 @@ namespace Mug.TypeSystem
                 TokenKind.KeyTu32 => new MugType(TypeKind.UInt32),
                 TokenKind.KeyTu64 => new MugType(TypeKind.UInt64),
                 TokenKind.KeyTVoid => new MugType(TypeKind.Void),
-                TokenKind.Identifier => new MugType(TypeKind.Struct),
+                TokenKind.Identifier => new MugType(TypeKind.Struct, t.Value),
                 _ => Error(t.Kind.ToString())
             };
         }
@@ -99,7 +100,7 @@ namespace Mug.TypeSystem
         /// <summary>
         /// the function converts a Mugtype to the corresponding Llvmtyperef
         /// </summary>
-        public MugValueType ToMugType(Range position, Func<string, Range, MugValueType> notsupportedtype)
+        public MugValueType ToMugValueType(Range position, IRGenerator generator)
         {
             return Kind switch
             {
@@ -110,9 +111,15 @@ namespace Mug.TypeSystem
                 TypeKind.Void => MugValueType.Void,
                 TypeKind.Char => MugValueType.Char,
                 TypeKind.String => MugValueType.String,
-                TypeKind.Pointer => MugValueType.Pointer(((MugType)BaseType).ToMugType(position, notsupportedtype)),
-                _ => notsupportedtype(Kind.ToString(), position)
+                TypeKind.Struct => generator.GetSymbol(BaseType.ToString(), position).Type,
+                TypeKind.Pointer => MugValueType.Pointer(((MugType)BaseType).ToMugValueType(position, generator)),
+                _ => generator.NotSupportedType<MugValueType>(Kind.ToString(), position)
             };
+        }
+
+        public bool IsAllocableTypeNew()
+        {
+            return Kind == TypeKind.Struct || Kind == TypeKind.Array || Kind == TypeKind.Pointer;
         }
     }
 }

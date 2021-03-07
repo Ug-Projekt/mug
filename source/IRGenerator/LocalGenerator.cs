@@ -8,6 +8,7 @@ using Mug.Models.Parser.NodeKinds.Statements;
 using Mug.MugValueSystem;
 using Mug.TypeSystem;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 
 namespace Mug.Models.Generator
@@ -21,6 +22,7 @@ namespace Mug.Models.Generator
         // pointers
         private readonly IRGenerator _generator;
         private readonly LLVMValueRef _llvmfunction;
+        private LLVMBasicBlockRef _oldcondition;
 
         internal LocalGenerator(IRGenerator errorHandler, ref LLVMValueRef llvmfunction, ref FunctionNode function, ref MugEmitter emitter)
         {
@@ -181,13 +183,13 @@ namespace Mug.Models.Generator
         {
             // the expression type to cast
             var expressionType = _emitter.PeekType();
-            var castType = type.ToMugType(position, _generator.NotSupportedType<MugValueType>);
+            var castType = type.ToMugValueType(position, _generator);
 
             if (expressionType.MatchAnyTypeOfIntType() &&
                 castType.MatchAnyTypeOfIntType()) // LLVM has different instructions for each type convertion
                 _emitter.CastInt(castType);
             else
-                _emitter.CallAsOperator(position, expressionType, type.ToMugType(position, _generator.NotSupportedType<MugValueType>));
+                _emitter.CallAsOperator(position, expressionType, type.ToMugValueType(position, _generator));
         }
 
         /// <summary>
@@ -307,7 +309,7 @@ namespace Mug.Models.Generator
         {
             // EvaluateExpression();
 
-            var type = aa.Type.ToMugType(aa.Position, _generator.NotSupportedType<MugValueType>);
+            var type = aa.Type.ToMugValueType(aa.Position, _generator);
 
             // loading the array
 
@@ -320,6 +322,64 @@ namespace Mug.Models.Generator
 
             // loading a new array with the
             // _emitter.StoreElementsInArray();
+        }
+
+        private void EmitExprAllocateStruct(TypeAllocationNode ta)
+        {
+            if (!ta.Name.IsAllocableTypeNew())
+                Error(ta.Position, "Unable to allocate type ", ta.Name.ToString(), " with `new` operator");
+
+            var structure = _generator.GetSymbol(ta.Name.ToMugValueType(ta.Position, _generator).ToString(), ta.Position).Type;
+
+            var tmp = _emitter.Builder.BuildAlloca(
+                structure.LLVMType);
+            var structureInfo = structure.GetStructure();
+
+            var fields = new List<string>();
+
+            for (int i = 0; i < ta.Body.Length; i++)
+            {
+                var field = ta.Body[i];
+
+                if (fields.Contains(field.Name))
+                    Error(field.Position, "Field reassignment in type allocation");
+
+                fields.Add(field.Name);
+
+                EvaluateExpression(field.Body);
+
+                if (!structureInfo.ContainsFieldWithName(field.Name))
+                    Error(field.Position, "Undeclared field");
+
+                var fieldType = structureInfo.GetFieldTypeFromName(field.Name)
+                    .ToMugValueType(structureInfo.GetFieldPositionFromName(field.Name), _generator);
+
+                _generator.ExpectSameTypes(
+                    fieldType, field.Position, $"expected {fieldType}, but got {_emitter.PeekType()}", _emitter.PeekType());
+
+                _emitter.StoreField(tmp, structureInfo.GetFieldIndexFromName(field.Name));
+            }
+
+            _emitter.Load(MugValue.From(_emitter.Builder.BuildLoad(tmp), structure));
+        }
+
+        private void EmitExprMemberAccess(MemberNode m)
+        {
+
+            if (m.Base is Token token)
+                _emitter.LoadFieldName(token.Value, token.Position);
+            else
+            {
+                EvaluateExpression(m.Base);
+                _emitter.LoadFieldName();
+            }
+
+            var structure = _emitter.PeekType().GetStructure();
+            var type = structure.GetFieldTypeFromName(m.Member.Value);
+            var index = structure.GetFieldIndexFromName(m.Member.Value);
+            var value = _emitter.Pop().LLVMValue;
+
+            _emitter.LoadField(value, type.ToMugValueType(m.Member.Position, _generator), index);
         }
 
         /// <summary>
@@ -363,6 +423,12 @@ namespace Mug.Models.Generator
                 case ArrayAllocationNode aa:
                     EmitExprAllocateArray(aa);
                     break;
+                case TypeAllocationNode ta:
+                    EmitExprAllocateStruct(ta);
+                    break;
+                case MemberNode m:
+                    EmitExprMemberAccess(m);
+                    break;
                 default:
                     Error(expression.Position, "expression not supported yet");
                     break;
@@ -389,7 +455,7 @@ namespace Mug.Models.Generator
                 // alias for ...
                 var parameter = parameters[i];
 
-                var parametertype = parameter.Type.ToMugType(parameter.Position, _generator.NotSupportedType<MugValueType>);
+                var parametertype = parameter.Type.ToMugValueType(parameter.Position, _generator);
 
                 // allocating the local variable
                 _emitter.DeclareVariable(
@@ -411,7 +477,7 @@ namespace Mug.Models.Generator
             if (statement.Kind == TokenKind.KeyElif)
             {
                 // preparing the else if body
-                _emitter = new MugEmitter(_generator, oldemitter.Memory);
+                _emitter = new MugEmitter(_generator, oldemitter.Memory, endifelse, true);
                 _emitter.Builder.PositionAtEnd(@else);
 
                 // evaluating the else if expression
@@ -444,7 +510,7 @@ namespace Mug.Models.Generator
         private void DefineConditionBody(LLVMBasicBlockRef then, LLVMBasicBlockRef endifelse, BlockNode body, MugEmitter oldemitter)
         {
             // allocating a new emitter with the old symbols
-            _emitter = new MugEmitter(_generator, oldemitter.Memory);
+            _emitter = new MugEmitter(_generator, oldemitter.Memory, endifelse, true);
             // locating the emitter builder at the end of the block
             _emitter.Builder.PositionAtEnd(then);
 
@@ -468,32 +534,47 @@ namespace Mug.Models.Generator
             // evaluate expression
             EvaluateConditionExpression(i.Expression, i.Position);
 
+            var saveOldCondition = _oldcondition;
+
             // if block
             var then = _llvmfunction.AppendBasicBlock("");
 
-            // else block
-            var @else = _llvmfunction.AppendBasicBlock("");
+            _oldcondition = then;
 
-            var endifelse = i.ElseNode is not null ? _llvmfunction.AppendBasicBlock("") : @else;
+            // else block
+            var @else = i.ElseNode is not null ? _llvmfunction.AppendBasicBlock("") : _emitter.ExitBlock;
+
+            var endcondition = _llvmfunction.AppendBasicBlock("");
 
             // compare
-            _emitter.CompareJump(then, @else);
+            _emitter.CompareJump(then, !_emitter.IsInsideSubBlock && i.ElseNode is null ? endcondition : @else);
 
             // save the old emitter
             var oldemitter = _emitter;
 
             // define if and else bodies
             // if
-            DefineConditionBody(then, endifelse, i.Body, oldemitter);
+            DefineConditionBody(then, endcondition, i.Body, oldemitter);
 
             // else
             if (i.ElseNode is not null)
-                DefineElseBody(@else, endifelse, i.ElseNode, oldemitter);
-
+                DefineElseBody(@else, endcondition, i.ElseNode, oldemitter);
+            
             // restore old emitter
-            _emitter = new(_generator, oldemitter.Memory);
+            _emitter = new(_generator, oldemitter.Memory, oldemitter.ExitBlock, oldemitter.IsInsideSubBlock);
+
+            if (_emitter.IsInsideSubBlock)
+            {
+                if (i.ElseNode is not null)
+                    saveOldCondition.Terminator.SetOperand(1, @else.AsValue());
+                else
+                    saveOldCondition.Terminator.SetOperand(1, endcondition.AsValue());
+            }
+
+            _oldcondition = saveOldCondition;
+
             // re emit the entry block
-            _emitter.Builder.PositionAtEnd(endifelse);
+            _emitter.Builder.PositionAtEnd(endcondition);
         }
 
         private void EmitWhileStatement(ConditionalStatement i)
@@ -505,13 +586,17 @@ namespace Mug.Models.Generator
 
             var endcycle = _llvmfunction.AppendBasicBlock("");
 
+            var saveOldCondition = _oldcondition;
+
+            _oldcondition = cycle; // compare here
+
             // jumping to the compare block
             _emitter.Jump(compare);
 
             // save the old emitter
             var oldemitter = _emitter;
 
-            _emitter = new(_generator, oldemitter.Memory);
+            _emitter = new(_generator, oldemitter.Memory, endcycle, true);
             // locating the builder in the compare block
             _emitter.Builder.PositionAtEnd(compare);
 
@@ -525,7 +610,14 @@ namespace Mug.Models.Generator
             DefineConditionBody(cycle, compare, i.Body, oldemitter);
 
             // restore old emitter
-            _emitter = new(_generator, oldemitter.Memory);
+            _emitter = new(_generator, oldemitter.Memory, oldemitter.ExitBlock, oldemitter.IsInsideSubBlock);
+
+            if (_emitter.IsInsideSubBlock)
+            {
+                if (saveOldCondition.Terminator.OperandCount >= 2)
+                    saveOldCondition.Terminator.SetOperand(1, endcycle.AsValue());
+            }
+
             // re emit the entry block
             _emitter.Builder.PositionAtEnd(endcycle);
         }
@@ -538,18 +630,47 @@ namespace Mug.Models.Generator
                 EmitWhileStatement(i);
         }
 
+        private FieldAssignmentNode[] GetDefaultValueOfFields(string name, Range position)
+        {
+            var s = _generator.GetSymbol(name, position).Type.GetStructure();
+            var fields = new FieldAssignmentNode[s.Body.Length];
+
+            for (int i = 0; i < s.Body.Length; i++)
+            {
+                var field = s.Body[i];
+
+                fields[i] = new FieldAssignmentNode()
+                {
+                    Name = field.Name,
+                    Body = GetDefaultValueOf(field.Type, field.Position)
+                };
+            }
+
+            return fields;
+        }
+
         private INode GetDefaultValueOf(MugType type, Range position)
         {
             return type.Kind switch
             {
-                TypeKind.Char or TypeKind.Int32 or TypeKind.Int64 or
-                TypeKind.UInt8 or TypeKind.UInt32 or TypeKind.UInt64 => new Token(TokenKind.ConstantDigit, "0", new()),
+                TypeKind.Char => new Token(TokenKind.ConstantChar, "\0", new()),
+                TypeKind.Int32 => new Token(TokenKind.ConstantDigit, "0", new()),
+                TypeKind.UInt8 or TypeKind.UInt32 or TypeKind.UInt64 or TypeKind.Int64 => new CastExpressionNode()
+                {
+                    Expression = new Token(TokenKind.ConstantChar, "\0", new()),
+                    Type = type
+                },
                 TypeKind.Bool => new Token(TokenKind.ConstantBoolean, "false", new()),
                 TypeKind.String => new Token(TokenKind.ConstantString, "", new()),
                 TypeKind.Array => new ArrayAllocationNode()
                 {
                     Type = type.BaseType is TypeKind kind ? new MugType(kind) : (MugType)type.BaseType,
                     Size = new Token(TokenKind.ConstantDigit, "0", new())
+                },
+                TypeKind.Struct => new TypeAllocationNode()
+                {
+                    Name = type,
+                    Body = GetDefaultValueOfFields(type.BaseType.ToString(), position)
                 },
                 TypeKind.Pointer => _generator.Error<INode>(position, "Pointers must be initialized")
             };
@@ -564,7 +685,7 @@ namespace Mug.Models.Generator
             if (@return.IsVoid())
             {
                 _generator.ExpectSameTypes(
-                    _function.Type.ToMugType(@return.Position, _generator.NotSupportedType<MugValueType>),
+                    _function.Type.ToMugValueType(@return.Position, _generator),
                     @return.Position,
                     "Expected non-void expression",
                     MugValueType.Void);
@@ -579,7 +700,7 @@ namespace Mug.Models.Generator
                  */
                 EvaluateExpression(@return.Body);
 
-                var type = _function.Type.ToMugType(@return.Position, _generator.NotSupportedType<MugValueType>);
+                var type = _function.Type.ToMugValueType(@return.Position, _generator);
 
                 _generator.ExpectSameTypes(type, @return.Position, $"Expected {type} type, got {_emitter.PeekType()} type", _emitter.PeekType());
                 _emitter.Ret();
@@ -683,9 +804,9 @@ namespace Mug.Models.Generator
             // match the constant explicit type and expression type are the same
             if (!constant.Type.IsAutomatic())
                 _generator.ExpectSameTypes(
-                    constant.Type.ToMugType(
+                    constant.Type.ToMugValueType(
                         constant.Position,
-                        _generator.NotSupportedType<MugValueType>), constant.Body.Position, $"Expected {constant.Type} type, got {_emitter.PeekType()} type", _emitter.PeekType());
+                        _generator), constant.Body.Position, $"Expected {constant.Type} type, got {_emitter.PeekType()} type", _emitter.PeekType());
 
             // declaring the constant with a name
             _emitter.DeclareConstant(constant.Name, constant.Position);
@@ -731,6 +852,9 @@ namespace Mug.Models.Generator
         {
             foreach (var statement in statements.Statements)
                 RecognizeStatement(statement);
+
+            if (_emitter.IsInsideSubBlock)
+                _emitter.Exit();
         }
 
         /// <summary>

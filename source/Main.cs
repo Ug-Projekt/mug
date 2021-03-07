@@ -10,34 +10,31 @@ try
 #if DEBUG
 
     var test = @"
-type Person {
-   name: str,
-   age: u8
-}
-
-type Person {
-   d: i32
-}
-
 func main() {
-   # var x = new Person {};
+  var x: i32;
+
+  if x < 90 {
+    x = 0;
+    while x < 10 {
+       if x != 1 { x++; }
+    }
+    x = 1;
+  }
 }
 ";
     var unit = new CompilationUnit("test", test);
-    unit.Generate(true);
-
-    unit.IRGenerator.Module.Dump();
+    unit.Generate(true, true);
 
 #else
 
     if (args.Length == 0)
-            CompilationErrors.Throw("No arguments passed");
+        CompilationErrors.Throw("No arguments passed");
 
-        for (int i = 0; i < args.Length; i++)
-        {
-            var unit = new CompilationUnit(args[i]);
-            unit.Compile(0);
-        }
+    for (int i = 0; i < args.Length; i++)
+    {
+        var unit = new CompilationUnit(args[i]);
+        unit.Compile(3);
+    }
 
 #endif
 }
