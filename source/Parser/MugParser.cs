@@ -305,6 +305,17 @@ namespace Mug.Models.Parser
             return true;
         }
 
+        private void CollectParameters(ref NodeBuilder parameters)
+        {
+            while (!MatchAdvance(TokenKind.ClosePar))
+            {
+                parameters.Add(ExpectExpression(true, TokenKind.Comma, TokenKind.ClosePar));
+
+                if (Back.Kind == TokenKind.ClosePar)
+                    _currentIndex--;
+            }
+        }
+
         private bool MatchCallStatement(out INode e, bool isImperativeStatement, INode previousMember = null)
         {
             e = null;
@@ -324,8 +335,8 @@ namespace Mug.Models.Parser
             if (previousMember is null)
                 name = GetLeftValue();
 
-            NodeBuilder parameters = new();
-            
+            var parameters = new NodeBuilder();
+
             if (name is MemberNode instanceAccesses)
             {
                 parameters.Add(instanceAccesses.Base);
@@ -333,18 +344,35 @@ namespace Mug.Models.Parser
                 name = instanceAccesses.Member;
             }
 
-            while (!MatchAdvance(TokenKind.ClosePar))
-            {
-                parameters.Add(ExpectExpression(true, TokenKind.Comma, TokenKind.ClosePar));
-
-                if (Back.Kind == TokenKind.ClosePar)
-                    _currentIndex--;
-            }
+            CollectParameters(ref parameters);
 
             e = new CallStatement() { Name = name, Parameters = parameters, Position = previousMember is null ? name.Position : previousMember.Position };
 
             if (isImperativeStatement)
+            {
+                while (MatchAdvance(TokenKind.Dot))
+                {
+                    name = Expect("Expected member after `.`", TokenKind.Identifier);
+
+                    Expect("When imperative statement, only call is allowed after `.`", TokenKind.OpenPar);
+                    /*if (MatchAdvance(TokenKind.OpenPar))
+                    {*/
+                    parameters = new NodeBuilder();
+
+                    CollectParameters(ref parameters);
+
+                    parameters.Insert(0, e);
+
+                    e = new CallStatement() { Name = name, Parameters = parameters };
+                    /*}
+                    else
+                    {
+                        e = new MemberNode() { Base = e, Member = (Token)name, Position = e.Position.Start..name.Position.End };
+                    }*/
+                }
+
                 Expect("", TokenKind.Semicolon);
+            }
 
             return true;
         }
@@ -435,9 +463,9 @@ namespace Mug.Models.Parser
             return new FieldAssignmentNode() { Name = name.Value.ToString(), Body = expression, Position = name.Position };
         }
 
-        private INode ExpectTerm()
+        private INode ExpectTerm(bool allowCallStatement = true)
         {
-            if (!MatchTerm(out var e))
+            if (!MatchTerm(out var e, allowCallStatement))
                 ParseError("Expected term");
 
             return e;

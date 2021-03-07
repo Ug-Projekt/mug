@@ -14,9 +14,5 @@ namespace Mug.Models.Parser.NodeKinds
         {
             Members = new NodeBuilder();
         }
-        public string Dump()
-        {
-            return JsonConvert.SerializeObject(Members.Nodes, Formatting.Indented);
-        }
     }
 }

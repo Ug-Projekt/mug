@@ -17,7 +17,7 @@ func main() {
 ";
     var unit = new CompilationUnit("test", test);
     unit.IRGenerator.Parser.Lexer.Tokenize();
-    Console.WriteLine(unit.IRGenerator.Parser.Parse().Dump());
+    Console.WriteLine(((INode)unit.IRGenerator.Parser.Parse()).Dump());
     //unit.Generate(true, true);
 
 #else
