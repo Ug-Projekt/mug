@@ -1,8 +1,6 @@
 ﻿using Mug.Models.Lexer;
-using Mug.Models.Parser;
 using System;
 using System.Collections.Generic;
-using System.Text;
 
 namespace Mug.Models.Parser
 {
@@ -10,11 +8,11 @@ namespace Mug.Models.Parser
     {
         private readonly Dictionary<string, Token> Table = new()
         {
-            ["inline"]     = Token.NewInfo(TokenKind.ConstantBoolean, "false"),
-            ["header"]     = Token.NewInfo(TokenKind.ConstantString,  ""     ),
-            ["dynamiclib"] = Token.NewInfo(TokenKind.ConstantString,  ""     ),
-            ["export"]     = Token.NewInfo(TokenKind.ConstantString,  ""     ),
-            ["extern"]     = Token.NewInfo(TokenKind.ConstantString,  ""     ),
+            ["inline"] = Token.NewInfo(TokenKind.ConstantBoolean, "false"),
+            ["header"] = Token.NewInfo(TokenKind.ConstantString, ""),
+            ["dynamiclib"] = Token.NewInfo(TokenKind.ConstantString, ""),
+            ["export"] = Token.NewInfo(TokenKind.ConstantString, ""),
+            ["extern"] = Token.NewInfo(TokenKind.ConstantString, ""),
         };
 
         public string GetPragma(string pragma)

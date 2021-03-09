@@ -1,5 +1,4 @@
-﻿using Mug.Models.Lexer;
-using System;
+﻿using System;
 
 namespace Mug.Models.Parser.NodeKinds
 {

@@ -1,7 +1,6 @@
 ﻿using Mug.Compilation;
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Text;
 
 namespace Mug.Models.Lexer
@@ -374,7 +373,7 @@ namespace Mug.Models.Lexer
                 this.Throw(_currentIndex - 1, $"String has not been correctly enclosed");
 
             //else add closing simbol
-            TokenCollection.Add(new(TokenKind.ConstantString, _currentSymbol.ToString(), new(start, end+1)));
+            TokenCollection.Add(new(TokenKind.ConstantString, _currentSymbol.ToString(), new(start, end + 1)));
             _currentSymbol.Clear();
         }
 
@@ -399,7 +398,7 @@ namespace Mug.Models.Lexer
                 this.Throw(start..end, "Not enough characters in backtick sequence");
 
             //else add closing simbol
-            TokenCollection.Add(new(TokenKind.Identifier, _currentSymbol.ToString(), new (start, end+1)));
+            TokenCollection.Add(new(TokenKind.Identifier, _currentSymbol.ToString(), new(start, end + 1)));
             _currentSymbol.Clear();
         }
 
@@ -436,18 +435,18 @@ namespace Mug.Models.Lexer
             // checks if there is a double token
             switch (doubleToken)
             {
-                case "==": AddDouble(TokenKind.BooleanEQ, doubleToken);         break;
-                case "!=": AddDouble(TokenKind.BooleanNEQ, doubleToken);        break;
+                case "==": AddDouble(TokenKind.BooleanEQ, doubleToken); break;
+                case "!=": AddDouble(TokenKind.BooleanNEQ, doubleToken); break;
                 case "++": AddDouble(TokenKind.OperatorIncrement, doubleToken); break;
-                case "+=": AddDouble(TokenKind.AddAssignment, doubleToken);     break;
+                case "+=": AddDouble(TokenKind.AddAssignment, doubleToken); break;
                 case "--": AddDouble(TokenKind.OperatorDecrement, doubleToken); break;
-                case "-=": AddDouble(TokenKind.SubAssignment, doubleToken);     break;
-                case "*=": AddDouble(TokenKind.MulAssignment, doubleToken);     break;
-                case "/=": AddDouble(TokenKind.DivAssignment, doubleToken);     break;
-                case "<=": AddDouble(TokenKind.BooleanMinEQ, doubleToken);      break;
-                case ">=": AddDouble(TokenKind.BooleanMajEQ, doubleToken);      break;
-                case "..": AddDouble(TokenKind.RangeDots, doubleToken);         break;
-                case "@[": AddDouble(TokenKind.OpenPragmas, doubleToken);       break;
+                case "-=": AddDouble(TokenKind.SubAssignment, doubleToken); break;
+                case "*=": AddDouble(TokenKind.MulAssignment, doubleToken); break;
+                case "/=": AddDouble(TokenKind.DivAssignment, doubleToken); break;
+                case "<=": AddDouble(TokenKind.BooleanMinEQ, doubleToken); break;
+                case ">=": AddDouble(TokenKind.BooleanMajEQ, doubleToken); break;
+                case "..": AddDouble(TokenKind.RangeDots, doubleToken); break;
+                case "@[": AddDouble(TokenKind.OpenPragmas, doubleToken); break;
                 default:
                     if (current == '"') CollectString();
                     else if (current == '\'') CollectChar();
@@ -470,7 +469,7 @@ namespace Mug.Models.Lexer
             // check if the newly stripped code is empty
             if (_currentIndex >= Source.Length)
                 return;
-            
+
             // to avoid a massive array access, also better to read
             char current = Source[_currentIndex];
 
@@ -497,7 +496,7 @@ namespace Mug.Models.Lexer
                 _currentIndex++;
             }
 
-            
+
 
             // end of file token
             AddSingle(TokenKind.EOF, "<EOF>");

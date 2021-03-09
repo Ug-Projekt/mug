@@ -1,12 +1,9 @@
 ﻿using LLVMSharp.Interop;
-using Mug.Models.Parser.NodeKinds.Statements;
 using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace Mug.MugValueSystem
 {
-    struct MugValue
+    public struct MugValue
     {
         public MugValueType Type { get; set; }
         public LLVMValueRef LLVMValue { get; set; }
@@ -24,6 +21,11 @@ namespace Mug.MugValueSystem
         public bool IsAllocaInstruction()
         {
             return LLVMValue.IsAAllocaInst.Handle != IntPtr.Zero;
+        }
+
+        public bool IsGEP()
+        {
+            return LLVMValue.IsAGetElementPtrInst.Handle != IntPtr.Zero;
         }
     }
 }

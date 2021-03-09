@@ -43,7 +43,7 @@ namespace Mug.Models.Parser.NodeKinds.Statements
         {
             _body.Add(field);
         }
-        
+
         public int GetFieldIndexFromName(string name)
         {
             for (int i = 0; i < _body.Count; i++)

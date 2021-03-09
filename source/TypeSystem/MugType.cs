@@ -1,5 +1,4 @@
-﻿using LLVMSharp.Interop;
-using Mug.Compilation;
+﻿using Mug.Compilation;
 using Mug.Models.Generator;
 using Mug.Models.Lexer;
 using Mug.MugValueSystem;
@@ -90,9 +89,9 @@ namespace Mug.TypeSystem
         public bool IsInt()
         {
             return
-                Kind == TypeKind.Int32  ||
-                Kind == TypeKind.Int64  ||
-                Kind == TypeKind.UInt8  ||
+                Kind == TypeKind.Int32 ||
+                Kind == TypeKind.Int64 ||
+                Kind == TypeKind.UInt8 ||
                 Kind == TypeKind.UInt32 ||
                 Kind == TypeKind.UInt64;
         }

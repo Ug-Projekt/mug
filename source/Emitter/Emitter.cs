@@ -1,5 +1,4 @@
 ﻿using LLVMSharp.Interop;
-using Mug.Compilation;
 using Mug.Models.Parser.NodeKinds.Statements;
 using Mug.MugValueSystem;
 using System;
@@ -10,10 +9,10 @@ namespace Mug.Models.Generator.Emitter
 {
     internal class MugEmitter
     {
-        unsafe public LLVMBuilderRef Builder { get; private set; } = CreateBuilder();
+        public unsafe LLVMBuilderRef Builder { get; private set; } = CreateBuilder();
 
         private readonly Stack<MugValue> _stack = new();
-        private IRGenerator _generator;
+        private readonly IRGenerator _generator;
         public Dictionary<string, MugValue> Memory { get; }
         internal LLVMBasicBlockRef ExitBlock { get; }
         internal bool IsInsideSubBlock { get; }
@@ -96,10 +95,10 @@ namespace Mug.Models.Generator.Emitter
                 MugValue.From(Builder.BuildIntCast(Pop().LLVMValue, type.LLVMType), type));
         }
 
-        private MugValue GetFromMemory(string name, Range position)
+        public MugValue GetMemoryAllocation(string name, Range position)
         {
             if (!Memory.TryGetValue(name, out var variable))
-                _generator.Error(position, "Undeclared variable");
+                variable = _generator.GetSymbol(name, position);
 
             return variable;
         }
@@ -124,7 +123,7 @@ namespace Mug.Models.Generator.Emitter
 
             SetMemory(
                 name,
-                MugValue.From(Builder.BuildAlloca(type.LLVMType, name),type));
+                MugValue.From(Builder.BuildAlloca(type.LLVMType, name), type));
         }
 
         public void DeclareConstant(string name, Range position)
@@ -137,7 +136,7 @@ namespace Mug.Models.Generator.Emitter
 
         public void StoreVariable(string name, Range position)
         {
-            var variable = GetFromMemory(name, position);
+            var variable = GetMemoryAllocation(name, position);
 
             // check it is a variable and not a constant
             if (!variable.IsAllocaInstruction())
@@ -166,6 +165,7 @@ namespace Mug.Models.Generator.Emitter
 
         public void EmitGCDecrementReferenceCounter()
         {
+            Pop();
             /*Builder.BuildCall(
                 _generator.RequireStandardSymbol(GCPointerDecrementStandardSymbol, GCMugLibSymbol).LLVMValue,
                 new[] { Pop().LLVMValue });*/
@@ -173,7 +173,7 @@ namespace Mug.Models.Generator.Emitter
 
         public void LoadFromMemory(string name, Range position)
         {
-            var variable = GetFromMemory(name, position);
+            var variable = GetMemoryAllocation(name, position);
 
             // variable
             if (variable.IsAllocaInstruction())
@@ -240,7 +240,7 @@ namespace Mug.Models.Generator.Emitter
 
             for (int i = 0; i < paramCount; i++)
                 // paramcount - current index (the last - i) - 1 (offset)
-                parameters[paramCount-i-1] = Pop();
+                parameters[paramCount - i - 1] = Pop();
 
             var result = Builder.BuildCall(function, _generator.MugValuesToLLVMValues(parameters));
 
@@ -265,52 +265,65 @@ namespace Mug.Models.Generator.Emitter
             Builder.BuildBr(targetblock);
         }
 
-        public MugValueType PeekTypeFromMemory(string name, Range position)
+        public void LoadMemoryAllocation(string name, Range position)
         {
-            return GetFromMemory(name, position).Type;
+            Load(GetMemoryAllocation(name, position));
         }
 
-        public bool IsConstant(string name, Range position)
+        public MugValueType PeekTypeFromMemory(string name, Range position)
         {
-            return !GetFromMemory(name, position).IsAllocaInstruction();
+            return GetMemoryAllocation(name, position).Type;
         }
 
         public void StoreField(LLVMValueRef tmp, int index)
         {
-            Builder.BuildStore(Pop().LLVMValue, Builder.BuildGEP(
-                tmp,
+            Builder.BuildStore(
+                Pop().LLVMValue,
+                Builder.BuildGEP(
+                    tmp,
+                    new[]
+                    {
+                        LLVMValueRef.CreateConstInt(LLVMTypeRef.Int32, 0),
+                        LLVMValueRef.CreateConstInt(LLVMTypeRef.Int32, (uint)index)
+                    })
+                );
+        }
+
+        public void LoadField(MugValue instance, MugValueType fieldType, int index, bool load)
+        {
+            var field = Builder.BuildGEP(
+                instance.LLVMValue,
                 new[]
                 {
                     LLVMValueRef.CreateConstInt(LLVMTypeRef.Int32, 0),
                     LLVMValueRef.CreateConstInt(LLVMTypeRef.Int32, (uint)index)
-                }));
-        }
+                });
 
-        public void LoadField(LLVMValueRef inst, MugValueType type, int index)
-        {
             Load(
                 MugValue.From(
-                    Builder.BuildLoad(
-                        Builder.BuildGEP(
-                            inst,
-                            new[]
-                            {
-                                LLVMValueRef.CreateConstInt(LLVMTypeRef.Int32, 0),
-                                LLVMValueRef.CreateConstInt(LLVMTypeRef.Int32, (uint)index)
-                            })
-                        ),
-                    type)
+                    load ? Builder.BuildLoad(field) : field,
+                    fieldType)
                 );
         }
 
         public void LoadFieldName(string name, Range position)
         {
-            Load(GetFromMemory(name, position));
+            var instance = GetMemoryAllocation(name, position);
+
+            if (!instance.IsAllocaInstruction())
+            {
+                var tmp = Builder.BuildAlloca(instance.Type.LLVMType);
+                Builder.BuildStore(instance.LLVMValue, tmp);
+                instance.LLVMValue = tmp;
+            }
+
+            Load(instance);
         }
 
         public void LoadFieldName()
         {
             var value = Pop();
+
             if (value.LLVMValue.IsALoadInst.Handle != IntPtr.Zero)
                 Load(MugValue.From(value.LLVMValue.GetOperand(0), value.Type));
             else if (value.LLVMValue.IsACallInst.Handle != IntPtr.Zero)
@@ -327,6 +340,19 @@ namespace Mug.Models.Generator.Emitter
         public void Exit()
         {
             Builder.BuildBr(ExitBlock);
+        }
+
+        public void StoreInside(MugValue field)
+        {
+            Builder.BuildStore(Pop().LLVMValue, field.LLVMValue);
+        }
+
+        public void LoadUnknownAllocation(MugValue allocation)
+        {
+            if (allocation.IsAllocaInstruction() || allocation.IsGEP())
+                Load(MugValue.From(Builder.BuildLoad(allocation.LLVMValue), allocation.Type));
+            else
+                throw new("unable to recognize unknonwn allocation");
         }
 
         public void SelectArrayElement()

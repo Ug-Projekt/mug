@@ -2,8 +2,6 @@
 using Mug.Models.Generator;
 using Mug.Models.Parser.NodeKinds.Statements;
 using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace Mug.MugValueSystem
 {

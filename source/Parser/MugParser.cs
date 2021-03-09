@@ -3,7 +3,6 @@ using Mug.Models.Lexer;
 using Mug.Models.Parser.NodeKinds;
 using Mug.Models.Parser.NodeKinds.Directives;
 using Mug.Models.Parser.NodeKinds.Statements;
-using Mug.Models.Parser;
 using Mug.TypeSystem;
 using System;
 using System.Collections.Generic;
@@ -22,6 +21,7 @@ namespace Mug.Models.Parser
         {
             if (Match(TokenKind.EOF))
                 ParseErrorEOF();
+
             Lexer.Throw(Current, error);
         }
 
@@ -263,7 +263,7 @@ namespace Mug.Models.Parser
 
             if (!MatchAdvance(TokenKind.OpenPar))
                 return false;
-            
+
             e = ExpectExpression(true, TokenKind.ClosePar);
 
             return true;
@@ -301,7 +301,7 @@ namespace Mug.Models.Parser
 
                 CollectPossibleArrayAccessNode(ref name);
             }
-            
+
             return true;
         }
 
@@ -320,7 +320,7 @@ namespace Mug.Models.Parser
         {
             e = null;
             INode name = null;
-            
+
             if (previousMember is null)
             {
                 if (!MatchTerm(out _leftvalue, false))
@@ -348,15 +348,12 @@ namespace Mug.Models.Parser
 
             e = new CallStatement() { Name = name, Parameters = parameters, Position = previousMember is null ? name.Position : previousMember.Position };
 
-            if (isImperativeStatement)
+            while (MatchAdvance(TokenKind.Dot))
             {
-                while (MatchAdvance(TokenKind.Dot))
-                {
-                    name = Expect("Expected member after `.`", TokenKind.Identifier);
+                name = Expect("Expected member after `.`", TokenKind.Identifier);
 
-                    Expect("When imperative statement, only call is allowed after `.`", TokenKind.OpenPar);
-                    /*if (MatchAdvance(TokenKind.OpenPar))
-                    {*/
+                if (MatchAdvance(TokenKind.OpenPar))
+                {
                     parameters = new NodeBuilder();
 
                     CollectParameters(ref parameters);
@@ -364,15 +361,14 @@ namespace Mug.Models.Parser
                     parameters.Insert(0, e);
 
                     e = new CallStatement() { Name = name, Parameters = parameters };
-                    /*}
-                    else
-                    {
-                        e = new MemberNode() { Base = e, Member = (Token)name, Position = e.Position.Start..name.Position.End };
-                    }*/
                 }
-
-                Expect("", TokenKind.Semicolon);
+                else
+                {
+                    e = new MemberNode() { Base = e, Member = (Token)name, Position = e.Position.Start..name.Position.End };
+                }
             }
+            if (isImperativeStatement)
+                Expect("", TokenKind.Semicolon);
 
             return true;
         }
@@ -408,7 +404,7 @@ namespace Mug.Models.Parser
                     _currentIndex--;
                     return false;
                 }
-                
+
                 if (allowCallStatement && MatchCallStatement(out var call, false, e))
                 {
                     e = call;
@@ -477,7 +473,7 @@ namespace Mug.Models.Parser
 
             if (!MatchTerm(out INode left))
                 return false;
-            
+
             e = left;
 
             if (MatchFactorOps())
@@ -493,7 +489,7 @@ namespace Mug.Models.Parser
                         break;
                 } while (MatchTerm(out right));
             }
-            
+
             return true;
         }
 
@@ -780,7 +776,7 @@ namespace Mug.Models.Parser
         private bool ForLoopDefinition(out INode statement)
         {
             statement = null;
-            
+
             if (!MatchAdvance(TokenKind.KeyFor, out Token key))
                 return false;
 
@@ -848,7 +844,7 @@ namespace Mug.Models.Parser
                 block.Add(ExpectStatement());
 
             Expect("A block statement must end with `}` token;", TokenKind.CloseBrace);
-            
+
             return block;
         }
 
@@ -916,7 +912,7 @@ namespace Mug.Models.Parser
                 type = ExpectType();
             else
                 type = new MugType(TypeKind.Void);
-            
+
             if (Match(TokenKind.OpenBrace)) // function definition
             {
                 var body = ExpectBlock();
@@ -1088,7 +1084,7 @@ namespace Mug.Models.Parser
         private NodeBuilder ExpectNamespaceMembers(TokenKind end = TokenKind.EOF)
         {
             NodeBuilder nodes = new();
-            
+
             // while the current token is not end
             while (!Match(end))
             {
@@ -1125,7 +1121,7 @@ namespace Mug.Models.Parser
         public NamespaceNode Parse()
         {
             var firstToken = Lexer.TokenCollection[_currentIndex];
-            
+
             Module.Name = new Token(TokenKind.Identifier, Lexer.ModuleName, 0..(Lexer.Source.Length - 1));
 
             // to avoid bugs

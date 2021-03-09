@@ -1,5 +1,4 @@
-﻿using LLVMSharp;
-using LLVMSharp.Interop;
+﻿using LLVMSharp.Interop;
 using Mug.Compilation;
 using Mug.Models.Generator.Emitter;
 using Mug.Models.Lexer;
@@ -12,7 +11,6 @@ using Mug.TypeSystem;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Runtime.InteropServices;
 
 namespace Mug.Models.Generator
 {
@@ -229,7 +227,7 @@ namespace Mug.Models.Generator
         /// </summary>
         private void DefineFunction(FunctionNode function)
         {
-            
+
             var llvmfunction = Symbols[function.Name].LLVMValue;
             // basic block, won't be emitted any block because the name is empty
             var entry = llvmfunction.AppendBasicBlock("");
@@ -291,7 +289,7 @@ namespace Mug.Models.Generator
                 using (var marshalledFilename = new MarshaledString(filename))
                     if (LLVM.CreateMemoryBufferWithContentsOfFile(marshalledFilename, &memoryBuffer, &message) != 0)
                         CompilationErrors.Throw("Unable to open file: `", filename, "`");
-                
+
                 if (LLVM.ParseBitcode(memoryBuffer, &module, &message) != 0)
                     CompilationErrors.Throw("Unable to parse file: `", filename, "`");
 
@@ -341,7 +339,7 @@ namespace Mug.Models.Generator
             var function = Module.GetNamedFunction(prototype.Pragmas.GetPragma("extern"));
 
             var type = prototype.Type.ToMugValueType(prototype.Position, this);
-                
+
             // if the function is not declared yet
             if (function.Handle == IntPtr.Zero)
                 // declares it
@@ -374,13 +372,14 @@ namespace Mug.Models.Generator
 
         private bool AlreadyIncluded(string path)
         {
-            return Symbols.ContainsKey($"@import: {path}");
+            // backtick to prevent symbol declaration via backtick sequence identifier
+            return Symbols.ContainsKey($"`@import: {path}");
         }
 
         private void EmitIncludeGuard(string path)
         {
             // pragma once
-            var symbol = $"@import: {path}";
+            var symbol = $"`@import: {path}";
             if (Symbols.ContainsKey(symbol))
                 return;
 
