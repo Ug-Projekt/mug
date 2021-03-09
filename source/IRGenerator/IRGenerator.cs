@@ -219,11 +219,6 @@ namespace Mug.Models.Generator
             return member;
         }
 
-        private bool MatchAllPathsReturnAValue(LLVMValueRef function)
-        {
-            return function.LastBasicBlock.Terminator.IsAReturnInst.Handle == IntPtr.Zero;
-        }
-
         /// <summary>
         /// defines the body of a function by taking from the declared symbols its own previously defined symbol,
         /// to allow the call of a method declared under the caller.
@@ -244,14 +239,9 @@ namespace Mug.Models.Generator
             generator.Generate();
 
             // if the type is void check if the last statement was ret, if it was not ret add one implicitly
-            if (llvmfunction.LastBasicBlock.Terminator.IsAReturnInst.Handle == IntPtr.Zero)
-            {
-                // implicit return with void functions
-                if (function.Type.Kind == TypeKind.Void) // is null
-                    generator.AddImplicitRetVoid();
-                else if (!MatchAllPathsReturnAValue(llvmfunction))
-                    Error(function.Position, "Not all paths return a value");
-            }
+            if (llvmfunction.LastBasicBlock.Terminator.IsAReturnInst.Handle == IntPtr.Zero &&
+                function.Type.Kind == TypeKind.Void)
+                generator.AddImplicitRetVoid();
         }
 
         /// <summary>

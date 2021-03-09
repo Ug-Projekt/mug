@@ -103,7 +103,7 @@ namespace Mug.Compilation
             Console.Write(source[start..end].Replace("\t", " "));
             Console.ResetColor();
             Console.Write("{0}\n{1} ", source[end..].Replace("\t", " "), new string(' ', lineAt.ToString().Length + 3 + source[..start].Length)
-                + "^" + new string('~', source[start..end].Length - 1));
+                + new string('-', source[start..end].Length));
             Console.ForegroundColor = ConsoleColor.DarkYellow;
             Console.WriteLine(error);
             Console.ResetColor();

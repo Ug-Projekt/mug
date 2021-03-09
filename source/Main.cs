@@ -8,21 +8,18 @@ try
 #if DEBUG
 
     var test = @"
-# mug build file(test.mug)
+mug build file(test.mug)
 
 type Person {
-   name: str,
-   age: Age
+  name: str,
+  age: Age
 }
 
-type P {
-   a: Age
+type Age {
+  age: u8
 }
 
-type Age { age: u8 }
-
-func main() {
-}
+func main(): i32 { }
 ";
     var unit = new CompilationUnit("test", test);
 
@@ -36,11 +33,11 @@ func main() {
     if (args.Length == 0)
         CompilationErrors.Throw("No arguments passed");
 
-    for (int i = 0; i < args.Length; i++)
-    {
-        var unit = new CompilationUnit(args[i]);
-        unit.Compile(3);
-    }
+    var options = new CompilationFlags();
+
+    options.SetArguments(args[1..]);
+
+    options.SetCompilationAction(args[0]);
 
 #endif
 }
