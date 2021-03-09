@@ -97,7 +97,7 @@ namespace Mug.TypeSystem
         }
 
         /// <summary>
-        /// the function converts a Mugtype to the corresponding Llvmtyperef
+        /// the function converts a Mugtype to the corresponding mugvaluetype
         /// </summary>
         public MugValueType ToMugValueType(Range position, IRGenerator generator)
         {
@@ -114,6 +114,14 @@ namespace Mug.TypeSystem
                 TypeKind.Pointer => MugValueType.Pointer(((MugType)BaseType).ToMugValueType(position, generator)),
                 _ => generator.NotSupportedType<MugValueType>(Kind.ToString(), position)
             };
+        }
+
+        /// <summary>
+        /// the function tries to convert a Mugtype to the corresponding mugvaluetype
+        /// </summary>
+        public bool TryToMugValueType(Range position, IRGenerator generator, out MugValueType type)
+        {
+            try { type = ToMugValueType(position, generator); return true; } catch { type = MugValueType.Void; return false; }
         }
 
         public bool IsAllocableTypeNew()

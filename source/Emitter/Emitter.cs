@@ -267,7 +267,16 @@ namespace Mug.Models.Generator.Emitter
 
         public void LoadMemoryAllocation(string name, Range position)
         {
-            Load(GetMemoryAllocation(name, position));
+            var allocation = GetMemoryAllocation(name, position);
+            if (!allocation.IsAllocaInstruction())
+            {
+                var tmp = Builder.BuildAlloca(allocation.Type.LLVMType);
+                Builder.BuildStore(allocation.LLVMValue, tmp);
+
+                allocation = MugValue.From(tmp, allocation.Type);
+            }
+
+            Load(allocation);
         }
 
         public MugValueType PeekTypeFromMemory(string name, Range position)

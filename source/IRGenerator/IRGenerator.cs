@@ -19,6 +19,9 @@ namespace Mug.Models.Generator
         public readonly MugParser Parser;
         public LLVMModuleRef Module { get; set; }
 
+        private string _lastStructName = "";
+        private readonly List<string> _declaredStructs = new();
+
         private Dictionary<string, MugValue> Symbols { get; set; } = new();
 
         private const string EntryPointName = "main";
@@ -437,8 +440,24 @@ namespace Mug.Models.Generator
             unit.Generate();
         }
 
+        private MugValueType SearchForStruct(string structName, Range position)
+        {
+            foreach (var member in Parser.Module.Members.Nodes)
+                if (member is TypeStatement t && t.Name == structName)
+                {
+                    EmitStructure(t);
+                    return Symbols[structName].Type;
+                }
+
+            Error(position, "Undeclared type `", structName, "`");
+            throw new(); // unreachable
+        }
+
         private void EmitStructure(TypeStatement structure)
         {
+            if (Symbols.ContainsKey(structure.Name))
+                return;
+
             var body = new MugValueType[structure.Body.Length];
             var fields = new List<string>();
 
@@ -451,7 +470,11 @@ namespace Mug.Models.Generator
 
                 fields.Add(field.Name);
 
-                body[i] = field.Type.ToMugValueType(field.Position, this);
+                if (field.Type.ToString() == _lastStructName)
+                    Error(field.Position, "Illegal recursion");
+
+                if (!field.Type.TryToMugValueType(field.Position, this, out body[i]))
+                    body[i] = SearchForStruct(field.Type.ToString(), field.Position);
             }
 
             var st = MugValueType.Struct(body, structure);
@@ -465,26 +488,34 @@ namespace Mug.Models.Generator
         /// recognize the type of the AST node and depending on the type call methods
         /// to convert it to the corresponding low-level code
         /// </summary>
-        private void RecognizeMember(INode member, bool declareOnly)
+        private void RecognizeMember(INode member, bool firstDeclaration, bool secondDeclaration)
         {
             switch (member)
             {
                 case FunctionNode function:
-                    if (declareOnly) // declares the prototype of the function
+                    if (secondDeclaration) // declares the prototype of the function
                         DeclareFunction(function);
-                    else // defines the function body
+                    else if (!firstDeclaration) // defines the function body
                         EmitFunction(function);
                     break;
                 case FunctionPrototypeNode prototype:
-                    if (declareOnly)
+                    if (secondDeclaration)
                         EmitFunctionPrototype(prototype);
                     break;
                 case TypeStatement structure:
-                    if (declareOnly)
+                    if (firstDeclaration)
+                    {
+                        if (_declaredStructs.Contains(structure.Name))
+                            Error(structure.Position, "Type `", structure.Name, "` already declared");
+
+                        _lastStructName = structure.Name;
+
                         EmitStructure(structure);
+                        _declaredStructs.Add(structure.Name);
+                    }
                     break;
                 case ImportDirective import:
-                    if (declareOnly)
+                    if (firstDeclaration)
                         EmitImport(import);
                     break;
                 default:
@@ -501,11 +532,15 @@ namespace Mug.Models.Generator
         {
             // prototypes' declaration
             foreach (var member in Parser.Module.Members.Nodes)
-                RecognizeMember(member, true);
+                RecognizeMember(member, true, false);
+
+            // prototypes' declaration
+            foreach (var member in Parser.Module.Members.Nodes)
+                RecognizeMember(member, false, true);
 
             // memebers' definition
             foreach (var member in Parser.Module.Members.Nodes)
-                RecognizeMember(member, false);
+                RecognizeMember(member, false, false);
         }
     }
 }

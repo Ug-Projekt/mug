@@ -8,21 +8,16 @@ try
 #if DEBUG
 
     var test = @"
-type Age { age: u8 }
+# mug build file(test.mug)
 
 type Person {
    name: str,
-   age: Age
+   age: Person
 }
 
-@[inline(true)]
-func Person(name: str, age: u8): Person { return new Person { name: name, age: new Age { age: age } }; }
+type Age { age: u8 }
 
-func main(): i32 {
-  var me = Person(""carpal"", 16 as u8);
-  var x = 1 as u8;
-  me.age.age = x + (2 as u8);
-  return me.age.age as i32;
+func main() {
 }
 ";
     var unit = new CompilationUnit("test", test);
