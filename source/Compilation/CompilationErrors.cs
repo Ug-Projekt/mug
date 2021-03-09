@@ -38,21 +38,46 @@ namespace Mug.Compilation
             for (; posStart >= 0; posStart--)
                 if (source[posStart] == '\n')
                     count++;
+
             return count;
         }
 
-        private static string GetLine(string source, int index)
+        private static string GetLine(string source, ref int index)
         {
-            return source.Split('\n')[index];
+            var result = "";
+
+            var counter = index;
+
+            while (counter > 0) {
+                if (source[counter] == '\n') {
+                    counter += 1;
+                    break;
+                }
+
+                counter -= 1;
+            }
+
+            index -= counter;
+
+            while (counter < source.Length && source[counter] != '\n') {
+                result += source[counter];
+                counter += 1;
+            }
+
+            return result;
         }
 
         /// <summary>
         /// pretty module info printing
         /// </summary
-        public static void WriteModule(string moduleName)
+        public static void WriteModule(string moduleName, int lineAt)
         {
             Console.ForegroundColor = ConsoleColor.DarkMagenta;
             Console.Write("[");
+            Console.ForegroundColor = ConsoleColor.DarkGray;
+            Console.Write(lineAt);
+            Console.ForegroundColor = ConsoleColor.DarkMagenta;
+            Console.Write("; ");
             Console.ForegroundColor = ConsoleColor.DarkGray;
             Console.Write(moduleName);
             Console.ForegroundColor = ConsoleColor.DarkMagenta;
@@ -65,28 +90,20 @@ namespace Mug.Compilation
         /// </summary>
         public static void WriteSourceLine(Range position, int lineAt, string source, string error)
         {
-            int start = position.Start.Value;
-            int end = position.End.Value;
+            var start = position.Start.Value;
+            source = GetLine(source, ref start);
+            var end = position.End.Value - (position.Start.Value - start);
 
-            while (start >= 0 && source[start] != '\n')
-                start--;
-            while (end < source.Length && source[end] != '\n')
-                end++;
-
-            position = new(position.Start.Value - start - 4, end - position.End.Value - 4);
-            source = GetLine(source, lineAt - 1);
-
-            Console.WriteLine($"@Raw(Line: {lineAt}, Position: ({position.Start}..{position.End}))");
             Console.Write(lineAt);
             Console.ForegroundColor = ConsoleColor.DarkGreen;
             Console.Write(" | ");
             Console.ResetColor();
-            Console.Write(source[..position.Start].Replace("\t", " "));
+            Console.Write(source[..start].Replace("\t", " "));
             Console.ForegroundColor = ConsoleColor.DarkRed;
-            Console.Write(source[position.Start..position.End].Replace("\t", " "));
+            Console.Write(source[start..end].Replace("\t", " "));
             Console.ResetColor();
-            Console.Write("{0}\n{1} ", source[position.End..].Replace("\t", " "), new string(' ', lineAt.ToString().Length + 3 + source[..position.Start].Length)
-                + "^" + new string('~', source[position.Start..position.End].Length - 1));
+            Console.Write("{0}\n{1} ", source[end..].Replace("\t", " "), new string(' ', lineAt.ToString().Length + 3 + source[..start].Length)
+                + "^" + new string('~', source[start..end].Length - 1));
             Console.ForegroundColor = ConsoleColor.DarkYellow;
             Console.WriteLine(error);
             Console.ResetColor();

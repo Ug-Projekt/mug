@@ -3,7 +3,6 @@ using Mug.Models.Generator;
 using System;
 using System.Diagnostics;
 using System.IO;
-using System.Text;
 
 namespace Mug.Compilation
 {
@@ -85,8 +84,8 @@ namespace Mug.Compilation
                 {
                     FileName = ClangFilename,
                     Arguments = $"-O{optimizazioneLevel} {command}",
-                        // invisible window
-                        CreateNoWindow = true,
+                    // invisible window
+                    CreateNoWindow = true,
                     UseShellExecute = false,
                     ErrorDialog = false,
                     RedirectStandardInput = true,
