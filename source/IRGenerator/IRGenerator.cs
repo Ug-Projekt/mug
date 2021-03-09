@@ -11,6 +11,7 @@ using Mug.TypeSystem;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 
 namespace Mug.Models.Generator
 {
@@ -470,7 +471,7 @@ namespace Mug.Models.Generator
 
                 fields.Add(field.Name);
 
-                if (field.Type.ToString() == _lastStructName)
+                if (field.Type.ToString() == _declaredStructs.LastOrDefault() || field.Type.ToString() == structure.Name)
                     Error(field.Position, "Illegal recursion");
 
                 if (!field.Type.TryToMugValueType(field.Position, this, out body[i]))
@@ -508,10 +509,9 @@ namespace Mug.Models.Generator
                         if (_declaredStructs.Contains(structure.Name))
                             Error(structure.Position, "Type `", structure.Name, "` already declared");
 
-                        _lastStructName = structure.Name;
+                        _declaredStructs.Add(structure.Name);
 
                         EmitStructure(structure);
-                        _declaredStructs.Add(structure.Name);
                     }
                     break;
                 case ImportDirective import:

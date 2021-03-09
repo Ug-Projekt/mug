@@ -12,7 +12,11 @@ try
 
 type Person {
    name: str,
-   age: Person
+   age: Age
+}
+
+type P {
+   a: Age
 }
 
 type Age { age: u8 }
