@@ -1,4 +1,5 @@
 ﻿using LLVMSharp.Interop;
+using Mug.Models.Parser;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -19,12 +20,14 @@ namespace Mug.Compilation
         Executable,
         Library, // not available yet
         Bitcode,
-        Assembly
+        Assembly,
+        AbstractSyntaxTree,
+        Bytecode
     }
 
     public class CompilationFlags
     {
-        private const string USAGE = @"USAGE: mug <action> <file> <options>";
+        private const string USAGE = "\nUSAGE: mug <action> <file> <options>\n";
         private const string HELP = @"
 Compilation Actions:
   - build: to compile a program, with the following default options: {target: exe, mode: debug, output: <file>.exe}
@@ -32,11 +35,42 @@ Compilation Actions:
   - help: show this list
 
 Compilation Flags:
-  - src: source file to compile (one per time)
-  - dump-code: show the generated llvm code
-  - dump-output: the file into write the dump-code, default: {stdout}
+  - src: source file to compile (one at time)
   - mode: the compilation mode: {release: fast and small exe, debug: faster compilation, slower exe, allows to use llvmdbg}
-  - target: file format to generate: {exe, lib, bc, asm}
+  - target: file format to generate: {exe, lib, bc, asm, ast, ll}
+  - output: output file name
+
+How To Use:
+  - compilation action: it's a command to give to the compiler, only one compilation action for call
+  - compilation flag: it's a directive to give to the compilatio action, each compilation flag must be preceded by `*`
+";
+        private const string SRC_HELP = @"
+USAGE: mug <action> <options> *src <file>
+
+HELP: uses the next argument as source file to compile, curretly only one file at compilation supported
+";
+        private const string MODE_HELP = @"
+USAGE: mug <action> <file> <options> *mode (debug | release)
+
+HELP: uses the next argument as compilation mode:
+  - debug: for a faster compilation, allows debugging with llvmdbg
+  - release: for a faster runtime execution, supports code optiminzation
+";
+        private const string TARGET_HELP = @"
+USAGE: mug <action> <file> <options> *target (exe | lib | bc | asm | ast | ll)
+
+HELP: uses the next argument as compilation target:
+  - exe: executable with platform specific extension
+  - lib: dynamic link library
+  - bc: llvm bitcode
+  - asm: clang assembly
+  - ast: abstract syntax tree
+  - ll: llvm bytecode
+";
+        private const string OUTPUT_HELP = @"
+USAGE: mug <action> <file> <options> *output <name>
+
+HELP: uses the next argument as output file name. The extension is not required
 ";
 
         private readonly string[] _allowedExtensions = new[] { ".mug" };
@@ -46,8 +80,6 @@ Compilation Flags:
         {
             ["output"]      = null,
             ["target"]      = null,
-            ["dump-code"]   = null, // print on dump-output the llvm generated code
-            ["dump-output"] = null, // stdout
             ["mode"]        = null,
             ["src"]         = null, // file to compile
         };
@@ -60,6 +92,11 @@ Compilation Flags:
                 CompilationErrors.Throw("Undefined src to compile");
 
             return file;
+        }
+
+        private string GetOutputPath()
+        {
+            return Path.ChangeExtension(IsDefault("output") ? GetFile() : GetFlag<string>("output"), GetOutputExtension());
         }
 
         private void SetFlag(string flag, object value)
@@ -83,24 +120,14 @@ Compilation Flags:
             return GetFlag<object>(flag) is null;
         }
 
-        private void DumpIFRequired(LLVMModuleRef module)
+        private void DumpBytecode(string path, LLVMModuleRef module)
         {
-            if (GetFlag<bool>("dump-code"))
-            {
-                if (IsDefault("dump-output"))
-                    module.Dump();
-                else
-                    File.WriteAllText(GetFlag<string>("dump-output"), module.ToString());
-            }
+            File.WriteAllText(path, module.ToString());
         }
 
-        private string MakeTarget()
+        private void DumpAbstractSyntaxTree(string path, INode head)
         {
-            return GetFlag<CompilationTarget>("target") switch
-            {
-                CompilationTarget.Assembly => "-S",
-                _ => ""
-            };
+            File.WriteAllText(path, head.Dump());
         }
 
         private void Build()
@@ -108,19 +135,50 @@ Compilation Flags:
             LoadArguments();
 
             var unit = new CompilationUnit(GetFile());
-            unit.Compile(
-                (int)GetFlag<CompilationMode>("mode"),
-                GetFlag<string>("output"),
-                GetFlag<CompilationTarget>("target") != CompilationTarget.Bitcode,
-                MakeTarget());
 
-            DumpIFRequired(unit.IRGenerator.Module);
+            switch (GetFlag<CompilationTarget>("target"))
+            {
+                case CompilationTarget.Bitcode:
+                    compile("", true);
+                    break;
+                case CompilationTarget.Bytecode:
+                    unit.Generate();
+                    DumpBytecode(GetOutputPath(), unit.IRGenerator.Module);
+                    break;
+                case CompilationTarget.AbstractSyntaxTree:
+                    unit.GenerateAST();
+                    DumpAbstractSyntaxTree(GetOutputPath(), unit.IRGenerator.Parser.Module);
+                    break;
+                case CompilationTarget.Assembly:
+                    compile("-S");
+                    break;
+                case CompilationTarget.Executable:
+                    compile();
+                    break;
+                default:
+                    CompilationErrors.Throw("Unsupported target, try with another");
+                    break;
+            }
+
+            void compile(string flag = "", bool onylBitcode = false)
+            {
+                unit.Compile(
+                    (int)GetFlag<CompilationMode>("mode"),
+                    GetFlag<string>("output"),
+                    onylBitcode,
+                    flag);
+            }
         }
 
         private void BuildRun()
         {
             Build();
-            Process.Start(GetFlag<string>("output")).WaitForExit();
+
+            var process = Process.Start(GetFlag<string>("output"));
+
+            process.WaitForExit();
+
+            Environment.Exit(process.ExitCode);
         }
 
         private string CheckPath(string path)
@@ -170,6 +228,8 @@ Compilation Flags:
                 case "lib": CompilationErrors.Throw("Library traget is not supported yet"); return CompilationTarget.Library;
                 case "bc": return CompilationTarget.Bitcode;
                 case "asm": return CompilationTarget.Assembly;
+                case "ast": return CompilationTarget.AbstractSyntaxTree;
+                case "ll": return CompilationTarget.Bytecode;
                 default:
                     CompilationErrors.Throw("Unable to recognize target `", target, "`");
                     return CompilationTarget.Executable;
@@ -199,14 +259,14 @@ Compilation Flags:
             {
                 CompilationTarget.Assembly => "s",
                 CompilationTarget.Executable => GetExecutableExtension(),
+                CompilationTarget.Bytecode => "ll",
+                CompilationTarget.AbstractSyntaxTree => "ast",
                 _ => ""
             };
         }
 
         private void SetDefaultIFNeeded()
         {
-
-            SetDefault("dump-code", false);
             SetDefault("target", CompilationTarget.Executable);
             SetDefault("mode", CompilationMode.Debug);
             SetDefault("output", Path.ChangeExtension(GetFile(), GetOutputExtension()));
@@ -221,12 +281,6 @@ Compilation Flags:
                 {
                     case "src":
                         ConfigureFlag(arg, CheckMugFile(NextArgument()));
-                        break;
-                    case "dump-code":
-                        ConfigureFlag(arg, true);
-                        break;
-                    case "dump-output":
-                        ConfigureFlag(arg, NextArgument());
                         break;
                     case "mode":
                         ConfigureFlag(arg, GetMode(NextArgument()));
@@ -259,8 +313,40 @@ Compilation Flags:
 
         private void PrintUsageAndHelp()
         {
-            Console.WriteLine(USAGE);
-            Console.WriteLine(HELP);
+            Console.Write(USAGE);
+            Console.Write(HELP);
+        }
+        
+        private void PrintHelpFor(string flag)
+        {
+            switch (flag)
+            {
+                case "src":
+                    Console.Write(SRC_HELP);
+                    break;
+                case "mode":
+                    Console.Write(MODE_HELP);
+                    break;
+                case "target":
+                    Console.Write(TARGET_HELP);
+                    break;
+                case "output":
+                    Console.Write(OUTPUT_HELP);
+                    break;
+                default:
+                    CompilationErrors.Throw("Unkown compiler flag `", flag, "`");
+                    break;
+            }
+        }
+
+        private void Help()
+        {
+            if (_arguments.Length > 1)
+                CompilationErrors.Throw("Too many arguments for the `help` compilation action");
+            else if (_arguments.Length == 1)
+                PrintHelpFor(_arguments[_argumentSelector]);
+            else
+                PrintUsageAndHelp();
         }
 
         public void SetCompilationAction(string actionid)
@@ -274,7 +360,7 @@ Compilation Flags:
                     BuildRun();
                     break;
                 case "help":
-                    PrintUsageAndHelp();
+                    Help();
                     break;
                 default:
                     CompilationErrors.Throw("Invalid compilation action `", actionid, "`");
