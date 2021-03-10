@@ -190,7 +190,7 @@ Compilation Flags:
 
         private static string GetExecutableExtension()
         {
-            return Environment.OSVersion.Platform == PlatformID.Win32NT ? "exe" : null;
+            return Environment.OSVersion.Platform == PlatformID.Win32NT ? "exe" : "";
         }
 
         private string GetOutputExtension()
@@ -235,7 +235,7 @@ Compilation Flags:
                         ConfigureFlag(arg, GetTarget(NextArgument()));
                         break;
                     case "output":
-                        ConfigureFlag(arg, argument);
+                        ConfigureFlag(arg, NextArgument());
                         break;
                     case "":
                         CompilationErrors.Throw("Invalid empty flag");

@@ -389,7 +389,7 @@ namespace Mug.Models.Generator
 
             if (import.Mode == ImportMode.FromPackages) // dirof(mug.exe)/include/
             {
-                var path = "include/" + ((Token)import.Member).Value + ".mug";
+                var path = AppDomain.CurrentDomain.BaseDirectory + "include\\" + ((Token)import.Member).Value + ".mug";
 
                 if (AlreadyIncluded(path))
                     return;
