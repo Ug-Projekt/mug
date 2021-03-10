@@ -348,7 +348,8 @@ namespace Mug.Models.Generator.Emitter
 
         public void Exit()
         {
-            Builder.BuildBr(ExitBlock);
+            if (Builder.InsertBlock.Terminator.Handle == IntPtr.Zero)
+                Builder.BuildBr(ExitBlock);
         }
 
         public void StoreInside(MugValue field)

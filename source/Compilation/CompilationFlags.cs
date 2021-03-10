@@ -32,7 +32,7 @@ namespace Mug.Compilation
 Compilation Actions:
   - build: to compile a program, with the following default options: {target: exe, mode: debug, output: <file>.exe}
   - run: build and run
-  - help: show this list
+  - help: show this list or describes a compilation flag when one argument is passed
 
 Compilation Flags:
   - src: source file to compile (one at time)
@@ -130,9 +130,10 @@ HELP: uses the next argument as output file name. The extension is not required
             File.WriteAllText(path, head.Dump());
         }
 
-        private void Build()
+        private void Build(bool loadArgs = true)
         {
-            LoadArguments();
+            if (loadArgs)
+                LoadArguments();
 
             var unit = new CompilationUnit(GetFile());
 
@@ -172,7 +173,12 @@ HELP: uses the next argument as output file name. The extension is not required
 
         private void BuildRun()
         {
-            Build();
+            LoadArguments();
+
+            if (GetFlag<CompilationTarget>("target") != CompilationTarget.Executable)
+                CompilationErrors.Throw("Unable to perform compilation action `run` when target is not `exe`");
+
+            Build(false);
 
             var process = Process.Start(GetFlag<string>("output"));
 
