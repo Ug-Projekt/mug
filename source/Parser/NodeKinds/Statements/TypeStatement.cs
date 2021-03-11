@@ -35,6 +35,8 @@ namespace Mug.Models.Parser.NodeKinds.Statements
             }
         }
         public Range Position { get; set; }
+        public TokenKind Modifier { get; set; }
+
         public void AddGenericType(Token type)
         {
             _genericTypes.Add(type);

@@ -58,6 +58,7 @@ namespace Mug.Models.Lexer
             "break" => AddKeyword(TokenKind.KeyBreak, s),
             "while" => AddKeyword(TokenKind.KeyWhile, s),
             "pub" => AddKeyword(TokenKind.KeyPub, s),
+            "priv" => AddKeyword(TokenKind.KeyPriv, s),
             "use" => AddKeyword(TokenKind.KeyUse, s),
             "import" => AddKeyword(TokenKind.KeyImport, s),
             "new" => AddKeyword(TokenKind.KeyNew, s),
@@ -130,7 +131,7 @@ namespace Mug.Models.Lexer
             ':' => TokenKind.Colon,
             '.' => TokenKind.Dot,
             '?' => TokenKind.KeyTVoid,
-            _ => InExpressionError<TokenKind>("In the current context, this is not a valid char")
+            _ => InExpressionError<TokenKind>("Invalid char")
         };
 
         private void AddToken(TokenKind kind, string value)

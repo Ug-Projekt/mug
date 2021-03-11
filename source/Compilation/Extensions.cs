@@ -1,4 +1,7 @@
 ﻿using System;
+using System.ComponentModel;
+using System.Linq;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
 
@@ -52,6 +55,25 @@ namespace Mug.Compilation
         {
             var span = new ReadOnlySpan<byte>(Value, Length);
             return span.ToString();
+        }
+    }
+
+    static class Extensions
+    {
+
+        public static string GetDescription(this Enum instance)
+        {
+            var genericEnumType = instance.GetType();
+            var memberInfo = genericEnumType.GetMember(instance.ToString());
+
+            if (memberInfo is not null && memberInfo.Length > 0)
+            {
+                var attr = memberInfo[0].GetCustomAttributes(typeof(DescriptionAttribute), false);
+                if (attr is not null && attr.Length > 0)
+                    return ((DescriptionAttribute)attr.ElementAt(0)).Description;
+            }
+
+            return instance.ToString();
         }
     }
 }

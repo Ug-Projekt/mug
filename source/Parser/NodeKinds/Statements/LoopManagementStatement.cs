@@ -3,10 +3,10 @@ using System;
 
 namespace Mug.Models.Parser.NodeKinds.Statements
 {
-    public class LoopManagmentStatement : INode
+    public class LoopManagementStatement : INode
     {
-        public string NodeKind => "LoopManagment";
-        public Token Managment { get; set; }
+        public string NodeKind => "LoopManagement";
+        public Token Management { get; set; }
         public Range Position { get; set; }
     }
 }

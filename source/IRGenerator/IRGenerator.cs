@@ -20,7 +20,6 @@ namespace Mug.Models.Generator
         public readonly MugParser Parser;
         public LLVMModuleRef Module { get; set; }
 
-        private string _lastStructName = "";
         private readonly List<string> _declaredStructs = new();
 
         private Dictionary<string, MugValue> Symbols { get; set; } = new();
@@ -351,8 +350,10 @@ namespace Mug.Models.Generator
 
         private void IncludeCHeader(string path)
         {
+            var bc = Path.ChangeExtension(path, "bc");
+
             // compiling c code to llvm bit code
-            CompilationUnit.CallClang($"-emit-llvm -c {path}", 3);
+            CompilationUnit.CallClang($"-emit-llvm -c {path} -o {bc}", 3);
 
             // targetting bitcode file
             path = Path.ChangeExtension(path, "bc");

@@ -8,18 +8,9 @@ try
 #if DEBUG
 
     var test = @"
-mug build file(test.mug)
-
-type Person {
-  name: str,
-  age: Age
+pub func a(): i32 {
 }
 
-type Age {
-  age: u8
-}
-
-func main(): i32 { }
 ";
     var unit = new CompilationUnit("test", test);
 

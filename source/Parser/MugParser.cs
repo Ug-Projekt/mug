@@ -6,6 +6,10 @@ using Mug.Models.Parser.NodeKinds.Statements;
 using Mug.TypeSystem;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
+using System.Linq;
+using System.Reflection;
+using System.Text;
 
 namespace Mug.Models.Parser
 {
@@ -15,6 +19,7 @@ namespace Mug.Models.Parser
         public readonly MugLexer Lexer;
         private int _currentIndex = 0;
         private Pragmas _pragmas;
+        private TokenKind _modifier = TokenKind.Bad;
         private INode _leftvalue;
 
         private void ParseError(params string[] error)
@@ -73,27 +78,37 @@ namespace Mug.Models.Parser
                     return Back;
                 }
 
-            ParseError("Expected `", string.Join("`, `", kinds), "`, found ", Current.Value, (error != "" ? "`: " + error : "`"));
-            return new();
-        }
+            if (error == "")
+                ParseError("Expected `", matchString(), "`, found `", Current.Value, "`");
+            else
+                ParseError(error);
 
-        private Token ExpectMultipleMute(string error, params TokenKind[] kinds)
-        {
-            for (int i = 0; i < kinds.Length; i++)
-                if (Current.Kind == kinds[i])
+            throw new(); // unreachable
+
+            string matchString()
+            {
+                StringBuilder result = new();
+
+                for (int i = 0; i < kinds.Length; i++)
                 {
-                    _currentIndex++;
-                    return Back;
+                    result.Append("");
+                    if (i < kinds.Length - 1)
+                        result.Append("`, `");
                 }
 
-            ParseError(error);
-            return new();
+                return result.ToString();
+            }
         }
 
         private Token Expect(string error, TokenKind kind)
         {
             if (Current.Kind != kind)
-                ParseError("Expected `", kind.ToString(), "`, found `", Current.Value, (error != "" ? "`: " + error : "`"));
+            {
+                if (error == "")
+                    ParseError("Expected `", kind.GetDescription(), "`, found `", Current.Value, "`");
+                else
+                    ParseError(error);
+            }
 
             _currentIndex++;
             return Back;
@@ -119,7 +134,7 @@ namespace Mug.Models.Parser
             if (MatchAdvance(TokenKind.OpenBracket))
             {
                 var type = ExpectType();
-                Expect("An array type definition must end by `]`;", TokenKind.CloseBracket);
+                Expect("An array type definition must end by `]`", TokenKind.CloseBracket);
                 return new MugType(TypeKind.Array, type);
             }
             else if (MatchAdvance(TokenKind.KeyTPtr))
@@ -170,19 +185,19 @@ namespace Mug.Models.Parser
         private ParameterNode ExpectParameter(bool isFirst)
         {
             if (!isFirst)
-                Expect("Parameters must be separed by a comma;", TokenKind.Comma);
+                Expect("Parameters must be separated by a comma", TokenKind.Comma);
 
-            var name = Expect("In parameter declaration must specify the param name;", TokenKind.Identifier);
+            var name = Expect("Expected parameter name", TokenKind.Identifier);
 
-            Expect("In parameter declaration must specify the param type;", TokenKind.Colon);
+            Expect("Expected parameter type", TokenKind.Colon);
 
             var type = ExpectType();
             var defaultvalue = new Token();
 
             if (MatchAdvance(TokenKind.Equal))
-                defaultvalue = ExpectConstantMute("A default parameter value must be evaluable at compilation-time, so a constant;");
+                defaultvalue = ExpectConstantMute("Expected constant expression as default parameter value");
 
-            ExpectMultiple("In the current context is only allowed to close the parameter list or add a parameter to it;", TokenKind.Comma, TokenKind.ClosePar);
+            ExpectMultiple("", TokenKind.Comma, TokenKind.ClosePar);
             _currentIndex--;
 
             return new ParameterNode(type, name.Value, defaultvalue, name.Position);
@@ -214,7 +229,7 @@ namespace Mug.Models.Parser
             var match = MatchPrimitiveType(out var type) || MatchAdvance(TokenKind.Identifier, out type);
 
             if (!match)
-                ParseError("Expected a type, but found `" + Current.Kind.ToString() + "`;");
+                ParseError("Expected a type, but found `" + Current.Value + "`");
 
             return MugType.FromToken(type);
         }
@@ -324,7 +339,7 @@ namespace Mug.Models.Parser
             if (previousMember is null)
             {
                 if (!MatchTerm(out _leftvalue, false))
-                    ParseError("Unknown local statement");
+                    ParseError("Unable to find a valid local statement");
             }
             else
                 name = previousMember;
@@ -384,7 +399,7 @@ namespace Mug.Models.Parser
                 if (!MatchTerm(out e, allowCallStatement))
                 {
                     _currentIndex--;
-                    ParseError("Unexpected prefix operator;");
+                    ParseError("Unexpected prefix operator");
                 }
 
                 e = new PrefixOperator() { Expression = e, Position = prefixOp.Position, Prefix = prefixOp.Kind };
@@ -432,7 +447,7 @@ namespace Mug.Models.Parser
         {
             if (!MatchFactor(out INode e) &&
                 !MatchInParExpression(out e))
-                ParseError("Expected factor (term times term, or divide, etc..), but found an unknown expression stars with `", Current.Kind.ToString(), "`;");
+                ParseError("Expected expression factor here");
 
             return e;
         }
@@ -448,10 +463,10 @@ namespace Mug.Models.Parser
         private FieldAssignmentNode ExpectFieldAssign()
         {
             if (!MatchAdvance(TokenKind.Identifier))
-                ParseError("Expected field assign;");
+                ParseError("Expected field assignment");
 
             var name = Back;
-            Expect("Required `:` after field name;", TokenKind.Colon);
+            Expect($"When assigning a field, required `:`, not `{Current.Value}`", TokenKind.Colon);
 
             var expression = ExpectExpression(true, TokenKind.Comma, TokenKind.CloseBrace);
             _currentIndex--;
@@ -511,7 +526,7 @@ namespace Mug.Models.Parser
             var expression = ExpectExpression(true, TokenKind.KeyTVoid);
             var ifBody = ExpectFactor();
 
-            Expect("In inline conditions there must be the else body: place it here;", TokenKind.KeyElse);
+            Expect("In inline conditions there must be the else body: place it here", TokenKind.KeyElse);
 
             var elseBody = ExpectFactor();
             _currentIndex++;
@@ -524,15 +539,15 @@ namespace Mug.Models.Parser
             if (MatchAdvance(TokenKind.OpenBracket))
             {
                 var type = ExpectType();
-                Expect("Expected array size after its type;", TokenKind.Comma);
+                Expect("Expected array size after its type", TokenKind.Comma);
 
                 var size = ExpectExpression(true, TokenKind.CloseBracket);
                 _currentIndex--;
 
-                Expect("Expected `]` and the array body;", TokenKind.CloseBracket);
+                Expect("Expected `]` and the array body", TokenKind.CloseBracket);
 
                 var array = new ArrayAllocationNode() { Size = size, Type = type };
-                Expect("Expected the array body, empty (`{}`) if has to be instanced with type default values;", TokenKind.OpenBrace);
+                Expect("Expected the array body, empty (`{}`) if has to be instanced with type default values", TokenKind.OpenBrace);
 
                 if (!Match(TokenKind.CloseBrace))
                 {
@@ -553,7 +568,7 @@ namespace Mug.Models.Parser
             var name = ExpectType();
             var allocation = new TypeAllocationNode() { Name = name, Position = newposition };
 
-            Expect("Type allocation requires `{}`;", TokenKind.OpenBrace);
+            Expect("Type allocation requires `{}`", TokenKind.OpenBrace);
 
             if (Match(TokenKind.Identifier))
                 do
@@ -578,7 +593,7 @@ namespace Mug.Models.Parser
             if (MatchBooleanOperator(out _))
             {
                 _currentIndex--;
-                ParseError("Double boolean operator not allowed, to compare two boolean expressions please put two operand into `()`;");
+                ParseError("Double boolean operator not allowed, to compare two boolean expressions please put two operands into `()`");
             }
 
             _currentIndex++;
@@ -614,14 +629,14 @@ namespace Mug.Models.Parser
             }
 
             if (e is null)
-                ParseError("Missing expression: `", Current.Value.ToString(), "` is not a valid symbol in expression;");
+                ParseError("Expected expression, found `", Current.Value.ToString(), "`");
 
             if (MatchBooleanOperator(out var boolOP))
                 return CollectBooleanExpression(ref e, boolOP, isFirst, end);
             else if (MatchAdvance(TokenKind.KeyAs, out var asToken))
                 e = new CastExpressionNode() { Expression = e, Type = ExpectType(), Position = asToken.Position };
 
-            ExpectMultipleMute("`" + Current.Value + "` is not a valid token in the current context;", end);
+            ExpectMultiple("Invalid token in the current context, maybe `;` missing?", end);
 
             return e;
         }
@@ -638,7 +653,7 @@ namespace Mug.Models.Parser
             if (!MatchAdvance(TokenKind.KeyVar))
                 return false;
 
-            var name = Expect("Expected the variable id;", TokenKind.Identifier);
+            var name = Expect("Expected the variable name", TokenKind.Identifier);
             var type = ExpectVariableType();
 
             if (MatchAdvance(TokenKind.Semicolon))
@@ -647,7 +662,7 @@ namespace Mug.Models.Parser
                 return true;
             }
 
-            Expect("To define the value of a variable must open the body with `=`, or you can only declare a variable putting after type spec the symbol `;`;", TokenKind.Equal);
+            Expect("To define the value of a variable must open the body with `=`, or you can only declare a variable putting after type spec the symbol `;`", TokenKind.Equal);
 
             var body = ExpectExpression(true, TokenKind.Semicolon);
             statement = new VariableStatement() { Body = body, IsAssigned = true, Name = name.Value.ToString(), Position = name.Position, Type = type };
@@ -662,13 +677,13 @@ namespace Mug.Models.Parser
             if (!MatchAdvance(TokenKind.KeyConst))
                 return false;
 
-            var name = Expect("Expected the constant id;", TokenKind.Identifier);
+            var name = Expect("Expected the constant name", TokenKind.Identifier);
             var type = ExpectVariableType();
 
             if (Match(TokenKind.Semicolon))
-                ParseError("A constant cannot be declared without a body;");
+                ParseError("A constant cannot be declared without a body");
 
-            Expect("To define the value of a constant must open the body with `=`;", TokenKind.Equal);
+            Expect("To define the value of a constant must open the body with `=`", TokenKind.Equal);
 
             var body = ExpectExpression(true, TokenKind.Semicolon);
             statement = new ConstantStatement() { Body = body, Name = name.Value.ToString(), Position = name.Position, Type = type };
@@ -795,7 +810,7 @@ namespace Mug.Models.Parser
             else if (MatchAdvance(TokenKind.Equal))
                 counter = new AssignmentStatement() { Operator = TokenKind.Equal, Position = pos, Body = ExpectFactor(), Name = name };
 
-            var op = ExpectMultiple("Expected an operator for the for statement, allowed: `in`, `to`;", TokenKind.KeyIn, TokenKind.KeyTo).Kind;
+            var op = ExpectMultiple("Expected `in`, `to` in for statement", TokenKind.KeyIn, TokenKind.KeyTo).Kind;
             var expression = ExpectFactor();
             var body = ExpectBlock();
 
@@ -812,7 +827,7 @@ namespace Mug.Models.Parser
                 !MatchAdvance(TokenKind.KeyBreak))
                 return false;
 
-            statement = new LoopManagmentStatement() { Managment = Back };
+            statement = new LoopManagementStatement() { Management = Back, Position = Back.Position };
 
             Expect("", TokenKind.Semicolon);
 
@@ -829,28 +844,28 @@ namespace Mug.Models.Parser
                                 if (!LoopManagerDefintion(out statement)) // continue, break
                                     if (!MatchCallStatement(out statement, true)) // f();
                                         if (!ValueAssignment(out statement)) // x = value;
-                                            ParseError("In the current local context, this is not a valid imperative statement;");
+                                            ParseError("Invalid token here");
 
             return statement;
         }
 
         private BlockNode ExpectBlock()
         {
-            Expect("A block statement must start by `{` token;", TokenKind.OpenBrace);
+            Expect("A block statement must start by `{` token", TokenKind.OpenBrace);
 
             var block = new BlockNode();
 
             while (!Match(TokenKind.CloseBrace))
                 block.Add(ExpectStatement());
 
-            Expect("A block statement must end with `}` token;", TokenKind.CloseBrace);
+            Expect("A block statement must end with `}` token", TokenKind.CloseBrace);
 
             return block;
         }
 
         private ParameterListNode ExpectParameterListDeclaration()
         {
-            Expect("In function definition you must open a parenthesis to declare parameters, or if the function does not accept parameters just open and close pars: `()`", TokenKind.OpenPar);
+            Expect("", TokenKind.OpenPar);
 
             var parameters = new ParameterListNode();
             var count = 0;
@@ -862,6 +877,15 @@ namespace Mug.Models.Parser
             }
 
             return parameters;
+        }
+
+        private TokenKind GetModifier()
+        {
+            if (_modifier == TokenKind.Bad)
+                return TokenKind.KeyPriv;
+
+            _modifier = TokenKind.Bad;
+            return _modifier; // pub only
         }
 
         private Pragmas GetPramas()
@@ -886,14 +910,15 @@ namespace Mug.Models.Parser
             if (!MatchAdvance(TokenKind.KeyFunc)) // <func>
                 return false;
 
+            var modifier = GetModifier();
             var pragmas = GetPramas();
             var generics = new List<Token>();
-            var name = Expect("In function definition must specify the name;", TokenKind.Identifier); // func <name>
+            var name = Expect("In function definition must specify the name", TokenKind.Identifier); // func <name>
 
             if (MatchAdvance(TokenKind.OpenBracket)) // func name<[>
             {
                 if (Match(TokenKind.CloseBracket))
-                    ParseError("Invalid generic definition content;");
+                    ParseError("Invalid generic definition content");
 
                 var count = 0;
 
@@ -917,7 +942,7 @@ namespace Mug.Models.Parser
             {
                 var body = ExpectBlock();
 
-                var f = new FunctionNode() { Pragmas = pragmas, Body = body, Name = name.Value.ToString(), ParameterList = parameters, Type = type, Position = name.Position };
+                var f = new FunctionNode() { Modifier = modifier, Pragmas = pragmas, Body = body, Name = name.Value.ToString(), ParameterList = parameters, Type = type, Position = name.Position };
 
                 f.SetGenericTypes(generics);
 
@@ -927,7 +952,7 @@ namespace Mug.Models.Parser
             {
                 Expect("", TokenKind.Semicolon);
 
-                var f = new FunctionPrototypeNode() { Pragmas = pragmas, Name = name.Value.ToString(), ParameterList = parameters, Type = type, Position = name.Position };
+                var f = new FunctionPrototypeNode() { Modifier = modifier, Pragmas = pragmas, Name = name.Value.ToString(), ParameterList = parameters, Type = type, Position = name.Position };
                 f.SetGenericTypes(generics);
 
                 node = f;
@@ -954,7 +979,7 @@ namespace Mug.Models.Parser
             else // import <path>
                 body = Expect("", TokenKind.Identifier);
 
-            Expect("Expected `;`, at the end of an import directive;", TokenKind.Semicolon); // import .. <;>
+            Expect("Expected `;`, at the end of an import directive", TokenKind.Semicolon); // import .. <;>
 
             directive = new ImportDirective() { Mode = mode, Member = body, Position = token.Position };
             return true;
@@ -971,9 +996,9 @@ namespace Mug.Models.Parser
 
             Expect("Allowed only alias declaration with use directive", TokenKind.KeyAs); // use path <as>
 
-            var alias = Expect("Expected the use path alias, after `as` in a use directive;", TokenKind.Identifier); // use path as <alias>
+            var alias = Expect("Expected the use path alias, after `as` in a use directive", TokenKind.Identifier); // use path as <alias>
 
-            Expect("Expected `;`, at the end of a use directive;", TokenKind.Semicolon); // use path alias <;>
+            Expect("Expected `;`, at the end of a use directive", TokenKind.Semicolon); // use path alias <;>
 
             directive = new UseDirective() { Body = body, Alias = alias, Position = token.Position };
             return true;
@@ -991,19 +1016,19 @@ namespace Mug.Models.Parser
         private Token ExpectGenericType(bool isFirst = true)
         {
             if (!isFirst)
-                Expect("Generic types must be separated by a `,`;", TokenKind.Comma);
+                Expect("Generic types must be separated by a `,`", TokenKind.Comma);
 
             if (!MatchAdvance(TokenKind.KeyType))
-                ParseError("`", Current.Kind.ToString(), "` invalid token in generic type definition;");
+                ParseError("`", Current.Value.ToString(), "` invalid token in generic type definition");
 
-            return Expect("In generic type definition, expected ident after `type` keyword;", TokenKind.Identifier);
+            return Expect("In generic type definition, expected ident after `type` keyword", TokenKind.Identifier);
         }
 
         private FieldNode ExpectFieldDefinition()
         {
-            var name = Expect("Expected field name;", TokenKind.Identifier); // <field>
+            var name = Expect("Expected field name", TokenKind.Identifier); // <field>
 
-            Expect("Expected `:` after field name, then the field type;", TokenKind.Colon); // field <:>
+            Expect("Expected type specification", TokenKind.Colon); // field <:>
 
             var type = ExpectType(); // field: <error>
 
@@ -1023,9 +1048,10 @@ namespace Mug.Models.Parser
                 return false;
 
             // required an identifier
+            var modifier = GetModifier();
             var pragmas = GetPramas();
-            var name = Expect("Expected the type name after `type` keyword;", TokenKind.Identifier);
-            var statement = new TypeStatement() { Pragmas = pragmas, Name = name.Value.ToString(), Position = name.Position };
+            var name = Expect("Expected the type name after `type` keyword", TokenKind.Identifier);
+            var statement = new TypeStatement() { Modifier = modifier, Pragmas = pragmas, Name = name.Value.ToString(), Position = name.Position };
 
             // struct generics
             if (MatchAdvance(TokenKind.OpenBracket))
@@ -1033,7 +1059,7 @@ namespace Mug.Models.Parser
                 var count = 0;
 
                 if (Match(TokenKind.CloseBracket))
-                    ParseError("Invalid generic definition content;");
+                    ParseError("Invalid generic definition content");
 
                 while (!MatchAdvance(TokenKind.CloseBracket))
                 {
@@ -1069,13 +1095,19 @@ namespace Mug.Models.Parser
             {
                 var name = Expect("", TokenKind.Identifier).Value;
                 Expect("", TokenKind.OpenPar);
-                var value = ExpectConstantMute("non-constant expressions not allowed in pragmas");
+                var value = ExpectConstantMute("Non-constant expressions not allowed in pragmas");
                 Expect("", TokenKind.ClosePar);
 
                 _pragmas.SetPragma(name, value, ParseError, ref _currentIndex);
             } while (MatchAdvance(TokenKind.Comma));
 
             Expect("Expected pragmas close", TokenKind.CloseBracket);
+        }
+
+        private void CollectModifier()
+        {
+            if (MatchAdvance(TokenKind.KeyPub))
+                _modifier = Back.Kind;
         }
 
         /// <summary>
@@ -1090,6 +1122,7 @@ namespace Mug.Models.Parser
             {
                 // collecting pragmas for first two statements (function and type)
                 CollectPragmas();
+                CollectModifier();
 
                 // searches for a global statement
                 // func id() {}
@@ -1100,12 +1133,15 @@ namespace Mug.Models.Parser
                         if (_pragmas is not null)
                             ParseError("Invalid pragmas for this member");
 
+                        if (_modifier == TokenKind.Bad)
+                            ParseError("Invalid modifier for this member");
+
                         // var id = constant;
                         if (!VariableDefinition(out statement))
                             // import "", import path, use x as y
                             if (!DirectiveDefinition(out statement))
                                 // if there is not global statement
-                                ParseError("In the current global context, this is not a valid global statement;");
+                                ParseError("Invalid token here");
                     }
 
                 // adds the statement to the members

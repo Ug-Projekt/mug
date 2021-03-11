@@ -22,6 +22,7 @@ namespace Mug.Models.Generator
         private readonly IRGenerator _generator;
         private readonly LLVMValueRef _llvmfunction;
         private LLVMBasicBlockRef _oldcondition;
+        private LLVMBasicBlockRef _cycleExitBlock { get; set; }
 
         internal LocalGenerator(IRGenerator errorHandler, ref LLVMValueRef llvmfunction, ref FunctionNode function, ref MugEmitter emitter)
         {
@@ -306,7 +307,6 @@ namespace Mug.Models.Generator
             EmitOperator(b.Operator, ft, st, b.Position);
         }
 
-        ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         private void EmitExprArrayElemSelect(ArraySelectElemNode a)
         {
             // loading the array
@@ -520,12 +520,20 @@ namespace Mug.Models.Generator
                 DefineConditionBody(@else, endifelse, statement.Body, oldemitter);
         }
 
-        private void DefineConditionBody(LLVMBasicBlockRef then, LLVMBasicBlockRef endifelse, BlockNode body, MugEmitter oldemitter)
+        private void DefineConditionBody(
+            LLVMBasicBlockRef then,
+            LLVMBasicBlockRef endifelse,
+            BlockNode body,
+            MugEmitter oldemitter
+            /*bool isCycle = false, LLVMBasicBlockRef cycleExitBlock = new()*/)
         {
             // allocating a new emitter with the old symbols
             _emitter = new MugEmitter(_generator, oldemitter.Memory, endifelse, true);
             // locating the emitter builder at the end of the block
             _emitter.Builder.PositionAtEnd(then);
+
+            /*if (isCycle)
+                _emitter.CycleExitBlock = cycleExitBlock;*/
 
             // generating the low-level code
             Generate(body);
@@ -619,6 +627,10 @@ namespace Mug.Models.Generator
             // compare
             _emitter.CompareJump(cycle, endcycle);
 
+            var oldCycleExitBlock = _cycleExitBlock;
+
+            _cycleExitBlock = endcycle;
+
             // define if and else bodies
             DefineConditionBody(cycle, compare, i.Body, oldemitter);
 
@@ -633,6 +645,8 @@ namespace Mug.Models.Generator
 
             // re emit the entry block
             _emitter.Builder.PositionAtEnd(endcycle);
+
+            _cycleExitBlock = oldCycleExitBlock;
         }
 
         private void EmitConditionalStatement(ConditionalStatement i)
@@ -850,6 +864,18 @@ namespace Mug.Models.Generator
             _emitter.DeclareConstant(constant.Name, constant.Position);
         }
 
+        private void EmitLoopManagementStatement(LoopManagementStatement management)
+        {
+            // is not inside a cycle
+            if (_cycleExitBlock.Handle == IntPtr.Zero)
+                Error(management.Position, "Loop management statements only allowed inside cycle's bodies");
+
+            if (management.Management.Kind == TokenKind.KeyBreak)
+                _emitter.Jump(_cycleExitBlock);
+            else
+                _emitter.Exit();
+        }
+
         /// <summary>
         /// 
         /// </summary>
@@ -874,6 +900,9 @@ namespace Mug.Models.Generator
                     break;
                 case ConstantStatement constant:
                     EmitConstantStatement(constant);
+                    break;
+                case LoopManagementStatement loopmanagement:
+                    EmitLoopManagementStatement(loopmanagement);
                     break;
                 /*case ForLoopStatement loop:
                     break;*/
