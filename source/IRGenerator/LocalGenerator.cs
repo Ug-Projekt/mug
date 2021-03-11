@@ -123,6 +123,25 @@ namespace Mug.Models.Generator
                 _emitter.CallOperator("/", position, ft, st);
         }
 
+        private void EmitBooleanOperator(string literal, LLVMIntPredicate llvmpredicate, OperatorKind kind, ref MugValueType ft, ref MugValueType st, Range position)
+        {
+            if ((kind == OperatorKind.CompareEQ || kind == OperatorKind.CompareNEQ) && ft.IsSameEnumOf(st))
+            {
+                if (_emitter.OneOfTwoIsOnlyTheEnumType())
+                    Error(position, "Cannot apply boolean operator on this expression");
+
+                EmitOperator(
+                    kind,
+                    ft.GetEnum().BaseType.ToMugValueType(position, _generator),
+                    st.GetEnum().BaseType.ToMugValueType(position, _generator),
+                    position);
+            }
+            else if (_generator.MatchSameIntType(ft, st))
+                _emitter.CompareInt(llvmpredicate);
+            else
+                _emitter.CallOperator(literal, position, ft, st);
+        }
+
         /// <summary>
         /// the function manages the operator implementations for all the types
         /// </summary>
@@ -143,40 +162,22 @@ namespace Mug.Models.Generator
                     EmitDiv(ft, st, position);
                     break;
                 case OperatorKind.CompareEQ:
-                    if (_generator.MatchSameIntType(ft, st))
-                        _emitter.CompareInt(LLVMIntPredicate.LLVMIntEQ);
-                    else
-                        _emitter.CallOperator("==", position, ft, st);
+                    EmitBooleanOperator("==", LLVMIntPredicate.LLVMIntEQ, kind, ref ft, ref st, position);
                     break;
                 case OperatorKind.CompareNEQ:
-                    if (_generator.MatchSameIntType(ft, st))
-                        _emitter.CompareInt(LLVMIntPredicate.LLVMIntNE);
-                    else
-                        _emitter.CallOperator("!=", position, ft, st);
+                    EmitBooleanOperator("!=", LLVMIntPredicate.LLVMIntNE, kind, ref ft, ref st, position);
                     break;
                 case OperatorKind.CompareMajor:
-                    if (_generator.MatchSameIntType(ft, st))
-                        _emitter.CompareInt(LLVMIntPredicate.LLVMIntSGT);
-                    else
-                        _emitter.CallOperator(">", position, ft, st);
+                    EmitBooleanOperator(">", LLVMIntPredicate.LLVMIntSGT, kind, ref ft, ref st, position);
                     break;
                 case OperatorKind.CompareMajorEQ:
-                    if (_generator.MatchSameIntType(ft, st))
-                        _emitter.CompareInt(LLVMIntPredicate.LLVMIntSGE);
-                    else
-                        _emitter.CallOperator(">=", position, ft, st);
+                    EmitBooleanOperator(">=", LLVMIntPredicate.LLVMIntSGE, kind, ref ft, ref st, position);
                     break;
                 case OperatorKind.CompareMinor:
-                    if (_generator.MatchSameIntType(ft, st))
-                        _emitter.CompareInt(LLVMIntPredicate.LLVMIntSLT);
-                    else
-                        _emitter.CallOperator("<", position, ft, st);
+                    EmitBooleanOperator("<", LLVMIntPredicate.LLVMIntSLT, kind, ref ft, ref st, position);
                     break;
                 case OperatorKind.CompareMinorEQ:
-                    if (_generator.MatchSameIntType(ft, st))
-                        _emitter.CompareInt(LLVMIntPredicate.LLVMIntSLE);
-                    else
-                        _emitter.CallOperator("<=", position, ft, st);
+                    EmitBooleanOperator("<=", LLVMIntPredicate.LLVMIntSLE, kind, ref ft, ref st, position);
                     break;
                 /*case OperatorKind.And
                     break;*/
@@ -195,12 +196,21 @@ namespace Mug.Models.Generator
             var expressionType = _emitter.PeekType();
             var castType = type.ToMugValueType(position, _generator);
 
-            if (expressionType.TypeKind == MugValueTypeKind.Enum)
+            if (castType.IsEnum())
+            {
+                var enumerable = castType.GetEnum();
+
+                if (expressionType.TypeKind != enumerable.BaseType.ToMugValueType(position, _generator).TypeKind)
+                    Error(position, "The base type of enum `", enumerable.Name, "` is incompatible with type `", expressionType.ToString(), "`");
+
+                _emitter.CastToEnumMemberFromBaseType(castType);
+            }
+            else if (expressionType.TypeKind == MugValueTypeKind.Enum)
             {
                 if (expressionType.GetEnum().BaseType.ToMugValueType(new(), _generator).TypeKind != castType.TypeKind)
                     Error(position, "Enum base type is incompatible with type `", castType.ToString(), "`");
 
-                _emitter.CastEnumMember(castType);
+                _emitter.CastEnumMemberToBaseType(castType);
             }
             else if (expressionType.MatchAnyTypeOfIntType() &&
                 castType.MatchAnyTypeOfIntType()) // LLVM has different instructions for each type convertion
@@ -717,7 +727,7 @@ namespace Mug.Models.Generator
                     Type = type.BaseType is TypeKind kind ? new MugType(kind) : (MugType)type.BaseType,
                     Size = new Token(TokenKind.ConstantDigit, "0", new())
                 },
-                TypeKind.Struct => new TypeAllocationNode()
+                TypeKind.DefinedType => new TypeAllocationNode()
                 {
                     Name = type,
                     Body = GetDefaultValueOfFields(type.BaseType.ToString(), position)

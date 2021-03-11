@@ -119,6 +119,11 @@ namespace Mug.MugValueSystem
             return ((Tuple<LLVMTypeRef, EnumStatement>)BaseType).Item2;
         }
 
+        public bool IsSameEnumOf(MugValueType st)
+        {
+            return IsEnum() && st.IsEnum() && GetEnum().Equals(st.GetEnum());
+        }
+
         public bool IsEnum()
         {
             return BaseType is Tuple<LLVMTypeRef, EnumStatement>;

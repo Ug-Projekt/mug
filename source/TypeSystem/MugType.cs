@@ -36,7 +36,7 @@ namespace Mug.TypeSystem
                 TokenKind.KeyTu32 => new MugType(TypeKind.UInt32),
                 TokenKind.KeyTu64 => new MugType(TypeKind.UInt64),
                 TokenKind.KeyTVoid => new MugType(TypeKind.Void),
-                TokenKind.Identifier => new MugType(TypeKind.Struct, t.Value),
+                TokenKind.Identifier => new MugType(TypeKind.DefinedType, t.Value),
                 _ => Error(t.Kind.ToString())
             };
         }
@@ -74,7 +74,7 @@ namespace Mug.TypeSystem
                 TypeKind.Array => $"[{BaseType}]",
                 TypeKind.Bool => "u1",
                 TypeKind.Char => "chr",
-                TypeKind.Struct => BaseType.ToString(),
+                TypeKind.DefinedType => BaseType.ToString(),
                 TypeKind.Int32 => "i32",
                 TypeKind.Int64 => "i64",
                 TypeKind.UInt8 => "u8",
@@ -110,7 +110,7 @@ namespace Mug.TypeSystem
                 TypeKind.Void => MugValueType.Void,
                 TypeKind.Char => MugValueType.Char,
                 TypeKind.String => MugValueType.String,
-                TypeKind.Struct => generator.GetSymbol(BaseType.ToString(), position).Type,
+                TypeKind.DefinedType => generator.GetSymbol(BaseType.ToString(), position).Type,
                 TypeKind.Pointer => MugValueType.Pointer(((MugType)BaseType).ToMugValueType(position, generator)),
                 _ => generator.NotSupportedType<MugValueType>(Kind.ToString(), position)
             };
@@ -126,7 +126,7 @@ namespace Mug.TypeSystem
 
         public bool IsAllocableTypeNew()
         {
-            return Kind == TypeKind.Struct || Kind == TypeKind.Array || Kind == TypeKind.Pointer;
+            return Kind == TypeKind.DefinedType || Kind == TypeKind.Array || Kind == TypeKind.Pointer;
         }
     }
 }

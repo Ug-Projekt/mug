@@ -10,11 +10,11 @@ try
     var test = @"
 
 enum Days: u8 {
-  MoonDay: 0
+  Monday: 1,
+  Tuesday: 2
 }
 
 func main() {
-  var x = Days.MoonDay as u8;
 }
 
 ";

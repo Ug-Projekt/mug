@@ -14,7 +14,7 @@
         UInt64,
         Bool,
         Array,
-        Struct,
+        DefinedType,
         GenericStruct,
         Void
     }

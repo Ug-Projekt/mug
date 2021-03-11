@@ -457,13 +457,46 @@ namespace Mug.Models.Generator
             throw new(); // unreachable
         }
 
+        private TokenKind GetValueTokenKindFromType(MugValueTypeKind kind, Range position)
+        {
+            return kind switch
+            {
+                MugValueTypeKind.Void => Error<TokenKind>(position, "Enum base type must be a non-void type"),
+                MugValueTypeKind.String => TokenKind.ConstantString,
+                MugValueTypeKind.Int8 or MugValueTypeKind.Int32 or MugValueTypeKind.Int64 => TokenKind.ConstantDigit,
+                MugValueTypeKind.Bool => TokenKind.ConstantBoolean,
+                MugValueTypeKind.Char => TokenKind.ConstantChar,
+            };
+        }
+
+        private void CheckCorrectEnum(ref EnumStatement enumstatement,  MugValueType basetype)
+        {
+            var expectedValue = GetValueTokenKindFromType(basetype.TypeKind, enumstatement.Position);
+            var members = new List<string>();
+
+            foreach (var member in enumstatement.Body)
+            {
+                if (member.Value.Kind != expectedValue)
+                    Error(member.Position, "Expected type `", basetype.ToString(), "`");
+
+                if (members.Contains(member.Name))
+                    Error(member.Position, "Member already declared");
+
+                members.Add(member.Name);
+            }
+        }
+
         private void EmitEnum(EnumStatement enumstatement)
         {
-            var basetype = MugValueType.Enum(enumstatement.BaseType.ToMugValueType(enumstatement.Position, this), enumstatement);
+            var basetype = enumstatement.BaseType.ToMugValueType(enumstatement.Position, this);
+
+            CheckCorrectEnum(ref enumstatement, basetype);
+            
+            var type = MugValueType.Enum(basetype, enumstatement);
 
             DeclareSymbol(
                 enumstatement.Name,
-                MugValue.Enum(basetype, enumstatement.Modifier == TokenKind.KeyPub),
+                MugValue.Enum(type, enumstatement.Modifier == TokenKind.KeyPub),
                 enumstatement.Position);
         }
 

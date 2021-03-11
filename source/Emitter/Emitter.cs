@@ -157,6 +157,15 @@ namespace Mug.Models.Generator.Emitter
             Builder.BuildStore(Pop().LLVMValue, variable.LLVMValue);
         }
 
+        public bool OneOfTwoIsOnlyTheEnumType()
+        {
+            var second = Pop();
+            var first = Peek();
+            Load(second);
+
+            return second.LLVMValue.Handle == IntPtr.Zero || first.LLVMValue.Handle == IntPtr.Zero;
+        }
+
         public bool IsDeclared(string name)
         {
             return Memory.ContainsKey(name);
@@ -254,9 +263,14 @@ namespace Mug.Models.Generator.Emitter
                 Load(MugValue.From(result, returnType));
         }
 
-        public void CastEnumMember(MugValueType type)
+        public void CastEnumMemberToBaseType(MugValueType type)
         {
             Load(MugValue.From(Pop().LLVMValue, type));
+        }
+
+        public void CastToEnumMemberFromBaseType(MugValueType enumerable)
+        {
+            Load(MugValue.From(Pop().LLVMValue, enumerable));
         }
 
         public void CompareJump(LLVMBasicBlockRef ifbody, LLVMBasicBlockRef elsebody)
