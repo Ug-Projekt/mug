@@ -10,6 +10,7 @@
         Void,
         String,
         Pointer,
-        Struct
+        Struct,
+        Enum
     }
 }

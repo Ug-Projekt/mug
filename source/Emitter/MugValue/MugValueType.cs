@@ -1,5 +1,6 @@
 ﻿using LLVMSharp.Interop;
 using Mug.Models.Generator;
+using Mug.Models.Parser.NodeKinds;
 using Mug.Models.Parser.NodeKinds.Statements;
 using System;
 
@@ -18,6 +19,9 @@ namespace Mug.MugValueSystem
 
                 if (TypeKind == MugValueTypeKind.Struct)
                     return ((Tuple<LLVMTypeRef, TypeStatement>)BaseType).Item1;
+
+                if (TypeKind == MugValueTypeKind.Enum)
+                    return ((Tuple<LLVMTypeRef, EnumStatement>)BaseType).Item1;
 
                 return (LLVMTypeRef)BaseType;
             }
@@ -53,6 +57,11 @@ namespace Mug.MugValueSystem
             };
         }
 
+        public static MugValueType Enum(MugValueType basetype, EnumStatement enumstatement)
+        {
+            return new MugValueType { TypeKind = MugValueTypeKind.Enum, BaseType = new Tuple<LLVMTypeRef, EnumStatement>(basetype.LLVMType, enumstatement) };
+        }
+
         public static MugValueType Bool => From(LLVMTypeRef.Int1, MugValueTypeKind.Bool);
         public static MugValueType Int8 => From(LLVMTypeRef.Int8, MugValueTypeKind.Int8);
         public static MugValueType Int32 => From(LLVMTypeRef.Int32, MugValueTypeKind.Int32);
@@ -72,8 +81,9 @@ namespace Mug.MugValueSystem
                 MugValueTypeKind.Void => "?",
                 MugValueTypeKind.Char => "chr",
                 MugValueTypeKind.String => "str",
-                MugValueTypeKind.Struct => $"{((Tuple<LLVMTypeRef, TypeStatement>)BaseType).Item2.Name}",
-                MugValueTypeKind.Pointer => $"ptr {BaseType}".Replace("*", "")
+                MugValueTypeKind.Struct => ((Tuple<LLVMTypeRef, TypeStatement>)BaseType).Item2.Name,
+                MugValueTypeKind.Pointer => $"ptr {BaseType}".Replace("*", ""),
+                MugValueTypeKind.Enum => ((Tuple<LLVMTypeRef, EnumStatement>)BaseType).Item2.Name
             };
         }
 
@@ -102,6 +112,16 @@ namespace Mug.MugValueSystem
         public TypeStatement GetStructure()
         {
             return ((Tuple<LLVMTypeRef, TypeStatement>)BaseType).Item2;
+        }
+
+        public EnumStatement GetEnum()
+        {
+            return ((Tuple<LLVMTypeRef, EnumStatement>)BaseType).Item2;
+        }
+
+        public bool IsEnum()
+        {
+            return BaseType is Tuple<LLVMTypeRef, EnumStatement>;
         }
     }
 }

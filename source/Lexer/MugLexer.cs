@@ -64,6 +64,7 @@ namespace Mug.Models.Lexer
             "new" => AddKeyword(TokenKind.KeyNew, s),
             "for" => AddKeyword(TokenKind.KeyFor, s),
             "type" => AddKeyword(TokenKind.KeyType, s),
+            "enum" => AddKeyword(TokenKind.KeyEnum, s),
             "as" => AddKeyword(TokenKind.KeyAs, s),
             "in" => AddKeyword(TokenKind.KeyIn, s),
             "to" => AddKeyword(TokenKind.KeyTo, s),

@@ -90,6 +90,11 @@ namespace Mug.Models.Generator
                 ft.TypeKind == MugValueTypeKind.Int8);
         }
 
+        internal bool MatchIntTypes(MugValueType ft, MugValueType st)
+        {
+            return ft.MatchIntType() && st.MatchIntType();
+        }
+
         public ulong StringCharToIntChar(string value)
         {
             return Convert.ToUInt64(Convert.ToChar(value));
@@ -452,6 +457,16 @@ namespace Mug.Models.Generator
             throw new(); // unreachable
         }
 
+        private void EmitEnum(EnumStatement enumstatement)
+        {
+            var basetype = MugValueType.Enum(enumstatement.BaseType.ToMugValueType(enumstatement.Position, this), enumstatement);
+
+            DeclareSymbol(
+                enumstatement.Name,
+                MugValue.Enum(basetype, enumstatement.Modifier == TokenKind.KeyPub),
+                enumstatement.Position);
+        }
+
         private void EmitStructure(TypeStatement structure)
         {
             if (Symbols.ContainsKey(structure.Name))
@@ -487,22 +502,22 @@ namespace Mug.Models.Generator
         /// recognize the type of the AST node and depending on the type call methods
         /// to convert it to the corresponding low-level code
         /// </summary>
-        private void RecognizeMember(INode member, bool firstDeclaration, bool secondDeclaration)
+        private void RecognizeMember(INode member, bool firstDeclaration, bool secondDeclaration, bool tirdDeclaration)
         {
             switch (member)
             {
                 case FunctionNode function:
-                    if (secondDeclaration) // declares the prototype of the function
+                    if (tirdDeclaration) // declares the prototype of the function
                         DeclareFunction(function);
-                    else if (!firstDeclaration) // defines the function body
+                    else if (!secondDeclaration && !firstDeclaration) // defines the function body
                         EmitFunction(function);
                     break;
                 case FunctionPrototypeNode prototype:
-                    if (secondDeclaration)
+                    if (tirdDeclaration)
                         EmitFunctionPrototype(prototype);
                     break;
                 case TypeStatement structure:
-                    if (firstDeclaration)
+                    if (secondDeclaration)
                     {
                         if (_declaredStructs.Contains(structure.Name))
                             Error(structure.Position, "Type `", structure.Name, "` already declared");
@@ -512,8 +527,12 @@ namespace Mug.Models.Generator
                         EmitStructure(structure);
                     }
                     break;
-                case ImportDirective import:
+                case EnumStatement enumstatement:
                     if (firstDeclaration)
+                        EmitEnum(enumstatement);
+                    break;
+                case ImportDirective import:
+                    if (secondDeclaration)
                         EmitImport(import);
                     break;
                 default:
@@ -530,15 +549,19 @@ namespace Mug.Models.Generator
         {
             // prototypes' declaration
             foreach (var member in Parser.Module.Members.Nodes)
-                RecognizeMember(member, true, false);
+                RecognizeMember(member, true, false, false);
 
             // prototypes' declaration
             foreach (var member in Parser.Module.Members.Nodes)
-                RecognizeMember(member, false, true);
+                RecognizeMember(member, false, true, false);
+
+            // prototypes' declaration
+            foreach (var member in Parser.Module.Members.Nodes)
+                RecognizeMember(member, false, false, true);
 
             // memebers' definition
             foreach (var member in Parser.Module.Members.Nodes)
-                RecognizeMember(member, false, false);
+                RecognizeMember(member, false, false, false);
         }
     }
 }

@@ -69,16 +69,14 @@ namespace Mug.Models.Generator.Emitter
         {
             var second = Pop();
             Load(
-                MugValue.From(Builder.BuildSub(Pop().LLVMValue, second.LLVMValue), second.Type)
-                );
+                MugValue.From(Builder.BuildSub(Pop().LLVMValue, second.LLVMValue), second.Type));
         }
 
         public void MulInt()
         {
             var second = Pop();
             Load(
-                MugValue.From(Builder.BuildMul(Pop().LLVMValue, second.LLVMValue), second.Type)
-                );
+                MugValue.From(Builder.BuildMul(Pop().LLVMValue, second.LLVMValue), second.Type));
         }
 
         public void DivInt()
@@ -113,6 +111,15 @@ namespace Mug.Models.Generator.Emitter
                 variable.Name,
                 variable.Type.ToMugValueType(variable.Position, _generator),
                 variable.Position);
+        }
+
+        public bool OneOfTwoIsAConstant()
+        {
+            var second = Pop();
+            var first = Peek();
+            Load(second);
+
+            return second.LLVMValue.IsConstant || first.LLVMValue.IsConstant;
         }
 
         public void DeclareVariable(string name, MugValueType type, Range position)
@@ -247,6 +254,11 @@ namespace Mug.Models.Generator.Emitter
                 Load(MugValue.From(result, returnType));
         }
 
+        public void CastEnumMember(MugValueType type)
+        {
+            Load(MugValue.From(Pop().LLVMValue, type));
+        }
+
         public void CompareJump(LLVMBasicBlockRef ifbody, LLVMBasicBlockRef elsebody)
         {
             Builder.BuildCondBr(Pop().LLVMValue, ifbody, elsebody);
@@ -295,6 +307,18 @@ namespace Mug.Models.Generator.Emitter
                         LLVMValueRef.CreateConstInt(LLVMTypeRef.Int32, (uint)index)
                     })
                 );
+        }
+
+        public void LoadEnumMember(string enumname, string membername, Range position, LocalGenerator localgenerator)
+        {
+            var enumerable = _generator.GetSymbol(enumname, position);
+
+            if (!enumerable.Type.IsEnum())
+                _generator.Error(position, "Not an enum");
+
+            var type = enumerable.Type.GetEnum();
+
+            Load(type.GetMemberValueFromName(enumerable.Type, type.BaseType.ToMugValueType(position, localgenerator._generator), membername, position, localgenerator));
         }
 
         public void LoadField(MugValue instance, MugValueType fieldType, int index, bool load)

@@ -19,7 +19,7 @@ namespace Mug.Models.Generator
         // function info
         private readonly FunctionNode _function;
         // pointers
-        private readonly IRGenerator _generator;
+        internal readonly IRGenerator _generator;
         private readonly LLVMValueRef _llvmfunction;
         private LLVMBasicBlockRef _oldcondition;
         private LLVMBasicBlockRef _cycleExitBlock { get; set; }
@@ -32,7 +32,7 @@ namespace Mug.Models.Generator
             _llvmfunction = llvmfunction;
         }
 
-        private void Error(Range position, params string[] error)
+        internal void Error(Range position, params string[] error)
         {
             _generator.Parser.Lexer.Throw(position, error);
         }
@@ -52,7 +52,7 @@ namespace Mug.Models.Generator
         /// <summary>
         /// converts a constant in token format to one in LLVMValueRef format
         /// </summary>
-        internal MugValue ConstToMugConst(Token constant, Range position)
+        internal MugValue ConstToMugConst(Token constant, Range position, bool isenum = false, MugValueType enumint = new())
         {
             LLVMValueRef llvmvalue = new();
             MugValueType type = new();
@@ -60,8 +60,16 @@ namespace Mug.Models.Generator
             switch (constant.Kind)
             {
                 case TokenKind.ConstantDigit:
-                    llvmvalue = LLVMValueRef.CreateConstInt(LLVMTypeRef.Int32, Convert.ToUInt64(constant.Value));
-                    type = MugValueType.Int32;
+                    if (!isenum)
+                    {
+                        llvmvalue = LLVMValueRef.CreateConstInt(LLVMTypeRef.Int32, Convert.ToUInt64(constant.Value));
+                        type = MugValueType.Int32;
+                    }
+                    else
+                    {
+                        llvmvalue = LLVMValueRef.CreateConstInt(enumint.LLVMType, Convert.ToUInt64(constant.Value));
+                        type = enumint;
+                    }
                     break;
                 case TokenKind.ConstantBoolean:
                     llvmvalue = LLVMValueRef.CreateConstInt(LLVMTypeRef.Int1, _generator.StringBoolToIntBool(constant.Value));
@@ -187,7 +195,14 @@ namespace Mug.Models.Generator
             var expressionType = _emitter.PeekType();
             var castType = type.ToMugValueType(position, _generator);
 
-            if (expressionType.MatchAnyTypeOfIntType() &&
+            if (expressionType.TypeKind == MugValueTypeKind.Enum)
+            {
+                if (expressionType.GetEnum().BaseType.ToMugValueType(new(), _generator).TypeKind != castType.TypeKind)
+                    Error(position, "Enum base type is incompatible with type `", castType.ToString(), "`");
+
+                _emitter.CastEnumMember(castType);
+            }
+            else if (expressionType.MatchAnyTypeOfIntType() &&
                 castType.MatchAnyTypeOfIntType()) // LLVM has different instructions for each type convertion
                 _emitter.CastInt(castType);
             else
@@ -380,7 +395,15 @@ namespace Mug.Models.Generator
         private void EmitExprMemberAccess(MemberNode m)
         {
             if (m.Base is Token token)
-                _emitter.LoadFieldName(token.Value, token.Position);
+            {
+                if (_emitter.IsDeclared(token.Value))
+                    _emitter.LoadFieldName(token.Value, token.Position);
+                else
+                {
+                    _emitter.LoadEnumMember(token.Value, m.Member.Value, m.Member.Position, this);
+                    return;
+                }
+            }
             else
             {
                 EvaluateExpression(m.Base);

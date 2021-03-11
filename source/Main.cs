@@ -8,10 +8,13 @@ try
 #if DEBUG
 
     var test = @"
-import ""x.mug"";
+
+enum Days: u8 {
+  MoonDay: 0
+}
 
 func main() {
-  const add = add(1, 2);
+  var x = Days.MoonDay as u8;
 }
 
 ";

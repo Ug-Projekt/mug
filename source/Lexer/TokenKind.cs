@@ -145,6 +145,8 @@ namespace Mug.Models.Lexer
         [Description("@[")]
         OpenPragmas,
         [Description("priv")]
-        KeyPriv
+        KeyPriv,
+        [Description("enum")]
+        KeyEnum
     }
 }

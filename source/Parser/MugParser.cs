@@ -170,7 +170,7 @@ namespace Mug.Models.Parser
             return false;
         }
 
-        private Token ExpectConstantMute(params string[] error)
+        private Token ExpectConstant(params string[] error)
         {
             var match = MatchConstantAdvance();
 
@@ -195,7 +195,7 @@ namespace Mug.Models.Parser
             var defaultvalue = new Token();
 
             if (MatchAdvance(TokenKind.Equal))
-                defaultvalue = ExpectConstantMute("Expected constant expression as default parameter value");
+                defaultvalue = ExpectConstant("Expected constant expression as default parameter value");
 
             ExpectMultiple("", TokenKind.Comma, TokenKind.ClosePar);
             _currentIndex--;
@@ -1088,6 +1088,59 @@ namespace Mug.Models.Parser
             return true;
         }
 
+        private EnumMemberNode ExpectMemberDefinition()
+        {
+            var name = Expect("Expected enum member name", TokenKind.Identifier);
+
+            Expect("Enum member must have a constant value", TokenKind.Colon);
+            var value = ExpectConstant("Enum member must have a constant value");
+
+            return new EnumMemberNode() { Name = name.Value, Value = value, Position = name.Position };
+        }
+
+        private MugType ExpectPrimitiveType()
+        {
+            if (!MatchPrimitiveType(out var type))
+                ParseError("Expected primitive type");
+
+            return MugType.FromToken(type);
+        }
+
+        private bool EnumDefinition(out INode node)
+        {
+            // mandatory for c# convention
+            node = null;
+
+            // returns if does not match a type keyword
+            if (!MatchAdvance(TokenKind.KeyEnum))
+                return false;
+
+            // required an identifier
+            var modifier = GetModifier();
+            var pragmas = GetPramas();
+            var name = Expect("Expected the type name after `enum` keyword", TokenKind.Identifier);
+            var statement = new EnumStatement() { Modifier = modifier, Pragmas = pragmas, Name = name.Value.ToString(), Position = name.Position };
+
+            // base type
+            Expect("An enum must have a base type (i32, str, ...)", TokenKind.Colon);
+            statement.BaseType = ExpectPrimitiveType();
+
+            // enum body
+            Expect("", TokenKind.OpenBrace);
+
+            statement.AddMember(ExpectMemberDefinition());
+
+            // trailing commas are not allowed
+            while (MatchAdvance(TokenKind.Comma))
+                statement.AddMember(ExpectMemberDefinition());
+
+            Expect("", TokenKind.CloseBrace); // expected close body
+
+            node = statement;
+
+            return true;
+        }
+
         private void CollectPragmas()
         {
             if (!MatchAdvance(TokenKind.OpenPragmas))
@@ -1099,7 +1152,7 @@ namespace Mug.Models.Parser
             {
                 var name = Expect("", TokenKind.Identifier).Value;
                 Expect("", TokenKind.OpenPar);
-                var value = ExpectConstantMute("Non-constant expressions not allowed in pragmas");
+                var value = ExpectConstant("Non-constant expressions not allowed in pragmas");
                 Expect("", TokenKind.ClosePar);
 
                 _pragmas.SetPragma(name, value, ParseError, ref _currentIndex);
@@ -1110,7 +1163,7 @@ namespace Mug.Models.Parser
 
         private void CollectModifier()
         {
-            if (MatchAdvance(TokenKind.KeyPub))
+            if (MatchAdvance(TokenKind.KeyPub) || MatchAdvance(TokenKind.KeyPriv))
                 _modifier = Back.Kind;
         }
 
@@ -1134,18 +1187,21 @@ namespace Mug.Models.Parser
                     // (c struct) type MyStruct {}
                     if (!TypeDefinition(out statement))
                     {
-                        if (_pragmas is not null)
-                            ParseError("Invalid pragmas for this member");
+                        if (!EnumDefinition(out statement))
+                        {
+                            if (_pragmas is not null)
+                                ParseError("Invalid pragmas for this member");
 
-                        if (_modifier != TokenKind.Bad)
-                            ParseError("Invalid modifier for this member");
+                            if (_modifier != TokenKind.Bad)
+                                ParseError("Invalid modifier for this member");
 
-                        // var id = constant;
-                        if (!VariableDefinition(out statement))
-                            // import "", import path, use x as y
-                            if (!DirectiveDefinition(out statement))
-                                // if there is not global statement
-                                ParseError("Invalid token here");
+                            // var id = constant;
+                            if (!VariableDefinition(out statement))
+                                // import "", import path, use x as y
+                                if (!DirectiveDefinition(out statement))
+                                    // if there is not global statement
+                                    ParseError("Invalid token here");
+                        }
                     }
 
                 // adds the statement to the members
