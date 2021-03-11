@@ -884,8 +884,11 @@ namespace Mug.Models.Parser
             if (_modifier == TokenKind.Bad)
                 return TokenKind.KeyPriv;
 
+            var old = _modifier;
+
             _modifier = TokenKind.Bad;
-            return _modifier; // pub only
+
+            return old; // pub only currently
         }
 
         private Pragmas GetPramas()
@@ -957,6 +960,7 @@ namespace Mug.Models.Parser
 
                 node = f;
             }
+
             return true;
         }
 
@@ -1133,7 +1137,7 @@ namespace Mug.Models.Parser
                         if (_pragmas is not null)
                             ParseError("Invalid pragmas for this member");
 
-                        if (_modifier == TokenKind.Bad)
+                        if (_modifier != TokenKind.Bad)
                             ParseError("Invalid modifier for this member");
 
                         // var id = constant;

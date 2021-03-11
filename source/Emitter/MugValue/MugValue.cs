@@ -7,15 +7,16 @@ namespace Mug.MugValueSystem
     {
         public MugValueType Type { get; set; }
         public LLVMValueRef LLVMValue { get; set; }
+        public bool IsPublic { get; set; }
 
-        public static MugValue From(LLVMValueRef value, MugValueType type)
+        public static MugValue From(LLVMValueRef value, MugValueType type, bool ispublic = false)
         {
-            return new MugValue() { LLVMValue = value, Type = type };
+            return new MugValue() { IsPublic = ispublic, LLVMValue = value, Type = type };
         }
 
-        internal static MugValue Struct(LLVMValueRef structure, MugValueType type)
+        internal static MugValue Struct(LLVMValueRef structure, MugValueType type, bool ispublic = false)
         {
-            return From(structure, type);
+            return From(structure, type, ispublic);
         }
 
         public bool IsAllocaInstruction()

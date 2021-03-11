@@ -8,7 +8,10 @@ try
 #if DEBUG
 
     var test = @"
-pub func a(): i32 {
+import ""x.mug"";
+
+func main() {
+  const add = add(1, 2);
 }
 
 ";

@@ -130,7 +130,7 @@ namespace Mug.Models.Generator
         /// in this function and will convert the ast of the function node into the corresponding low-level code appending the result to the symbol
         /// body
         /// </summary>
-        private void InstallFunction(Pragmas pragmas, string name, MugType type, Range position, ParameterListNode paramTypes)
+        private void InstallFunction(bool ispublic, Pragmas pragmas, string name, MugType type, Range position, ParameterListNode paramTypes)
         {
             var parameterTypes = ParameterTypesToMugTypes(paramTypes.Parameters);
 
@@ -144,7 +144,7 @@ namespace Mug.Models.Generator
 
             var f = Module.AddFunction(pragmas.GetPragma("export"), ft);
 
-            DeclareSymbol(name, MugValue.From(f, t), position);
+            DeclareSymbol(name, MugValue.From(f, t, ispublic), position);
         }
 
         /// <summary>
@@ -293,7 +293,7 @@ namespace Mug.Models.Generator
 
         private void DeclareFunction(FunctionNode function)
         {
-            InstallFunction(function.Pragmas, function.Name, function.Type, function.Position, function.ParameterList);
+            InstallFunction(function.Modifier == TokenKind.KeyPub, function.Pragmas, function.Name, function.Type, function.Position, function.ParameterList);
 
             // allowing to call entrypoint
             if (function.Name == EntryPointName)
@@ -344,7 +344,7 @@ namespace Mug.Models.Generator
             // adding a new symbol
             DeclareSymbol(
                 BuildFunctionName(prototype.Name, parameters, type),
-                MugValue.From(function, type),
+                MugValue.From(function, type, prototype.Modifier == TokenKind.KeyPub),
                 prototype.Position);
         }
 
@@ -381,6 +381,13 @@ namespace Mug.Models.Generator
             Symbols.Add(symbol, new());
         }
 
+        private void MergeSymbols(ref CompilationUnit unit)
+        {
+            foreach (var symbol in unit.IRGenerator.Symbols)
+                if (symbol.Value.IsPublic)
+                    Symbols.Add(symbol.Key, symbol.Value);
+        }
+
         private void EmitImport(ImportDirective import)
         {
             if (import.Member is not Token)
@@ -390,6 +397,7 @@ namespace Mug.Models.Generator
 
             if (import.Mode == ImportMode.FromPackages) // dirof(mug.exe)/include/
             {
+                // compilerpath\include\package.mug
                 var path = AppDomain.CurrentDomain.BaseDirectory + "include\\" + ((Token)import.Member).Value + ".mug";
 
                 if (AlreadyIncluded(path))
@@ -427,9 +435,8 @@ namespace Mug.Models.Generator
 
             // pass the current module to generate the llvm code together by the irgenerator
             unit.IRGenerator.Module = Module;
-            // pass the current symbols to declare those in the module here
-            unit.IRGenerator.Symbols = Symbols;
             unit.Generate();
+            MergeSymbols(ref unit);
         }
 
         private MugValueType SearchForStruct(string structName, Range position)
@@ -473,7 +480,7 @@ namespace Mug.Models.Generator
 
             var s = Module.AddGlobal(st.LLVMType, structure.Name);
 
-            DeclareSymbol(structure.Name, MugValue.Struct(s, st), structure.Position);
+            DeclareSymbol(structure.Name, MugValue.Struct(s, st, structure.Modifier == TokenKind.KeyPub), structure.Position);
         }
 
         /// <summary>

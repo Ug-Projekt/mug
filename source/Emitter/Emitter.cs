@@ -62,8 +62,7 @@ namespace Mug.Models.Generator.Emitter
         {
             var second = Pop();
             Load(
-                MugValue.From(Builder.BuildAdd(Pop().LLVMValue, second.LLVMValue), second.Type)
-                );
+                MugValue.From(Builder.BuildAdd(Pop().LLVMValue, second.LLVMValue), second.Type));
         }
 
         public void SubInt()
