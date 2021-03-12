@@ -38,11 +38,11 @@ namespace Mug.Models.Parser.NodeKinds.Statements
             throw new();
         }
 
-        public MugValue GetMemberValueFromName(MugValueType enumerable, MugValueType enumerableBaseType, string name, Range position, LocalGenerator localgenerator)
+        public MugValue GetMemberValueFromName(MugValueType enumerated, MugValueType enumeratedBaseType, string name, Range position, LocalGenerator localgenerator)
         {
             for (int i = 0; i < _body.Count; i++)
                 if (_body[i].Name == name)
-                    return MugValue.EnumMember(enumerable, localgenerator.ConstToMugConst(_body[i].Value, _body[i].Position, true, enumerableBaseType).LLVMValue);
+                    return MugValue.EnumMember(enumerated, localgenerator.ConstToMugConst(_body[i].Value, _body[i].Position, true, enumeratedBaseType).LLVMValue);
 
             localgenerator.Error(position, "Enum `", Name, "` does not contain a definition for `", name, "`");
 

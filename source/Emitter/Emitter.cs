@@ -268,9 +268,9 @@ namespace Mug.Models.Generator.Emitter
             Load(MugValue.From(Pop().LLVMValue, type));
         }
 
-        public void CastToEnumMemberFromBaseType(MugValueType enumerable)
+        public void CastToEnumMemberFromBaseType(MugValueType enumerated)
         {
-            Load(MugValue.From(Pop().LLVMValue, enumerable));
+            Load(MugValue.From(Pop().LLVMValue, enumerated));
         }
 
         public void CompareJump(LLVMBasicBlockRef ifbody, LLVMBasicBlockRef elsebody)
@@ -325,14 +325,14 @@ namespace Mug.Models.Generator.Emitter
 
         public void LoadEnumMember(string enumname, string membername, Range position, LocalGenerator localgenerator)
         {
-            var enumerable = _generator.GetSymbol(enumname, position);
+            var enumerated = _generator.GetSymbol(enumname, position);
 
-            if (!enumerable.Type.IsEnum())
+            if (!enumerated.Type.IsEnum())
                 _generator.Error(position, "Not an enum");
 
-            var type = enumerable.Type.GetEnum();
+            var type = enumerated.Type.GetEnum();
 
-            Load(type.GetMemberValueFromName(enumerable.Type, type.BaseType.ToMugValueType(position, localgenerator._generator), membername, position, localgenerator));
+            Load(type.GetMemberValueFromName(enumerated.Type, type.BaseType.ToMugValueType(position, localgenerator._generator), membername, position, localgenerator));
         }
 
         public void LoadField(MugValue instance, MugValueType fieldType, int index, bool load)

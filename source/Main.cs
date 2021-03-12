@@ -9,12 +9,11 @@ try
 
     var test = @"
 
-enum Days: u8 {
-  Monday: 1,
-  Tuesday: 2
-}
+@[extern(""ok"")]
+pub func add();
 
 func main() {
+  add();
 }
 
 ";

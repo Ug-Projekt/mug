@@ -198,10 +198,10 @@ namespace Mug.Models.Generator
 
             if (castType.IsEnum())
             {
-                var enumerable = castType.GetEnum();
+                var enumerated = castType.GetEnum();
 
-                if (expressionType.TypeKind != enumerable.BaseType.ToMugValueType(position, _generator).TypeKind)
-                    Error(position, "The base type of enum `", enumerable.Name, "` is incompatible with type `", expressionType.ToString(), "`");
+                if (expressionType.TypeKind != enumerated.BaseType.ToMugValueType(position, _generator).TypeKind)
+                    Error(position, "The base type of enum `", enumerated.Name, "` is incompatible with type `", expressionType.ToString(), "`");
 
                 _emitter.CastToEnumMemberFromBaseType(castType);
             }

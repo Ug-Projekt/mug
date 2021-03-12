@@ -20,14 +20,14 @@ namespace Mug.MugValueSystem
             return From(structure, type, ispublic);
         }
 
-        public static MugValue Enum(MugValueType enumerable, bool ispublic)
+        public static MugValue Enum(MugValueType enumerated, bool ispublic)
         {
-            return From(new LLVMValueRef(), enumerable, ispublic);
+            return From(new LLVMValueRef(), enumerated, ispublic);
         }
 
-        public static MugValue EnumMember(MugValueType enumerable, LLVMValueRef value)
+        public static MugValue EnumMember(MugValueType enumerated, LLVMValueRef value)
         {
-            return From(value, enumerable);
+            return From(value, enumerated);
         }
 
         public bool IsAllocaInstruction()
