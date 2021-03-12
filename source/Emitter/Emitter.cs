@@ -202,12 +202,13 @@ namespace Mug.Models.Generator.Emitter
                 Load(variable);
         }
 
-        public void CallOperator(string op, Range position, params MugValueType[] types)
+        public void CallOperator(string op, Range position, bool expectedNonVoid, params MugValueType[] types)
         {
             var function = _generator.GetSymbol($"{op}({string.Join(", ", types)})", position);
 
-            // check the operator overloading is not void
-            _generator.ExpectNonVoidType(function.Type.LLVMType, position);
+            if (expectedNonVoid)
+                // check the operator overloading is not void
+                _generator.ExpectNonVoidType(function.Type.LLVMType, position);
 
             Call(function.LLVMValue, types.Length, function.Type);
         }
@@ -400,6 +401,16 @@ namespace Mug.Models.Generator.Emitter
                 Load(MugValue.From(Builder.BuildLoad(allocation.LLVMValue), allocation.Type));
             else
                 throw new("unable to recognize unknonwn allocation");
+        }
+
+        public void StoreElementArray(LLVMValueRef arrayload, int i)
+        {
+            var ptr = Builder.BuildGEP(arrayload, new[]
+            {
+                LLVMValueRef.CreateConstInt(LLVMTypeRef.Int32, (uint)i)
+            });
+            
+            Builder.BuildStore(Pop().LLVMValue, ptr);
         }
 
         public void SelectArrayElement()

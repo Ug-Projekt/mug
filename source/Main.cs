@@ -9,11 +9,7 @@ try
 
     var test = @"
 
-@[extern(""ok"")]
-pub func add();
-
 func main() {
-  add();
 }
 
 ";

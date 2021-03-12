@@ -23,6 +23,9 @@ namespace Mug.MugValueSystem
                 if (TypeKind == MugValueTypeKind.Enum)
                     return ((Tuple<LLVMTypeRef, EnumStatement>)BaseType).Item1;
 
+                if (TypeKind == MugValueTypeKind.Array)
+                    return LLVMTypeRef.CreatePointer(((MugValueType)BaseType).LLVMType, 0);
+
                 return (LLVMTypeRef)BaseType;
             }
         }
@@ -33,6 +36,9 @@ namespace Mug.MugValueSystem
             {
                 if (TypeKind == MugValueTypeKind.String)
                     return Char;
+
+                if (TypeKind == MugValueTypeKind.Array)
+                    return (MugValueType)BaseType;
 
                 throw new("");
             }
@@ -62,6 +68,11 @@ namespace Mug.MugValueSystem
             return new MugValueType { TypeKind = MugValueTypeKind.Enum, BaseType = new Tuple<LLVMTypeRef, EnumStatement>(basetype.LLVMType, enumstatement) };
         }
 
+        public static MugValueType Array(MugValueType basetype)
+        {
+            return new MugValueType { TypeKind = MugValueTypeKind.Array, BaseType = basetype };
+        }
+
         public static MugValueType Bool => From(LLVMTypeRef.Int1, MugValueTypeKind.Bool);
         public static MugValueType Int8 => From(LLVMTypeRef.Int8, MugValueTypeKind.Int8);
         public static MugValueType Int32 => From(LLVMTypeRef.Int32, MugValueTypeKind.Int32);
@@ -83,7 +94,8 @@ namespace Mug.MugValueSystem
                 MugValueTypeKind.String => "str",
                 MugValueTypeKind.Struct => ((Tuple<LLVMTypeRef, TypeStatement>)BaseType).Item2.Name,
                 MugValueTypeKind.Pointer => $"ptr {BaseType}".Replace("*", ""),
-                MugValueTypeKind.Enum => ((Tuple<LLVMTypeRef, EnumStatement>)BaseType).Item2.Name
+                MugValueTypeKind.Enum => ((Tuple<LLVMTypeRef, EnumStatement>)BaseType).Item2.Name,
+                MugValueTypeKind.Array => $"[{BaseType}]"
             };
         }
 
@@ -102,6 +114,11 @@ namespace Mug.MugValueSystem
                 TypeKind == MugValueTypeKind.Int8 ||
                 TypeKind == MugValueTypeKind.Int32 ||
                 TypeKind == MugValueTypeKind.Int64;
+        }
+
+        public bool IsIndexable()
+        {
+            return TypeKind == MugValueTypeKind.Array || TypeKind == MugValueTypeKind.String;
         }
 
         public bool IsPointer()

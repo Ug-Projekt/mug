@@ -292,7 +292,7 @@ namespace Mug.Models.Parser
                 {
                     IndexExpression = ExpectExpression(true, TokenKind.CloseBracket),
                     Left = e,
-                    Position = (e.Position.Start)..(token.Position.End)
+                    Position = token.Position.Start..Back.Position.End
                 };
             }
         }

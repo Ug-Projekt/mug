@@ -112,6 +112,7 @@ namespace Mug.TypeSystem
                 TypeKind.String => MugValueType.String,
                 TypeKind.DefinedType => generator.GetSymbol(BaseType.ToString(), position).Type,
                 TypeKind.Pointer => MugValueType.Pointer(((MugType)BaseType).ToMugValueType(position, generator)),
+                TypeKind.Array => MugValueType.Array(((MugType)BaseType).ToMugValueType(position, generator)),
                 _ => generator.NotSupportedType<MugValueType>(Kind.ToString(), position)
             };
         }

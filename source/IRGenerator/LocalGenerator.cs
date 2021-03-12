@@ -96,7 +96,7 @@ namespace Mug.Models.Generator
             if (_generator.MatchSameIntType(ft, st))
                 _emitter.AddInt();
             else
-                _emitter.CallOperator("+", position, ft, st);
+                _emitter.CallOperator("+", position, true, ft, st);
         }
 
         private void EmitSub(MugValueType ft, MugValueType st, Range position)
@@ -104,7 +104,7 @@ namespace Mug.Models.Generator
             if (_generator.MatchSameIntType(ft, st))
                 _emitter.SubInt();
             else
-                _emitter.CallOperator("-", position, ft, st);
+                _emitter.CallOperator("-", position, true, ft, st);
         }
 
         private void EmitMul(MugValueType ft, MugValueType st, Range position)
@@ -112,7 +112,7 @@ namespace Mug.Models.Generator
             if (_generator.MatchSameIntType(ft, st))
                 _emitter.MulInt();
             else
-                _emitter.CallOperator("*", position, ft, st);
+                _emitter.CallOperator("*", position, true, ft, st);
         }
 
         private void EmitDiv(MugValueType ft, MugValueType st, Range position)
@@ -120,7 +120,7 @@ namespace Mug.Models.Generator
             if (_generator.MatchSameIntType(ft, st))
                 _emitter.DivInt();
             else
-                _emitter.CallOperator("/", position, ft, st);
+                _emitter.CallOperator("/", position, true, ft, st);
         }
 
         private void EmitBooleanOperator(string literal, LLVMIntPredicate llvmpredicate, OperatorKind kind, ref MugValueType ft, ref MugValueType st, Range position)
@@ -139,7 +139,7 @@ namespace Mug.Models.Generator
             else if (_generator.MatchSameIntType(ft, st))
                 _emitter.CompareInt(llvmpredicate);
             else
-                _emitter.CallOperator(literal, position, ft, st);
+                _emitter.CallOperator(literal, position, true, ft, st);
         }
 
         /// <summary>
@@ -212,6 +212,12 @@ namespace Mug.Models.Generator
 
                 _emitter.CastEnumMemberToBaseType(castType);
             }
+            else if (expressionType.TypeKind == MugValueTypeKind.String && castType.Equals(MugValueType.Array(MugValueType.Char)))
+            {
+                var value = _emitter.Pop();
+                value.Type = castType;
+                _emitter.Load(value);
+            }
             else if (expressionType.MatchAnyTypeOfIntType() &&
                 castType.MatchAnyTypeOfIntType()) // LLVM has different instructions for each type convertion
                 _emitter.CastInt(castType);
@@ -240,6 +246,9 @@ namespace Mug.Models.Generator
                         _emitter.LoadFromMemory(t.Value, t.Position);
                     else
                         _emitter.LoadMemoryAllocation(t.Value, t.Position);
+                    break;
+                case ArraySelectElemNode a:
+                    EmitExprArrayElemSelect(a);
                     break;
                 default:
                     Error(member.Position, "Not supported yet");
@@ -337,30 +346,56 @@ namespace Mug.Models.Generator
             // loading the array
             EvaluateMemberAccess(a.Left, true);
 
+            var indexed = _emitter.PeekType();
+
             // loading the index expression
             EvaluateExpression(a.IndexExpression);
 
-            // loading the element
-            _emitter.SelectArrayElement();
+            var index = _emitter.PeekType();
+
+            if (indexed.IsIndexable())
+                // loading the element
+                _emitter.SelectArrayElement();
+            else
+                _emitter.CallOperator("[]", a.Position, true, indexed, index);
         }
 
         private void EmitExprAllocateArray(ArrayAllocationNode aa)
         {
-            // EvaluateExpression();
-
-            var type = aa.Type.ToMugValueType(aa.Position, _generator);
+            var arraytype = MugValueType.Array(aa.Type.ToMugValueType(aa.Position, _generator));
 
             // loading the array
 
-            _emitter.Load(
-                MugValue.From(
-                _emitter.Builder.BuildArrayMalloc(
-                    type.LLVMType,
-                    LLVMValueRef.CreateConstInt(LLVMTypeRef.Int32, 0))
-                , type));
+            if (aa.Size is Token t && t.Kind == TokenKind.Identifier && t.Value == "_")
+                _emitter.Load(MugValue.From(LLVMValueRef.CreateConstInt(LLVMTypeRef.Int32, (uint)aa.Body.Length), MugValueType.Int32));
+            else
+                EvaluateExpression(aa.Size);
 
-            // loading a new array with the
-            // _emitter.StoreElementsInArray();
+            var array = MugValue.From(_emitter.Builder.BuildAlloca(arraytype.LLVMType), arraytype);
+
+            var allocation = _emitter.Builder.BuildArrayMalloc(
+                    arraytype.ArrayBaseElementType.LLVMType,
+                    _emitter.Pop().LLVMValue);
+
+            _emitter.Builder.BuildStore(allocation, array.LLVMValue);
+
+            var arraypointer = _emitter.Builder.BuildLoad(array.LLVMValue);
+
+            var i = 0;
+
+            foreach (var elem in aa.Body)
+            {
+                EvaluateExpression(elem);
+
+                if (!_emitter.PeekType().Equals(arraytype.ArrayBaseElementType))
+                    Error(elem.Position, "Expected ", arraytype.ArrayBaseElementType.ToString(), ", got ", _emitter.PeekType().ToString());
+
+                _emitter.StoreElementArray(arraypointer, i);
+
+                i++;
+            }
+
+            _emitter.Load(MugValue.From(arraypointer, arraytype));
         }
 
         private void EmitExprAllocateStruct(TypeAllocationNode ta)
@@ -534,7 +569,7 @@ namespace Mug.Models.Generator
 
                 // the next condition
                 var next = statement.ElseNode is not null ? _llvmfunction.AppendBasicBlock("") : endifelse;
-
+                
                 // branch the current or the next
                 _emitter.CompareJump(elseif, next);
                 // locating the new block
@@ -804,9 +839,9 @@ namespace Mug.Models.Generator
             };
         }
 
-        private void EvaluateVariableAssignment(MugValue allocation, TokenKind operatorkind, INode body, Range position)
+        private void EvaluateVariableAssignment(MugValue allocation, TokenKind operatorkind, INode body, Range position, bool isfieldpointer)
         {
-            if (!allocation.IsAllocaInstruction() && !allocation.IsGEP())
+            if (!allocation.IsAllocaInstruction() && !isfieldpointer)
                 Error(position, "Unable to change a constant value");
 
             var variableType = allocation.Type;
@@ -841,7 +876,7 @@ namespace Mug.Models.Generator
                         _emitter.SubInt();
                 }
                 else
-                    _emitter.CallOperator(IncrementOperatorToString(operatorkind), position, variableType);
+                    _emitter.CallOperator(IncrementOperatorToString(operatorkind), position, false, variableType);
             }
             else
             {
@@ -855,7 +890,7 @@ namespace Mug.Models.Generator
             EvaluateMemberAccess(member, false);
             var field = _emitter.Pop();
 
-            EvaluateVariableAssignment(field, operatorkind, body, position);
+            EvaluateVariableAssignment(field, operatorkind, body, position, true);
 
             _emitter.StoreInside(field);
         }
@@ -865,7 +900,7 @@ namespace Mug.Models.Generator
             if (a.Name is Token t)
             {
                 var allocation = _emitter.GetMemoryAllocation(t.Value, t.Position);
-                EvaluateVariableAssignment(allocation, a.Operator, a.Body, a.Position);
+                EvaluateVariableAssignment(allocation, a.Operator, a.Body, a.Position, false);
 
                 if (allocation.Type.IsPointer())
                 {
@@ -874,6 +909,36 @@ namespace Mug.Models.Generator
                 }
 
                 _emitter.StoreVariable(t.Value, t.Position);
+            }
+            else if (a.Name is ArraySelectElemNode aa)
+            {
+                EvaluateExpression(aa.Left);
+
+                var leftExpr = _emitter.Pop();
+
+                EvaluateExpression(aa.IndexExpression);
+
+                var indexExpr = _emitter.Pop();
+
+                EvaluateExpression(a.Body);
+
+                var expr = _emitter.Pop();
+
+                if (leftExpr.Type.IsIndexable() && leftExpr.Type.ArrayBaseElementType.Equals(expr.Type))
+                {
+                    var indexptr = _emitter.Builder.BuildGEP(
+                        leftExpr.LLVMValue,
+                        new[] { indexExpr.LLVMValue });
+
+                    _emitter.Builder.BuildStore(expr.LLVMValue, indexptr);
+                }
+                else
+                {
+                    _emitter.Load(leftExpr);
+                    _emitter.Load(indexExpr);
+                    _emitter.Load(expr);
+                    _emitter.CallOperator("[]=", aa.Position, false, leftExpr.Type, indexExpr.Type, expr.Type);
+                }
             }
             else if (a.Name is MemberNode m)
                 EmitFieldAssignment(m, a.Operator, a.Body, a.Position);

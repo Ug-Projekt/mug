@@ -11,6 +11,7 @@
         String,
         Pointer,
         Struct,
-        Enum
+        Enum,
+        Array
     }
 }
