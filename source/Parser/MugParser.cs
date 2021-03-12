@@ -91,7 +91,7 @@ namespace Mug.Models.Parser
 
                 for (int i = 0; i < kinds.Length; i++)
                 {
-                    result.Append("");
+                    result.Append(kinds[i].GetDescription());
                     if (i < kinds.Length - 1)
                         result.Append("`, `");
                 }
@@ -129,33 +129,58 @@ namespace Mug.Models.Parser
             return expect;
         }
 
-        private MugType ExpectType(bool expectKeyTypeInGeneric = false)
+        private MugType ExpectType()
         {
-            if (MatchAdvance(TokenKind.OpenBracket))
+            if (MatchAdvance(TokenKind.OpenBracket, out var token))
             {
                 var type = ExpectType();
                 Expect("An array type definition must end by `]`", TokenKind.CloseBracket);
-                return new MugType(TypeKind.Array, type);
+                return new MugType(token.Position.Start..Back.Position.End, TypeKind.Array, type);
             }
-            else if (MatchAdvance(TokenKind.KeyTPtr))
-                return new MugType(TypeKind.Pointer, ExpectType());
-
-            MugType find;
-            find = ExpectBaseType();
-
-            // removed temporanely generics
-            /*if (MatchAdvance(TokenKind.OpenBracket))
+            else if (MatchAdvance(TokenKind.KeyTPtr, out token))
             {
-                if (expectKeyTypeInGeneric)
-                    Expect("", TokenKind.KeyType);
- 
                 var type = ExpectType();
-                find = new MugType(TypeKind.GenericStruct, new GenericType(find, type));
+                return new MugType(token.Position.Start..type.Position.End, TypeKind.Pointer, type);
+            }
 
-                Expect("Generic type specification must be wrote between `[]`;", TokenKind.CloseBracket);
-            }*/
+            var find = ExpectBaseType();
+
+            // struct generics
+            if (MatchAdvance(TokenKind.BooleanLess))
+            {
+                if (find.Kind != TypeKind.DefinedType)
+                {
+                    _currentIndex -= 2;
+                    ParseError("Generic parameters cannot be passed to type `", find.ToString(), "`");
+                }
+
+                var genericTypes = new List<MugType>();
+
+                do
+                    genericTypes.Add(ExpectType());
+                while (MatchAdvance(TokenKind.Comma));
+
+                Expect("", TokenKind.BooleanGreater);
+
+                find = new MugType(find.Position.Start..Back.Position.End, TypeKind.GenericDefinedType, new Tuple<MugType, List<MugType>>(find, genericTypes));
+            }
 
             return find;
+        }
+
+        private bool MatchType(out MugType type)
+        {
+            type = null;
+            MugType t = null;
+
+            if (!Match(TokenKind.OpenBracket) && !Match(TokenKind.KeyTPtr) && !MatchBaseType(out t))
+                return false;
+
+            if (t is not null)
+                _currentIndex--;
+
+            type = ExpectType();
+            return true;
         }
 
         private bool MatchAdvance(TokenKind kind, out Token token)
@@ -214,10 +239,10 @@ namespace Mug.Models.Parser
                 TokenKind.RangeDots => OperatorKind.Range,
                 TokenKind.BooleanEQ => OperatorKind.CompareEQ,
                 TokenKind.BooleanNEQ => OperatorKind.CompareNEQ,
-                TokenKind.BooleanMajor => OperatorKind.CompareMajor,
-                TokenKind.BooleanMajEQ => OperatorKind.CompareMajorEQ,
-                TokenKind.BooleanMinor => OperatorKind.CompareMinor,
-                TokenKind.BooleanMinEQ => OperatorKind.CompareMinorEQ,
+                TokenKind.BooleanGreater => OperatorKind.CompareMajor,
+                TokenKind.BooleanGEQ => OperatorKind.CompareMajorEQ,
+                TokenKind.BooleanLess => OperatorKind.CompareMinor,
+                TokenKind.BooleanLEQ => OperatorKind.CompareMinorEQ,
                 TokenKind.BooleanAND => OperatorKind.And,
                 TokenKind.BooleanOR => OperatorKind.Or,
                 _ => throw new Exception($"Unable to perform cast from TokenKind(`{op}`) to OperatorKind, if you see this error please open an issue on github")
@@ -226,12 +251,22 @@ namespace Mug.Models.Parser
 
         private MugType ExpectBaseType()
         {
-            var match = MatchPrimitiveType(out var type) || MatchAdvance(TokenKind.Identifier, out type);
-
-            if (!match)
+            if (!MatchBaseType(out var type))
                 ParseError("Expected a type, but found `" + Current.Value + "`");
 
-            return MugType.FromToken(type);
+            return type;
+        }
+
+        private bool MatchBaseType(out MugType type)
+        {
+            type = null;
+            
+            if (!MatchPrimitiveType(out var token) && !MatchAdvance(TokenKind.Identifier, out token))
+                return false;
+
+            type = MugType.FromToken(token);
+
+            return true;
         }
 
         private bool MatchPrimitiveType(out Token type)
@@ -331,6 +366,28 @@ namespace Mug.Models.Parser
             }
         }
 
+        private List<MugType> CollectGenericParameters()
+        {
+            var oldindex = _currentIndex;
+
+            if (MatchAdvance(TokenKind.BooleanLess))
+            {
+                if (MatchType(out var type))
+                {
+                    var generics = new List<MugType>() { type };
+
+                    while (MatchAdvance(TokenKind.Comma))
+                        generics.Add(ExpectType());
+
+                    if (MatchAdvance(TokenKind.BooleanGreater))
+                        return generics;
+                }
+            }
+
+            _currentIndex = oldindex;
+            return new List<MugType>();
+        }
+
         private bool MatchCallStatement(out INode e, bool isImperativeStatement, INode previousMember = null)
         {
             e = null;
@@ -339,12 +396,14 @@ namespace Mug.Models.Parser
             if (previousMember is null)
             {
                 if (!MatchTerm(out _leftvalue, false))
-                    ParseError("Unable to find a valid local statement");
+                    ParseError("Missing a `;`?");
             }
             else
                 name = previousMember;
 
-            if (!MatchAdvance(TokenKind.OpenPar))
+            var token = Current;
+
+            if (!MatchAdvance(TokenKind.OpenPar) && !Match(TokenKind.BooleanLess))
                 return false;
 
             if (previousMember is null)
@@ -359,13 +418,25 @@ namespace Mug.Models.Parser
                 name = instanceAccesses.Member;
             }
 
+            var generics = CollectGenericParameters();
+
+            if (token.Kind == TokenKind.BooleanLess && !MatchAdvance(TokenKind.OpenPar))
+            {
+                if (generics.Count != 0)
+                    ParseError("Expected call after generic parameter specification");
+
+                return false;
+            }
+
             CollectParameters(ref parameters);
 
-            e = new CallStatement() { Name = name, Parameters = parameters, Position = previousMember is null ? name.Position : previousMember.Position };
+            e = new CallStatement() { Generics = generics, Name = name, Parameters = parameters, Position = previousMember is null ? name.Position : previousMember.Position };
 
             while (MatchAdvance(TokenKind.Dot))
             {
                 name = Expect("Expected member after `.`", TokenKind.Identifier);
+
+                generics = CollectGenericParameters();
 
                 if (MatchAdvance(TokenKind.OpenPar))
                 {
@@ -375,10 +446,13 @@ namespace Mug.Models.Parser
 
                     parameters.Insert(0, e);
 
-                    e = new CallStatement() { Name = name, Parameters = parameters };
+                    e = new CallStatement() { Generics = generics, Name = name, Parameters = parameters };
                 }
                 else
                 {
+                    if (generics.Count != 0)
+                        ParseError("Expected call after generic parameter specification");
+
                     e = new MemberNode() { Base = e, Member = (Token)name, Position = e.Position.Start..name.Position.End };
                 }
             }
@@ -512,10 +586,10 @@ namespace Mug.Models.Parser
         {
             return MatchAdvance(TokenKind.BooleanEQ, out op) ||
                 MatchAdvance(TokenKind.BooleanNEQ, out op) ||
-                MatchAdvance(TokenKind.BooleanMajor, out op) ||
-                MatchAdvance(TokenKind.BooleanMinor, out op) ||
-                MatchAdvance(TokenKind.BooleanMajEQ, out op) ||
-                MatchAdvance(TokenKind.BooleanMinEQ, out op) ||
+                MatchAdvance(TokenKind.BooleanGreater, out op) ||
+                MatchAdvance(TokenKind.BooleanLess, out op) ||
+                MatchAdvance(TokenKind.BooleanGEQ, out op) ||
+                MatchAdvance(TokenKind.BooleanLEQ, out op) ||
                 MatchAdvance(TokenKind.BooleanOR, out op) ||
                 MatchAdvance(TokenKind.BooleanAND, out op) ||
                 MatchAdvance(TokenKind.KeyIn, out op);
@@ -571,11 +645,21 @@ namespace Mug.Models.Parser
             var name = ExpectType();
             var allocation = new TypeAllocationNode() { Name = name, Position = newposition };
 
+            // struct generics
+            if (MatchAdvance(TokenKind.OpenBracket))
+            {
+                do
+                    allocation.Generics.Add(ExpectType());
+                while (MatchAdvance(TokenKind.Comma));
+
+                Expect("", TokenKind.CloseBracket);
+            }
+
             Expect("Type allocation requires `{}`", TokenKind.OpenBrace);
 
             if (Match(TokenKind.Identifier))
                 do
-                    allocation.AddFieldAssign(ExpectFieldAssign());
+                    allocation.Body.Add(ExpectFieldAssign());
                 while (MatchAdvance(TokenKind.Comma));
 
             Expect("", TokenKind.CloseBrace);
@@ -611,6 +695,9 @@ namespace Mug.Models.Parser
             if (MatchAdvance(TokenKind.KeyNew, out token))
                 return CollectNodeNew(token.Position);
 
+            if (MatchAdvance(TokenKind.KeyType, out token))
+                return ExpectType();
+
             if (MatchFactor(out INode e))
             {
                 if (MatchAdvance(TokenKind.Plus) ||
@@ -632,7 +719,10 @@ namespace Mug.Models.Parser
             }
 
             if (e is null)
+            {
+                _currentIndex++;
                 ParseError("Expected expression, found `", Current.Value.ToString(), "`");
+            }
 
             if (MatchBooleanOperator(out var boolOP))
                 return CollectBooleanExpression(ref e, boolOP, isFirst, end);
@@ -646,7 +736,7 @@ namespace Mug.Models.Parser
 
         private MugType ExpectVariableType()
         {
-            return MatchAdvance(TokenKind.Colon) ? ExpectType() : MugType.Automatic();
+            return MatchAdvance(TokenKind.Colon) ? ExpectType() : MugType.Automatic(Back.Position);
         }
 
         private bool VariableDefinition(out INode statement)
@@ -921,19 +1011,7 @@ namespace Mug.Models.Parser
             var generics = new List<Token>();
             var name = Expect("In function definition must specify the name", TokenKind.Identifier); // func <name>
 
-            if (MatchAdvance(TokenKind.OpenBracket)) // func name<[>
-            {
-                if (Match(TokenKind.CloseBracket))
-                    ParseError("Invalid generic definition content");
-
-                var count = 0;
-
-                while (!MatchAdvance(TokenKind.CloseBracket))
-                {
-                    generics.Add(ExpectGenericType(count == 0));
-                    count++;
-                }
-            }
+            CollectGenericParameterDefinitions(generics);
 
             var parameters = ExpectParameterListDeclaration(); // func name<(..)>
 
@@ -942,7 +1020,7 @@ namespace Mug.Models.Parser
             if (MatchAdvance(TokenKind.Colon))
                 type = ExpectType();
             else
-                type = new MugType(TypeKind.Void);
+                type = new MugType(name.Position, TypeKind.Void);
 
             if (Match(TokenKind.OpenBrace)) // function definition
             {
@@ -950,7 +1028,7 @@ namespace Mug.Models.Parser
 
                 var f = new FunctionNode() { Modifier = modifier, Pragmas = pragmas, Body = body, Name = name.Value.ToString(), ParameterList = parameters, Type = type, Position = name.Position };
 
-                f.SetGenericTypes(generics);
+                f.Generics = generics;
 
                 node = f;
             }
@@ -959,7 +1037,7 @@ namespace Mug.Models.Parser
                 Expect("", TokenKind.Semicolon);
 
                 var f = new FunctionPrototypeNode() { Modifier = modifier, Pragmas = pragmas, Name = name.Value.ToString(), ParameterList = parameters, Type = type, Position = name.Position };
-                f.SetGenericTypes(generics);
+                f.Generics = generics;
 
                 node = f;
             }
@@ -1042,12 +1120,23 @@ namespace Mug.Models.Parser
             return new FieldNode() { Name = name.Value.ToString(), Type = type, Position = name.Position };
         }
 
+        private void CollectGenericParameterDefinitions(List<Token> generics)
+        {
+            if (MatchAdvance(TokenKind.BooleanLess))
+            {
+                do
+                    generics.Add(Expect("Expected generic name", TokenKind.Identifier));
+                while (MatchAdvance(TokenKind.Comma));
+
+                Expect("", TokenKind.BooleanGreater);
+            }
+        }
+
         /// <summary>
         /// search for a struct definition
         /// </summary>
         private bool TypeDefinition(out INode node)
         {
-            // mandatory for c# convention
             node = null;
 
             // returns if does not match a type keyword
@@ -1061,28 +1150,16 @@ namespace Mug.Models.Parser
             var statement = new TypeStatement() { Modifier = modifier, Pragmas = pragmas, Name = name.Value.ToString(), Position = name.Position };
 
             // struct generics
-            if (MatchAdvance(TokenKind.OpenBracket))
-            {
-                var count = 0;
-
-                if (Match(TokenKind.CloseBracket))
-                    ParseError("Invalid generic definition content");
-
-                while (!MatchAdvance(TokenKind.CloseBracket))
-                {
-                    statement.AddGenericType(ExpectGenericType(count == 0));
-                    count++;
-                }
-            }
+            CollectGenericParameterDefinitions(statement.Generics);
 
             // struct body
             Expect("", TokenKind.OpenBrace);
 
-            statement.AddField(ExpectFieldDefinition());
+            statement.Body.Add(ExpectFieldDefinition());
 
             // trailing commas are not allowed
             while (MatchAdvance(TokenKind.Comma))
-                statement.AddField(ExpectFieldDefinition());
+                statement.Body.Add(ExpectFieldDefinition());
 
             Expect("", TokenKind.CloseBrace); // expected close body
 

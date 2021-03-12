@@ -900,6 +900,9 @@ namespace Mug.Models.Generator
         {
             if (a.Name is Token t)
             {
+                if (t.Kind != TokenKind.Identifier)
+                    Error(a.Position, "Unable to assign a value to an expression");
+
                 var allocation = _emitter.GetMemoryAllocation(t.Value, t.Position);
                 EvaluateVariableAssignment(allocation, a.Operator, a.Body, a.Position, false);
 
