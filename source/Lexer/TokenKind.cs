@@ -93,13 +93,13 @@ namespace Mug.Models.Lexer
         [Description("else")]
         KeyElse,
         [Description("<")]
-        BooleanMinor,
+        BooleanLess,
         [Description(">")]
-        BooleanMajor,
+        BooleanGreater,
         [Description("<=")]
-        BooleanMinEQ,
+        BooleanLEQ,
         [Description(">=")]
-        BooleanMajEQ,
+        BooleanGEQ,
         [Description("!")]
         Negation,
         [Description("while")]

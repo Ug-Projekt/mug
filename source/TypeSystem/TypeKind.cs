@@ -15,7 +15,7 @@
         Bool,
         Array,
         DefinedType,
-        GenericStruct,
+        GenericDefinedType,
         Void
     }
 }

@@ -1,23 +1,28 @@
 ﻿using Mug.Compilation;
 using Mug.Models.Generator;
 using Mug.Models.Lexer;
+using Mug.Models.Parser;
 using Mug.MugValueSystem;
 using System;
+using System.Collections.Generic;
 
 namespace Mug.TypeSystem
 {
-    public struct MugType
+    public class MugType : INode
     {
+        public string NodeKind => "Type";
         public TypeKind Kind { get; set; }
         public object BaseType { get; set; }
+        public Range Position { get; set; }
 
         /// <summary>
         /// basetype is used when kind is a non primitive type, a pointer or an array
         /// </summary>
-        public MugType(TypeKind type, object baseType = null)
+        public MugType(Range position, TypeKind type, object baseType = null)
         {
             Kind = type;
             BaseType = baseType;
+            Position = position;
         }
 
         /// <summary>
@@ -27,16 +32,16 @@ namespace Mug.TypeSystem
         {
             return t.Kind switch
             {
-                TokenKind.KeyTstr => new MugType(TypeKind.String),
-                TokenKind.KeyTchr => new MugType(TypeKind.Char),
-                TokenKind.KeyTbool => new MugType(TypeKind.Bool),
-                TokenKind.KeyTi32 => new MugType(TypeKind.Int32),
-                TokenKind.KeyTi64 => new MugType(TypeKind.Int64),
-                TokenKind.KeyTu8 => new MugType(TypeKind.UInt8),
-                TokenKind.KeyTu32 => new MugType(TypeKind.UInt32),
-                TokenKind.KeyTu64 => new MugType(TypeKind.UInt64),
-                TokenKind.KeyTVoid => new MugType(TypeKind.Void),
-                TokenKind.Identifier => new MugType(TypeKind.DefinedType, t.Value),
+                TokenKind.KeyTstr => new MugType(t.Position, TypeKind.String),
+                TokenKind.KeyTchr => new MugType(t.Position, TypeKind.Char),
+                TokenKind.KeyTbool => new MugType(t.Position, TypeKind.Bool),
+                TokenKind.KeyTi32 => new MugType(t.Position, TypeKind.Int32),
+                TokenKind.KeyTi64 => new MugType(t.Position, TypeKind.Int64),
+                TokenKind.KeyTu8 => new MugType(t.Position, TypeKind.UInt8),
+                TokenKind.KeyTu32 => new MugType(t.Position, TypeKind.UInt32),
+                TokenKind.KeyTu64 => new MugType(t.Position, TypeKind.UInt64),
+                TokenKind.KeyTVoid => new MugType(t.Position, TypeKind.Void),
+                TokenKind.Identifier => new MugType(t.Position, TypeKind.DefinedType, t.Value),
                 _ => Error(t.Kind.ToString())
             };
         }
@@ -44,15 +49,15 @@ namespace Mug.TypeSystem
         private static MugType Error(string kind)
         {
             CompilationErrors.Throw("´", kind, "´ is not a type");
-            return new();
+            throw new();
         }
 
         /// <summary>
         /// a short way of allocating with new operator
         /// </summary>
-        public static MugType Automatic()
+        public static MugType Automatic(Range position)
         {
-            return new MugType(TypeKind.Auto);
+            return new MugType(position, TypeKind.Auto);
         }
 
         /// <summary>
@@ -75,6 +80,7 @@ namespace Mug.TypeSystem
                 TypeKind.Bool => "u1",
                 TypeKind.Char => "chr",
                 TypeKind.DefinedType => BaseType.ToString(),
+                TypeKind.GenericDefinedType => $"{((Tuple<MugType, List<MugType>>)BaseType).Item1}[{string.Join(", ", ((Tuple<MugType, List<MugType>>)BaseType).Item2)}]",
                 TypeKind.Int32 => "i32",
                 TypeKind.Int64 => "i64",
                 TypeKind.UInt8 => "u8",

@@ -1,5 +1,6 @@
 ﻿using LLVMSharp.Interop;
 using Mug.Models.Generator;
+using Mug.Models.Parser;
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -108,10 +109,12 @@ namespace Mug.Compilation
             }
         }
 
-        public void GenerateAST()
+        public INode GenerateAST()
         {
             IRGenerator.Parser.Lexer.Tokenize();
             IRGenerator.Parser.Parse();
+
+            return IRGenerator.Parser.Module;
         }
 
         /// <param name="verifyLLVMModule">

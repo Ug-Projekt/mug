@@ -12,25 +12,7 @@ namespace Mug.Models.Parser.NodeKinds.Statements
         public string Name { get; set; }
         public MugType Type { get; set; }
         public ParameterListNode ParameterList { get; set; } = new();
-        private List<Token> _genericTypes { get; set; } = new();
-        public Token[] GenericTypes
-        {
-            get
-            {
-                return _genericTypes.ToArray();
-            }
-        }
-        public Boolean IsGeneric
-        {
-            get
-            {
-                return GenericTypes.Length > 0;
-            }
-        }
-        public void SetGenericTypes(List<Token> types)
-        {
-            _genericTypes = types;
-        }
+        public List<Token> Generics { get; set; } = new();
         public BlockNode Body { get; set; } = new();
         public Range Position { get; set; }
         public TokenKind Modifier { get; set; }

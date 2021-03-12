@@ -117,8 +117,8 @@ namespace Mug.Models.Lexer
             ']' => TokenKind.CloseBracket,
             '{' => TokenKind.OpenBrace,
             '}' => TokenKind.CloseBrace,
-            '<' => TokenKind.BooleanMinor,
-            '>' => TokenKind.BooleanMajor,
+            '<' => TokenKind.BooleanLess,
+            '>' => TokenKind.BooleanGreater,
             '=' => TokenKind.Equal,
             '!' => TokenKind.Negation,
             '&' => TokenKind.BooleanAND,
@@ -445,8 +445,8 @@ namespace Mug.Models.Lexer
                 case "-=": AddDouble(TokenKind.SubAssignment, doubleToken); break;
                 case "*=": AddDouble(TokenKind.MulAssignment, doubleToken); break;
                 case "/=": AddDouble(TokenKind.DivAssignment, doubleToken); break;
-                case "<=": AddDouble(TokenKind.BooleanMinEQ, doubleToken); break;
-                case ">=": AddDouble(TokenKind.BooleanMajEQ, doubleToken); break;
+                case "<=": AddDouble(TokenKind.BooleanLEQ, doubleToken); break;
+                case ">=": AddDouble(TokenKind.BooleanGEQ, doubleToken); break;
                 case "..": AddDouble(TokenKind.RangeDots, doubleToken); break;
                 case "@[": AddDouble(TokenKind.OpenPragmas, doubleToken); break;
                 default:

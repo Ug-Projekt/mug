@@ -10,46 +10,15 @@ namespace Mug.Models.Parser.NodeKinds.Statements
         public string NodeKind => "Struct";
         public Pragmas Pragmas { get; set; }
         public string Name { get; set; }
-        private List<Token> _genericTypes { get; set; } = new();
-        public Token[] GenericTypes
-        {
-            get
-            {
-                return _genericTypes.ToArray();
-            }
-        }
-        public Boolean IsGeneric
-        {
-            get
-            {
-                return GenericTypes.Length > 0;
-            }
-        }
-
-        private List<FieldNode> _body { get; set; } = new();
-        public FieldNode[] Body
-        {
-            get
-            {
-                return _body.ToArray();
-            }
-        }
+        public List<Token> Generics { get; set; } = new();
+        public List<FieldNode> Body { get; set; } = new();
         public Range Position { get; set; }
         public TokenKind Modifier { get; set; }
 
-        public void AddGenericType(Token type)
-        {
-            _genericTypes.Add(type);
-        }
-        public void AddField(FieldNode field)
-        {
-            _body.Add(field);
-        }
-
         public int GetFieldIndexFromName(string name)
         {
-            for (int i = 0; i < _body.Count; i++)
-                if (_body[i].Name == name)
+            for (int i = 0; i < Body.Count; i++)
+                if (Body[i].Name == name)
                     return i;
 
             throw new();
@@ -57,26 +26,26 @@ namespace Mug.Models.Parser.NodeKinds.Statements
 
         public MugType GetFieldTypeFromName(string name)
         {
-            for (int i = 0; i < _body.Count; i++)
-                if (_body[i].Name == name)
-                    return _body[i].Type;
+            for (int i = 0; i < Body.Count; i++)
+                if (Body[i].Name == name)
+                    return Body[i].Type;
 
             throw new();
         }
 
         public Range GetFieldPositionFromName(string name)
         {
-            for (int i = 0; i < _body.Count; i++)
-                if (_body[i].Name == name)
-                    return _body[i].Position;
+            for (int i = 0; i < Body.Count; i++)
+                if (Body[i].Name == name)
+                    return Body[i].Position;
 
             throw new();
         }
 
         public bool ContainsFieldWithName(string name)
         {
-            for (int i = 0; i < _body.Count; i++)
-                if (_body[i].Name == name)
+            for (int i = 0; i < Body.Count; i++)
+                if (Body[i].Name == name)
                     return true;
 
             return false;

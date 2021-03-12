@@ -510,10 +510,10 @@ namespace Mug.Models.Generator
             if (Symbols.ContainsKey(structure.Name))
                 return;
 
-            var body = new MugValueType[structure.Body.Length];
+            var body = new MugValueType[structure.Body.Count];
             var fields = new List<string>();
 
-            for (int i = 0; i < structure.Body.Length; i++)
+            for (int i = 0; i < structure.Body.Count; i++)
             {
                 var field = structure.Body[i];
 
@@ -526,7 +526,7 @@ namespace Mug.Models.Generator
                     Error(field.Position, "Illegal recursion");
 
                 if (!field.Type.TryToMugValueType(field.Position, this, out body[i]))
-                    body[i] = SearchForStruct(field.Type.ToString(), field.Position);
+                    body[i] = SearchForStruct(field.Type.ToString(), field.Type.Position);
             }
 
             var st = MugValueType.Struct(body, structure);

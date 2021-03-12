@@ -9,6 +9,7 @@ using Mug.MugValueSystem;
 using Mug.TypeSystem;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Mug.Models.Generator
 {
@@ -411,7 +412,7 @@ namespace Mug.Models.Generator
 
             var fields = new List<string>();
 
-            for (int i = 0; i < ta.Body.Length; i++)
+            for (int i = 0; i < ta.Body.Count; i++)
             {
                 var field = ta.Body[i];
 
@@ -725,12 +726,12 @@ namespace Mug.Models.Generator
                 EmitWhileStatement(i);
         }
 
-        private FieldAssignmentNode[] GetDefaultValueOfFields(string name, Range position)
+        private List<FieldAssignmentNode> GetDefaultValueOfFields(string name, Range position)
         {
             var s = _generator.GetSymbol(name, position).Type.GetStructure();
-            var fields = new FieldAssignmentNode[s.Body.Length];
+            var fields = new FieldAssignmentNode[s.Body.Count];
 
-            for (int i = 0; i < s.Body.Length; i++)
+            for (int i = 0; i < s.Body.Count; i++)
             {
                 var field = s.Body[i];
 
@@ -741,7 +742,7 @@ namespace Mug.Models.Generator
                 };
             }
 
-            return fields;
+            return fields.ToList();
         }
 
         private INode GetDefaultValueOf(MugType type, Range position)
@@ -759,7 +760,7 @@ namespace Mug.Models.Generator
                 TypeKind.String => new Token(TokenKind.ConstantString, "", new()),
                 TypeKind.Array => new ArrayAllocationNode()
                 {
-                    Type = type.BaseType is TypeKind kind ? new MugType(kind) : (MugType)type.BaseType,
+                    Type = type.BaseType is TypeKind kind ? new MugType(position, kind) : (MugType)type.BaseType,
                     Size = new Token(TokenKind.ConstantDigit, "0", new())
                 },
                 TypeKind.DefinedType => new TypeAllocationNode()
