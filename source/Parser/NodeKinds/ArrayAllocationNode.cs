@@ -9,6 +9,7 @@ namespace Mug.Models.Parser.NodeKinds
         public string NodeKind => "ArrayAllocationNode";
         public MugType Type { get; set; }
         public INode Size { get; set; }
+        public bool SizeIsImplicit { get; set; }
         private List<INode> _body { get; set; } = new();
         public INode[] Body
         {
@@ -18,6 +19,7 @@ namespace Mug.Models.Parser.NodeKinds
             }
         }
         public Range Position { get; set; }
+
         public void AddArrayElement(INode element)
         {
             _body.Add(element);

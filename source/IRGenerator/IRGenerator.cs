@@ -388,9 +388,12 @@ namespace Mug.Models.Generator
 
         private void MergeSymbols(ref CompilationUnit unit)
         {
-            foreach (var symbol in unit.IRGenerator.Symbols)
+            for (int i = 0; i < unit.IRGenerator.Symbols.Count; i++)
+            {
+                var symbol = unit.IRGenerator.Symbols.ElementAt(i);
                 if (symbol.Value.IsPublic)
                     Symbols.Add(symbol.Key, symbol.Value);
+            }
         }
 
         private void EmitImport(ImportDirective import)
@@ -446,8 +449,8 @@ namespace Mug.Models.Generator
 
         private MugValueType SearchForStruct(string structName, Range position)
         {
-            foreach (var member in Parser.Module.Members.Nodes)
-                if (member is TypeStatement t && t.Name == structName)
+            for (int i = 0; i < Parser.Module.Members.Nodes.Length; i++)
+                if (Parser.Module.Members.Nodes[i] is TypeStatement t && t.Name == structName)
                 {
                     EmitStructure(t);
                     return Symbols[structName].Type;
@@ -474,8 +477,10 @@ namespace Mug.Models.Generator
             var expectedValue = GetValueTokenKindFromType(basetype.TypeKind, enumstatement.Position);
             var members = new List<string>();
 
-            foreach (var member in enumstatement.Body)
+            for (int i = 0; i < enumstatement.Body.Length; i++)
             {
+                var member = enumstatement.Body[i];
+
                 if (member.Value.Kind != expectedValue)
                     Error(member.Position, "Expected type `", basetype.ToString(), "`");
 

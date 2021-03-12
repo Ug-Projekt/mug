@@ -1,4 +1,5 @@
 ﻿using Mug.Compilation;
+using Mug.Models.Lexer;
 using Mug.Models.Parser;
 using System;
 
@@ -13,6 +14,7 @@ func main() {
 }
 
 ";
+
     var unit = new CompilationUnit("test", test);
 
     /*unit.IRGenerator.Parser.Lexer.Tokenize();

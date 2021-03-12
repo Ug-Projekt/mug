@@ -539,14 +539,17 @@ namespace Mug.Models.Parser
             if (MatchAdvance(TokenKind.OpenBracket))
             {
                 var type = ExpectType();
-                Expect("Expected array size after its type", TokenKind.Comma);
+                INode size = null;
 
-                var size = ExpectExpression(true, TokenKind.CloseBracket);
-                _currentIndex--;
-
+                if (MatchAdvance(TokenKind.Comma))
+                {
+                    size = ExpectExpression(true, TokenKind.CloseBracket);
+                    _currentIndex--;
+                }
+                
                 Expect("Expected `]` and the array body", TokenKind.CloseBracket);
 
-                var array = new ArrayAllocationNode() { Size = size, Type = type };
+                var array = new ArrayAllocationNode() { SizeIsImplicit = size == null, Size = size, Type = type };
                 Expect("Expected the array body, empty (`{}`) if has to be instanced with type default values", TokenKind.OpenBrace);
 
                 if (!Match(TokenKind.CloseBrace))

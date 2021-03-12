@@ -366,7 +366,7 @@ namespace Mug.Models.Generator
 
             // loading the array
 
-            if (aa.Size is Token t && t.Kind == TokenKind.Identifier && t.Value == "_")
+            if (aa.SizeIsImplicit)
                 _emitter.Load(MugValue.From(LLVMValueRef.CreateConstInt(LLVMTypeRef.Int32, (uint)aa.Body.Length), MugValueType.Int32));
             else
                 EvaluateExpression(aa.Size);
@@ -1015,8 +1015,8 @@ namespace Mug.Models.Generator
         /// </summary>
         public void Generate(BlockNode statements)
         {
-            foreach (var statement in statements.Statements)
-                RecognizeStatement(statement);
+            for (int i = 0; i < statements.Statements.Length; i++)
+                RecognizeStatement(statements.Statements[i]);
 
             if (_emitter.IsInsideSubBlock)
                 _emitter.Exit();

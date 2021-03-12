@@ -399,8 +399,8 @@ namespace Mug.Models.Lexer
             if (_currentSymbol.Length < 1)
                 this.Throw(start..end, "Not enough characters in backtick sequence");
 
-            //else add closing simbol
-            TokenCollection.Add(new(TokenKind.Identifier, _currentSymbol.ToString(), new(start, end + 1)));
+            //else add closing simbol, removing whitespaces
+            TokenCollection.Add(new(TokenKind.Identifier, _currentSymbol.ToString().Replace(" ", ""), new(start, end + 1)));
             _currentSymbol.Clear();
         }
 
