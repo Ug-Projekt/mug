@@ -68,6 +68,16 @@ namespace Mug.TypeSystem
             return Kind == TypeKind.Auto;
         }
 
+        public Tuple<MugType, List<MugType>> GetGenericStructure()
+        {
+            return ((Tuple<MugType, List<MugType>>)BaseType);
+        }
+
+        public bool IsGeneric()
+        {
+            return BaseType is Tuple<MugType, List<MugType>>;
+        }
+
         /// <summary>
         /// returns a string reppresentation of the type
         /// </summary>
@@ -80,7 +90,7 @@ namespace Mug.TypeSystem
                 TypeKind.Bool => "u1",
                 TypeKind.Char => "chr",
                 TypeKind.DefinedType => BaseType.ToString(),
-                TypeKind.GenericDefinedType => $"{((Tuple<MugType, List<MugType>>)BaseType).Item1}[{string.Join(", ", ((Tuple<MugType, List<MugType>>)BaseType).Item2)}]",
+                TypeKind.GenericDefinedType => GetGenericStructure().Item1.ToString(),
                 TypeKind.Int32 => "i32",
                 TypeKind.Int64 => "i64",
                 TypeKind.UInt8 => "u8",
@@ -117,6 +127,7 @@ namespace Mug.TypeSystem
                 TypeKind.Char => MugValueType.Char,
                 TypeKind.String => MugValueType.String,
                 TypeKind.DefinedType => generator.GetSymbol(BaseType.ToString(), position).Type,
+                TypeKind.GenericDefinedType => generator.GetGeneric(GetGenericStructure(), position).Type,
                 TypeKind.Pointer => MugValueType.Pointer(((MugType)BaseType).ToMugValueType(position, generator)),
                 TypeKind.Array => MugValueType.Array(((MugType)BaseType).ToMugValueType(position, generator)),
                 _ => generator.NotSupportedType<MugValueType>(Kind.ToString(), position)
@@ -133,7 +144,7 @@ namespace Mug.TypeSystem
 
         public bool IsAllocableTypeNew()
         {
-            return Kind == TypeKind.DefinedType || Kind == TypeKind.Array || Kind == TypeKind.Pointer;
+            return Kind == TypeKind.DefinedType || Kind == TypeKind.GenericDefinedType || Kind == TypeKind.Array || Kind == TypeKind.Pointer;
         }
     }
 }

@@ -9,26 +9,22 @@ try
 #if DEBUG
 
     var test = @"
-# import panic;
-#[
-pub enum VecErrors: str {
-  OutOfBounds: ""Index was out of bounds of the vector""
+
+type K<F> {
+  b: F
 }
 
-pub type Vec<T> {
-  arr: [T],
-  cap: i32,
-  len: i32
+type Ok<G> {
+  a: K<G>
 }
 
-func Vec<T>(capacity: i32) { return new Vec<T> { cap: capacity, len: 0 }; }
-
-func `[]`<T>(self: Vec<T>, index: i32): T {
-  if index >= self.len { panic(VecErrors.OutOfBounds as str); }
-  return self.arr[index];
+type Vec<T> {
+  a: T,
+  b: Ok<u8>
 }
-]#
+
 func main() {
+  var x = new Vec<i32> { a: 'a' };
 }
 
 ";

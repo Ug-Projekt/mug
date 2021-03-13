@@ -15,6 +15,29 @@ namespace Mug.Models.Parser.NodeKinds.Statements
         public Range Position { get; set; }
         public TokenKind Modifier { get; set; }
 
+        public bool HasGenericParameters()
+        {
+            return Generics.Count != 0;
+        }
+
+        public bool HasThisGenericParameter(MugType type, out int index)
+        {
+            index = 0;
+            if (type.Kind != TypeKind.DefinedType)
+                return false;
+
+            for (int i = 0; i < Generics.Count; i++)
+            {
+                if (Generics[i].Value == type.ToString())
+                {
+                    index = i;
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         public int GetFieldIndexFromName(string name)
         {
             for (int i = 0; i < Body.Count; i++)

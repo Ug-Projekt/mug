@@ -129,7 +129,7 @@ namespace Mug.Models.Parser
             return expect;
         }
 
-        private MugType ExpectType()
+        private MugType ExpectType(bool acceptGeneric = true)
         {
             if (MatchAdvance(TokenKind.OpenBracket, out var token))
             {
@@ -139,14 +139,14 @@ namespace Mug.Models.Parser
             }
             else if (MatchAdvance(TokenKind.KeyTPtr, out token))
             {
-                var type = ExpectType();
+                var type = ExpectType(acceptGeneric);
                 return new MugType(token.Position.Start..type.Position.End, TypeKind.Pointer, type);
             }
 
             var find = ExpectBaseType();
 
             // struct generics
-            if (MatchAdvance(TokenKind.BooleanLess))
+            if (acceptGeneric && MatchAdvance(TokenKind.BooleanLess))
             {
                 if (find.Kind != TypeKind.DefinedType)
                 {
@@ -642,17 +642,17 @@ namespace Mug.Models.Parser
                 return array;
             }
 
-            var name = ExpectType();
+            var name = ExpectType(false);
             var allocation = new TypeAllocationNode() { Name = name, Position = newposition };
 
             // struct generics
-            if (MatchAdvance(TokenKind.OpenBracket))
+            if (MatchAdvance(TokenKind.BooleanLess))
             {
                 do
                     allocation.Generics.Add(ExpectType());
                 while (MatchAdvance(TokenKind.Comma));
 
-                Expect("", TokenKind.CloseBracket);
+                Expect("", TokenKind.BooleanGreater);
             }
 
             Expect("Type allocation requires `{}`", TokenKind.OpenBrace);
@@ -694,9 +694,6 @@ namespace Mug.Models.Parser
 
             if (MatchAdvance(TokenKind.KeyNew, out token))
                 return CollectNodeNew(token.Position);
-
-            if (MatchAdvance(TokenKind.KeyType, out token))
-                return ExpectType();
 
             if (MatchFactor(out INode e))
             {

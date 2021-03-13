@@ -404,7 +404,12 @@ namespace Mug.Models.Generator
             if (!ta.Name.IsAllocableTypeNew())
                 Error(ta.Position, "Unable to allocate type ", ta.Name.ToString(), " with `new` operator");
 
-            var structure = _generator.GetSymbol(ta.Name.ToMugValueType(ta.Position, _generator).ToString(), ta.Position).Type;
+            MugValueType structure;
+
+            if (ta.HasGenerics())
+                structure = _generator.GetGeneric(new(ta.Name, ta.Generics), ta.Name.Position).Type;
+            else
+                structure = _generator.GetSymbol(ta.Name.ToMugValueType(ta.Name.Position, _generator).ToString(), ta.Position).Type;
 
             var tmp = _emitter.Builder.BuildAlloca(
                 structure.LLVMType);
@@ -426,11 +431,18 @@ namespace Mug.Models.Generator
                 if (!structureInfo.ContainsFieldWithName(field.Name))
                     Error(field.Position, "Undeclared field");
 
-                var fieldType = structureInfo.GetFieldTypeFromName(field.Name)
-                    .ToMugValueType(structureInfo.GetFieldPositionFromName(field.Name), _generator);
+                MugValueType fieldType;
+
+                var fieldMugType = structureInfo.GetFieldTypeFromName(field.Name);
+                var fieldPosition = structureInfo.GetFieldPositionFromName(field.Name);
+
+                if (structureInfo.HasThisGenericParameter(fieldMugType, out int index))
+                    fieldType = ta.Generics[index].ToMugValueType(ta.Generics[index].Position, _generator);
+                else
+                    fieldType = fieldMugType.ToMugValueType(fieldPosition, _generator);
 
                 _generator.ExpectSameTypes(
-                    fieldType, field.Position, $"expected {fieldType}, but got {_emitter.PeekType()}", _emitter.PeekType());
+                    fieldType, field.Body.Position, $"expected {fieldType}, but got {_emitter.PeekType()}", _emitter.PeekType());
 
                 _emitter.StoreField(tmp, structureInfo.GetFieldIndexFromName(field.Name));
             }
@@ -768,7 +780,12 @@ namespace Mug.Models.Generator
                     Name = type,
                     Body = GetDefaultValueOfFields(type.BaseType.ToString(), position)
                 },
-                TypeKind.Pointer => _generator.Error<INode>(position, "Pointers must be initialized")
+                TypeKind.Pointer => _generator.Error<INode>(position, "Pointers must be initialized"),
+                TypeKind.GenericDefinedType => new TypeAllocationNode()
+                {
+                    Generics = type.GetGenericStructure().Item2,
+                    Name = type.GetGenericStructure().Item1
+                }
             };
         }
 

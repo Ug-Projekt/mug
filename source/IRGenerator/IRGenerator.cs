@@ -21,6 +21,7 @@ namespace Mug.Models.Generator
         public LLVMModuleRef Module { get; set; }
 
         private readonly List<string> _declaredStructs = new();
+        private readonly List<TypeStatement> _genericStructs = new();
 
         private Dictionary<string, MugValue> Symbols { get; set; } = new();
 
@@ -130,6 +131,30 @@ namespace Mug.Models.Generator
             return result;
         }
 
+        private TypeStatement GetGenericStruct(MugType type, Range position)
+        {
+            for (int i = 0; i < _genericStructs.Count; i++)
+                if (_genericStructs[i].Name == type.ToString())
+                    return _genericStructs[i];
+
+            Error(position, "Undeclared generic struct, maybe it is not declared as generic struct");
+            throw new();
+        }
+
+        public MugValue GetGeneric(Tuple<MugType, List<MugType>> structure, Range position)
+        {
+            var symbol = $"{structure.Item1}<{string.Join(", ", structure.Item2)}>";
+
+            if (!Symbols.ContainsKey(symbol))
+            {
+                var s = GetGenericStruct(structure.Item1, position);
+
+                EmitGenericStruct(symbol, s, structure.Item2, position);
+            }
+            
+            return Symbols[symbol];
+        }
+
         /// <summary>
         /// declares the prototype symbol of a function, the function <see cref="DefineFunction(FunctionNode)"/> will take the declared symbol
         /// in this function and will convert the ast of the function node into the corresponding low-level code appending the result to the symbol
@@ -206,10 +231,19 @@ namespace Mug.Models.Generator
         /// this function is used in all contexts where the type void is not allowed,
         /// for example in the declaration of variables
         /// </summary>
-        public void ExpectNonVoidType(LLVMTypeRef type, Range position)
+        internal void ExpectNonVoidType(LLVMTypeRef type, Range position)
         {
             if (type == LLVMTypeRef.Void)
                 Error(position, "Expected a non-void type");
+        }
+
+        private bool DeclaredAsGenericStruct(string name)
+        {
+            for (int i = 0; i < _genericStructs.Count; i++)
+                if (_genericStructs[i].Name == name)
+                    return true;
+
+            return false;
         }
 
         /// <summary>
@@ -218,10 +252,49 @@ namespace Mug.Models.Generator
         internal MugValue GetSymbol(string name, Range position)
         {
             if (!Symbols.TryGetValue(name, out var member))
+            {
+                if (DeclaredAsGenericStruct(name))
+                    Error(position, "Insufficient generic arguments");
+
                 Error(position, "`", name, "` undeclared member");
+            }
 
             return member;
         }
+
+        /*internal MugValueType GetGeneric(Tuple<MugType, List<MugType>> name, Range position)
+        {
+            var structure = GetSymbol(name.Item1.ToString(), name.Item1.Position).Type.GetStructure();
+
+            if (structure is null)
+                Error(position, "Undeclared generic struct");
+
+            if (!structure.HasGenericParameters())
+                Error(position, "Passed generic parameters to a non-generic struct");
+
+            if (structure.Generics.Count != name.Item2.Count)
+                Error(
+                    position,
+                    "Passed ", name.Item2.Count.ToString(), " generic parameter", name.Item2.Count > 1 ? "s" : "", ", but ", structure.Generics.Count.ToString(),
+                    structure.Generics.Count > 1 ? " were" : " was", " expected");
+
+            var body = new MugValueType[structure.Body.Count];
+
+            for (int i = 0; i < structure.Body.Count; i++)
+            {
+                var field = structure.Body[i];
+
+                if (structure.HasThisGenericParameter(field.Type))
+                    continue;
+
+                if (!field.Type.TryToMugValueType(field.Position, this, out body[i]))
+                    body[i] = SearchForStruct(field.Type.ToString(), field.Type.Position);
+            }
+
+            var st = MugValueType.Struct(body, structure);
+
+            return st;
+        }*/
 
         /// <summary>
         /// defines the body of a function by taking from the declared symbols its own previously defined symbol,
@@ -447,16 +520,66 @@ namespace Mug.Models.Generator
             MergeSymbols(ref unit);
         }
 
-        private MugValueType SearchForStruct(string structName, Range position)
+        private void EmitGenericStruct(string newsymbol, TypeStatement structure, List<MugType> generictypes, Range position)
+        {
+            if (structure.Generics.Count != generictypes.Count)
+                Error(
+                    position,
+                    "Passed ", generictypes.Count.ToString(), " generic parameter", generictypes.Count > 1 ? "s" : "", ", but ", structure.Generics.Count.ToString(),
+                    structure.Generics.Count > 1 ? " were" : " was", " expected");
+
+            var body = new MugValueType[structure.Body.Count];
+            var fields = new List<string>();
+
+            for (int i = 0; i < structure.Body.Count; i++)
+            {
+                var field = structure.Body[i];
+
+                if (fields.Contains(field.Name))
+                    Error(field.Position, "Redeclaration of previous field");
+
+                fields.Add(field.Name);
+
+                // bad control
+                if (field.Type.ToString() == _declaredStructs.LastOrDefault() || field.Type.ToString() == structure.Name)
+                    Error(field.Position, "Illegal recursion");
+                else if (structure.HasThisGenericParameter(field.Type, out var genericParameterIndex))
+                    body[i] = generictypes[genericParameterIndex].ToMugValueType(field.Type.Position, this);
+                else if (!field.Type.TryToMugValueType(field.Position, this, out body[i]))
+                {
+                    if (!field.Type.IsGeneric())
+                        body[i] = SearchForStruct(field.Type, field.Type.Position);
+                    else
+                        body[i] = GetGeneric(new(field.Type, generictypes), field.Type.Position).Type;
+
+                }
+            }
+
+            var st = MugValueType.Struct(body, structure);
+
+            var s = Module.AddGlobal(st.LLVMType, structure.Name);
+
+            DeclareSymbol(newsymbol, MugValue.Struct(s, st, structure.Modifier == TokenKind.KeyPub), structure.Position);
+        }
+
+        private MugValueType SearchForStruct(MugType type, Range position)
         {
             for (int i = 0; i < Parser.Module.Members.Nodes.Length; i++)
-                if (Parser.Module.Members.Nodes[i] is TypeStatement t && t.Name == structName)
+                if (Parser.Module.Members.Nodes[i] is TypeStatement t && t.Name == type.ToString())
                 {
-                    EmitStructure(t);
-                    return Symbols[structName].Type;
+                    if (!t.HasGenericParameters())
+                        EmitStructure(t);
+                    else
+                    {
+                        var genericType = type.GetGenericStructure();
+                        var symbol = $"{genericType.Item1}<{string.Join(", ", genericType.Item2)}>";
+                        EmitGenericStruct(symbol, t, genericType.Item2, genericType.Item1.Position);
+                    }
+
+                    return Symbols[type.ToString()].Type;
                 }
 
-            Error(position, "Undeclared type `", structName, "`");
+            Error(position, "Undeclared type `", type.ToString(), "`");
             throw new(); // unreachable
         }
 
@@ -505,8 +628,28 @@ namespace Mug.Models.Generator
                 enumstatement.Position);
         }
 
+        private void CheckCorrectGenericSpecification(List<Token> generics)
+        {
+            var declared = new List<string>();
+
+            for (int i = 0; i < generics.Count; i++)
+            {
+                if (declared.Contains(generics[i].Value))
+                    Error(generics[i].Position, "Generic parameter already declared");
+
+                declared.Add(generics[i].Value);
+            }
+        }
+
         private void EmitStructure(TypeStatement structure)
         {
+            if (structure.HasGenericParameters())
+            {
+                _genericStructs.Add(structure);
+                CheckCorrectGenericSpecification(structure.Generics);
+                return;
+            }
+
             if (Symbols.ContainsKey(structure.Name))
                 return;
 
@@ -526,7 +669,7 @@ namespace Mug.Models.Generator
                     Error(field.Position, "Illegal recursion");
 
                 if (!field.Type.TryToMugValueType(field.Position, this, out body[i]))
-                    body[i] = SearchForStruct(field.Type.ToString(), field.Type.Position);
+                    body[i] = SearchForStruct(field.Type, field.Type.Position);
             }
 
             var st = MugValueType.Struct(body, structure);
@@ -562,6 +705,7 @@ namespace Mug.Models.Generator
 
                         _declaredStructs.Add(structure.Name);
 
+                    
                         EmitStructure(structure);
                     }
                     break;

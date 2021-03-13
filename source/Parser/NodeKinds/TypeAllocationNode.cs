@@ -13,5 +13,10 @@ namespace Mug.Models.Parser.NodeKinds
         public List<MugType> Generics { get; set; } = new();
         public List<FieldAssignmentNode> Body { get; set; } = new();
         public Range Position { get; set; }
+
+        public bool HasGenerics()
+        {
+            return Generics.Count != 0;
+        }
     }
 }

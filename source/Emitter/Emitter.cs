@@ -109,7 +109,7 @@ namespace Mug.Models.Generator.Emitter
         {
             DeclareVariable(
                 variable.Name,
-                variable.Type.ToMugValueType(variable.Position, _generator),
+                variable.Type.ToMugValueType(variable.Type.Position, _generator),
                 variable.Position);
         }
 
