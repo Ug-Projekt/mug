@@ -10,13 +10,13 @@ namespace Mug.Models.Parser.NodeKinds
     {
         public string NodeKind => "StructAllocation";
         public MugType Name { get; set; }
-        public List<MugType> Generics { get; set; } = new();
         public List<FieldAssignmentNode> Body { get; set; } = new();
         public Range Position { get; set; }
 
         public bool HasGenerics()
         {
-            return Generics.Count != 0;
+            return Name.IsGeneric();
+            // return Generics.Count != 0;
         }
     }
 }

@@ -94,7 +94,7 @@ namespace Mug.Models.Generator
 
         private void EmitSum(MugValueType ft, MugValueType st, Range position)
         {
-            if (_generator.MatchSameIntType(ft, st))
+            if (ft.MatchSameIntType(st))
                 _emitter.AddInt();
             else
                 _emitter.CallOperator("+", position, true, ft, st);
@@ -102,7 +102,7 @@ namespace Mug.Models.Generator
 
         private void EmitSub(MugValueType ft, MugValueType st, Range position)
         {
-            if (_generator.MatchSameIntType(ft, st))
+            if (ft.MatchSameIntType(st))
                 _emitter.SubInt();
             else
                 _emitter.CallOperator("-", position, true, ft, st);
@@ -110,7 +110,7 @@ namespace Mug.Models.Generator
 
         private void EmitMul(MugValueType ft, MugValueType st, Range position)
         {
-            if (_generator.MatchSameIntType(ft, st))
+            if (ft.MatchSameIntType(st))
                 _emitter.MulInt();
             else
                 _emitter.CallOperator("*", position, true, ft, st);
@@ -118,7 +118,7 @@ namespace Mug.Models.Generator
 
         private void EmitDiv(MugValueType ft, MugValueType st, Range position)
         {
-            if (_generator.MatchSameIntType(ft, st))
+            if (ft.MatchSameIntType(st))
                 _emitter.DivInt();
             else
                 _emitter.CallOperator("/", position, true, ft, st);
@@ -137,7 +137,7 @@ namespace Mug.Models.Generator
                     st.GetEnum().BaseType.ToMugValueType(position, _generator),
                     position);
             }
-            else if (_generator.MatchSameIntType(ft, st))
+            else if (ft.MatchSameIntType(st))
                 _emitter.CompareInt(llvmpredicate);
             else
                 _emitter.CallOperator(literal, position, true, ft, st);
@@ -289,7 +289,10 @@ namespace Mug.Models.Generator
              * the symbol of the function is taken by passing the name of the complete function which consists
              * of the function id and in brackets the list of parameter types separated by ', '
              */
-            var function = _generator.GetSymbol(BuildName(((Token)c.Name).Value, parameters), c.Position);
+            var function = (MugValue)_generator.GetSymbol(BuildName(((Token)c.Name).Value, parameters), c.Position).Value;
+
+            if (!function.IsFunction())
+                _generator.Error(c.Position, "Unable to call this member");
 
             // function type: <ret_type> <param_types>
             var functionType = function.Type.LLVMType;
@@ -404,15 +407,14 @@ namespace Mug.Models.Generator
             if (!ta.Name.IsAllocableTypeNew())
                 Error(ta.Position, "Unable to allocate type ", ta.Name.ToString(), " with `new` operator");
 
-            MugValueType structure;
-
-            if (ta.HasGenerics())
-                structure = _generator.GetGeneric(new(ta.Name, ta.Generics), ta.Name.Position).Type;
-            else
-                structure = _generator.GetSymbol(ta.Name.ToMugValueType(ta.Name.Position, _generator).ToString(), ta.Position).Type;
+            /*if (ta.HasGenerics())
+                structure = _generator.EvaluateGenericStruct(, ta.Name.Position).Type;
+            else*/
+            var structure = _generator.GetSymbol(ta.Name.ToMugValueType(ta.Name.Position, _generator).ToString(), ta.Position).GetValue<MugValue>().Type;
 
             var tmp = _emitter.Builder.BuildAlloca(
                 structure.LLVMType);
+
             var structureInfo = structure.GetStructure();
 
             var fields = new List<string>();
@@ -437,7 +439,10 @@ namespace Mug.Models.Generator
                 var fieldPosition = structureInfo.GetFieldPositionFromName(field.Name);
 
                 if (structureInfo.HasThisGenericParameter(fieldMugType, out int index))
-                    fieldType = ta.Generics[index].ToMugValueType(ta.Generics[index].Position, _generator);
+                {
+                    var genericStructure = ta.Name.GetGenericStructure();
+                    fieldType = genericStructure.Item2[index].ToMugValueType(genericStructure.Item2[index].Position, _generator);
+                }
                 else
                     fieldType = fieldMugType.ToMugValueType(fieldPosition, _generator);
 
@@ -740,7 +745,7 @@ namespace Mug.Models.Generator
 
         private List<FieldAssignmentNode> GetDefaultValueOfFields(string name, Range position)
         {
-            var s = _generator.GetSymbol(name, position).Type.GetStructure();
+            var s = _generator.GetSymbol(name, position).GetValue<MugValue>().Type.GetStructure();
             var fields = new FieldAssignmentNode[s.Body.Count];
 
             for (int i = 0; i < s.Body.Count; i++)
@@ -783,8 +788,7 @@ namespace Mug.Models.Generator
                 TypeKind.Pointer => _generator.Error<INode>(position, "Pointers must be initialized"),
                 TypeKind.GenericDefinedType => new TypeAllocationNode()
                 {
-                    Generics = type.GetGenericStructure().Item2,
-                    Name = type.GetGenericStructure().Item1
+                    Name = type
                 }
             };
         }

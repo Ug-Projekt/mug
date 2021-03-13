@@ -95,7 +95,13 @@ namespace Mug.Models.Generator.Emitter
         public MugValue GetMemoryAllocation(string name, Range position)
         {
             if (!Memory.TryGetValue(name, out var variable))
-                variable = _generator.GetSymbol(name, position);
+            {
+                var symbol = _generator.GetSymbol(name, position).Value;
+                if (symbol is MugValue value)
+                    variable = value;
+                else
+                    _generator.Error(position, "Bad symbol in expression");
+            }
 
             return variable;
         }
@@ -204,7 +210,10 @@ namespace Mug.Models.Generator.Emitter
 
         public void CallOperator(string op, Range position, bool expectedNonVoid, params MugValueType[] types)
         {
-            var function = _generator.GetSymbol($"{op}({string.Join(", ", types)})", position);
+            var function = (MugValue)_generator.GetSymbol($"{op}({string.Join(", ", types)})", position).Value;
+
+            if (!function.IsFunction())
+                _generator.Error(position, "Unable to call this member");
 
             if (expectedNonVoid)
                 // check the operator overloading is not void
@@ -215,7 +224,10 @@ namespace Mug.Models.Generator.Emitter
 
         public void CallAsOperator(Range position, MugValueType type, MugValueType returntype)
         {
-            var function = _generator.GetSymbol($"as({type}): {returntype}", position);
+            var function = (MugValue)_generator.GetSymbol($"as({type}): {returntype}", position).Value;
+
+            if (!function.IsFunction())
+                _generator.Error(position, "Unable to call this member");
 
             Call(function.LLVMValue, 1, returntype);
         }
@@ -326,7 +338,7 @@ namespace Mug.Models.Generator.Emitter
 
         public void LoadEnumMember(string enumname, string membername, Range position, LocalGenerator localgenerator)
         {
-            var enumerated = _generator.GetSymbol(enumname, position);
+            var enumerated = _generator.GetSymbol(enumname, position).GetValue<MugValue>();
 
             if (!enumerated.Type.IsEnum())
                 _generator.Error(position, "Not an enum");

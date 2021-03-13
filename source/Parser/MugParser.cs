@@ -162,7 +162,7 @@ namespace Mug.Models.Parser
 
                 Expect("", TokenKind.BooleanGreater);
 
-                find = new MugType(find.Position.Start..Back.Position.End, TypeKind.GenericDefinedType, new Tuple<MugType, List<MugType>>(find, genericTypes));
+                find = new MugType(find.Position.Start..Back.Position.End, TypeKind.GenericDefinedType, (find, genericTypes));
             }
 
             return find;
@@ -642,10 +642,10 @@ namespace Mug.Models.Parser
                 return array;
             }
 
-            var name = ExpectType(false);
+            var name = ExpectType(true);
             var allocation = new TypeAllocationNode() { Name = name, Position = newposition };
 
-            // struct generics
+            /*// struct generics
             if (MatchAdvance(TokenKind.BooleanLess))
             {
                 do
@@ -653,7 +653,7 @@ namespace Mug.Models.Parser
                 while (MatchAdvance(TokenKind.Comma));
 
                 Expect("", TokenKind.BooleanGreater);
-            }
+            }*/
 
             Expect("Type allocation requires `{}`", TokenKind.OpenBrace);
 

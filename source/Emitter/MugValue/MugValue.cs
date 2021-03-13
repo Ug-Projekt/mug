@@ -8,21 +8,20 @@ namespace Mug.MugValueSystem
     {
         public MugValueType Type { get; set; }
         public LLVMValueRef LLVMValue { get; set; }
-        public bool IsPublic { get; set; }
 
-        public static MugValue From(LLVMValueRef value, MugValueType type, bool ispublic = false)
+        public static MugValue From(LLVMValueRef value, MugValueType type)
         {
-            return new MugValue() { IsPublic = ispublic, LLVMValue = value, Type = type };
+            return new MugValue() { LLVMValue = value, Type = type };
         }
 
-        public static MugValue Struct(LLVMValueRef structure, MugValueType type, bool ispublic)
+        public static MugValue Struct(LLVMValueRef structure, MugValueType type)
         {
-            return From(structure, type, ispublic);
+            return From(structure, type);
         }
 
-        public static MugValue Enum(MugValueType enumerated, bool ispublic)
+        public static MugValue Enum(MugValueType enumerated)
         {
-            return From(new LLVMValueRef(), enumerated, ispublic);
+            return From(new LLVMValueRef(), enumerated);
         }
 
         public static MugValue EnumMember(MugValueType enumerated, LLVMValueRef value)
@@ -38,6 +37,11 @@ namespace Mug.MugValueSystem
         public bool IsGEP()
         {
             return LLVMValue.IsAGetElementPtrInst.Handle != IntPtr.Zero;
+        }
+
+        public bool IsFunction()
+        {
+            return LLVMValue.IsAFunction.Handle != IntPtr.Zero;
         }
     }
 }

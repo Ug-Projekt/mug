@@ -10,21 +10,21 @@ try
 
     var test = @"
 
-type K<F> {
-  b: F
+type J<H> {
+  a: H
 }
 
-type Ok<G> {
-  a: K<G>
+type C<G> {
+  a: J<G>
 }
 
-type Vec<T> {
-  a: T,
-  b: Ok<u8>
+type Vec<T, T1> {
+  b: T,
+  c: C<T1>
 }
 
 func main() {
-  var x = new Vec<i32> { a: 'a' };
+  var x = new Vec<u8, i32> { b: 1 as u8 };
 }
 
 ";

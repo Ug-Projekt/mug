@@ -5,6 +5,7 @@ using Mug.Models.Parser;
 using Mug.MugValueSystem;
 using System;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
 
 namespace Mug.TypeSystem
 {
@@ -68,14 +69,14 @@ namespace Mug.TypeSystem
             return Kind == TypeKind.Auto;
         }
 
-        public Tuple<MugType, List<MugType>> GetGenericStructure()
+        public (MugType, List<MugType>) GetGenericStructure()
         {
-            return ((Tuple<MugType, List<MugType>>)BaseType);
+            return ((MugType, List<MugType>))BaseType;
         }
 
         public bool IsGeneric()
         {
-            return BaseType is Tuple<MugType, List<MugType>>;
+            return BaseType is (MugType, List<MugType>);
         }
 
         /// <summary>
@@ -112,6 +113,17 @@ namespace Mug.TypeSystem
                 Kind == TypeKind.UInt64;
         }
 
+        private MugValueType EvaluateStruct(string name, List<MugType> generics, Range position, IRGenerator generator)
+        {
+            if (generator.IsAlias(BaseType.ToString(), out var symbol))
+                return symbol.GetValue<MugType>().ToMugValueType(position, generator);
+
+            if (generator.IsIllegalType(BaseType.ToString()))
+                generator.Error(position, "Illegal recursion in recursion");
+
+            return generator.EvaluateStruct(name, generics, position).Type;
+        }
+
         /// <summary>
         /// the function converts a Mugtype to the corresponding mugvaluetype
         /// </summary>
@@ -126,20 +138,12 @@ namespace Mug.TypeSystem
                 TypeKind.Void => MugValueType.Void,
                 TypeKind.Char => MugValueType.Char,
                 TypeKind.String => MugValueType.String,
-                TypeKind.DefinedType => generator.GetSymbol(BaseType.ToString(), position).Type,
-                TypeKind.GenericDefinedType => generator.GetGeneric(GetGenericStructure(), position).Type,
+                TypeKind.DefinedType => EvaluateStruct(BaseType.ToString(), new(), position, generator),
+                TypeKind.GenericDefinedType => EvaluateStruct(GetGenericStructure().Item1.ToString(), GetGenericStructure().Item2, position, generator),
                 TypeKind.Pointer => MugValueType.Pointer(((MugType)BaseType).ToMugValueType(position, generator)),
                 TypeKind.Array => MugValueType.Array(((MugType)BaseType).ToMugValueType(position, generator)),
                 _ => generator.NotSupportedType<MugValueType>(Kind.ToString(), position)
             };
-        }
-
-        /// <summary>
-        /// the function tries to convert a Mugtype to the corresponding mugvaluetype
-        /// </summary>
-        public bool TryToMugValueType(Range position, IRGenerator generator, out MugValueType type)
-        {
-            try { type = ToMugValueType(position, generator); return true; } catch { type = MugValueType.Void; return false; }
         }
 
         public bool IsAllocableTypeNew()
