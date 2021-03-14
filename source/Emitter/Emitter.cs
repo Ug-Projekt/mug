@@ -119,13 +119,42 @@ namespace Mug.Models.Generator.Emitter
                 variable.Position);
         }
 
-        public bool OneOfTwoIsAConstant()
+        public (MugValueType, MugValueType) GetCoupleTypes()
         {
             var second = Pop();
-            var first = Peek();
+            var secondType = second.Type;
+            var firstType = PeekType();
+
             Load(second);
 
-            return second.LLVMValue.IsConstant || first.LLVMValue.IsConstant;
+            return (firstType, secondType);
+        }
+
+        public void ForceCoupleConstantIntSize()
+        {
+            var second = Pop();
+            var first = Pop();
+
+            if (second.Type.MatchIntType() && first.Type.MatchIntType())
+            {
+                if (second.IsConstant())
+                    second = MugValue.From(Builder.BuildIntCast(second.LLVMValue, first.Type.LLVMType), first.Type);
+                else if (first.IsConstant())
+                    first = MugValue.From(Builder.BuildIntCast(first.LLVMValue, second.Type.LLVMType), second.Type);
+            }
+
+            Load(first);
+            Load(second);
+        }
+
+        public void ForceConstantIntSizeTo(MugValueType type)
+        {
+            var value = Pop();
+
+            if (value.Type.MatchIntType() && value.IsConstant())
+                value = MugValue.From(Builder.BuildIntCast(value.LLVMValue, type.LLVMType), type);
+
+            Load(value);
         }
 
         public void DeclareVariable(string name, MugValueType type, Range position)
@@ -146,7 +175,7 @@ namespace Mug.Models.Generator.Emitter
             SetMemory(name, Pop());
         }
 
-        public void StoreVariable(string name, Range position)
+        public void StoreVariable(string name, Range position, Range bodyPosition)
         {
             var variable = GetMemoryAllocation(name, position);
 
@@ -154,9 +183,11 @@ namespace Mug.Models.Generator.Emitter
             if (!variable.IsAllocaInstruction())
                 _generator.Error(position, "Unable to change the value of a constant");
 
+            ForceConstantIntSizeTo(variable.Type);
+
             _generator.ExpectSameTypes(
                 variable.Type,
-                position,
+                bodyPosition,
                 $"Expected {variable.Type} type, got {PeekType()} type",
                 PeekType());
 
@@ -400,6 +431,12 @@ namespace Mug.Models.Generator.Emitter
         {
             if (Builder.InsertBlock.Terminator.Handle == IntPtr.Zero)
                 Builder.BuildBr(ExitBlock);
+        }
+
+        public void ExpectIndexerType(Range position)
+        {
+            if (PeekType().TypeKind != MugValueTypeKind.Int32)
+                _generator.Error(position, "`", PeekType().ToString(), "` is not an indexer type");
         }
 
         public void StoreInside(MugValue field)

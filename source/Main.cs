@@ -9,18 +9,32 @@ try
 #if DEBUG
 
     var test = @"
-import ""person.mug"";
 
-func main(): i32 {
-  (new Person<i32> {  }).age.ageee();
+enum UserKind: u8
+{
+  NormalUser: 0,
+  Admin: 1,
+  Bot: 2
+}
+
+type Person
+{
+  name: str,
+  age: i32
+}
+
+func main()
+{
+  var x: [u8];
+  x[0] = 1;
 }
 
 "; // as operator broken or (new Struct { }).field
 
     var unit = new CompilationUnit("test", test);
     
-    Console.WriteLine(unit.GenerateAST().Dump());
-    // unit.Generate(true, true);
+    // Console.WriteLine(unit.GenerateAST().Dump());
+    unit.Generate(true, true);
 
 #else
 

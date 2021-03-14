@@ -53,7 +53,7 @@ namespace Mug.Models.Generator
         /// <summary>
         /// converts a constant in token format to one in LLVMValueRef format
         /// </summary>
-        internal MugValue ConstToMugConst(Token constant, Range position, bool isenum = false, MugValueType enumint = new())
+        internal MugValue ConstToMugConst(Token constant, Range position, bool isenum = false, MugValueType forcedIntSize = new())
         {
             LLVMValueRef llvmvalue = new();
             MugValueType type = new();
@@ -61,15 +61,15 @@ namespace Mug.Models.Generator
             switch (constant.Kind)
             {
                 case TokenKind.ConstantDigit:
-                    if (!isenum)
+                    if (isenum)
                     {
-                        llvmvalue = LLVMValueRef.CreateConstInt(LLVMTypeRef.Int32, Convert.ToUInt64(constant.Value));
-                        type = MugValueType.Int32;
+                        llvmvalue = LLVMValueRef.CreateConstInt(forcedIntSize.LLVMType, Convert.ToUInt64(constant.Value));
+                        type = forcedIntSize;
                     }
                     else
                     {
-                        llvmvalue = LLVMValueRef.CreateConstInt(enumint.LLVMType, Convert.ToUInt64(constant.Value));
-                        type = enumint;
+                        llvmvalue = LLVMValueRef.CreateConstInt(LLVMTypeRef.Int32, Convert.ToUInt64(constant.Value));
+                        type = MugValueType.Int32;
                     }
                     break;
                 case TokenKind.ConstantBoolean:
@@ -92,12 +92,16 @@ namespace Mug.Models.Generator
             return MugValue.From(llvmvalue, type);
         }
 
-        private void EmitSum(MugValueType ft, MugValueType st, Range position)
+        private void EmitSum(Range position)
         {
-            if (ft.MatchSameIntType(st))
+            _emitter.ForceCoupleConstantIntSize();
+
+            var types = _emitter.GetCoupleTypes();
+
+            if (types.Item1.MatchSameIntType(types.Item2))
                 _emitter.AddInt();
             else
-                _emitter.CallOperator("+", position, true, ft, st);
+                _emitter.CallOperator("+", position, true, types.Item1, types.Item2);
         }
 
         private void EmitSub(MugValueType ft, MugValueType st, Range position)
@@ -151,7 +155,7 @@ namespace Mug.Models.Generator
             switch (kind)
             {
                 case OperatorKind.Sum:
-                    EmitSum(ft, st, position);
+                    EmitSum(position);
                     break;
                 case OperatorKind.Subtract:
                     EmitSub(ft, st, position);
@@ -355,6 +359,11 @@ namespace Mug.Models.Generator
             // loading the index expression
             EvaluateExpression(a.IndexExpression);
 
+            // arrays are indexed by int32
+            _emitter.ForceConstantIntSizeTo(MugValueType.Int32);
+
+            _emitter.ExpectIndexerType(a.IndexExpression.Position);
+
             var index = _emitter.PeekType();
 
             if (indexed.IsIndexable())
@@ -391,6 +400,8 @@ namespace Mug.Models.Generator
             {
                 EvaluateExpression(elem);
 
+                _emitter.ForceConstantIntSizeTo(arraytype.ArrayBaseElementType);
+
                 if (!_emitter.PeekType().Equals(arraytype.ArrayBaseElementType))
                     Error(elem.Position, "Expected ", arraytype.ArrayBaseElementType.ToString(), ", got ", _emitter.PeekType().ToString());
 
@@ -412,6 +423,9 @@ namespace Mug.Models.Generator
             var tmp = _emitter.Builder.BuildAlloca(
                 structure.LLVMType);
 
+            if (structure.IsEnum())
+                Error(ta.Position, "Unable to allocate an enum");
+
             var structureInfo = structure.GetStructure();
 
             var fields = new List<string>();
@@ -431,14 +445,8 @@ namespace Mug.Models.Generator
                     Error(field.Position, "Undeclared field");
 
                 var fieldType = structureInfo.GetFieldTypeFromName(field.Name);
-                var fieldPosition = structureInfo.GetFieldPositionFromName(field.Name);
 
-                /*if (HasThisGenericParameter(fieldMugType, out int index))
-                {
-                    var genericStructure = ta.Name.GetGenericStructure();
-                    fieldType = genericStructure.Item2[index].ToMugValueType(genericStructure.Item2[index].Position, _generator);
-                }
-                else*/
+                _emitter.ForceConstantIntSizeTo(fieldType);
 
                 _generator.ExpectSameTypes(
                     fieldType, field.Body.Position, $"expected {fieldType}, but got {_emitter.PeekType()}", _emitter.PeekType());
@@ -562,7 +570,7 @@ namespace Mug.Models.Generator
                 _emitter.Load(MugValue.From(_llvmfunction.GetParam((uint)i), parametertype));
 
                 // storing the parameter into the variable
-                _emitter.StoreVariable(parameter.Name, parameter.Position);
+                _emitter.StoreVariable(parameter.Name, parameter.Position, parameter.Position);
             }
         }
 
@@ -741,7 +749,7 @@ namespace Mug.Models.Generator
 
         private List<FieldAssignmentNode> GetDefaultValueOfFields(string name, Range position)
         {
-            return new();
+            throw new();
             /*var s = _generator.GetSymbol(name, position).GetValue<MugValue>().Type.GetStructure();
             var fields = new FieldAssignmentNode[s.FieldNames.Length];
 
@@ -761,29 +769,33 @@ namespace Mug.Models.Generator
         {
             return type.Kind switch
             {
-                TypeKind.Char => new Token(TokenKind.ConstantChar, "\0", new()),
-                TypeKind.Int32 => new Token(TokenKind.ConstantDigit, "0", new()),
+                TypeKind.Char => new Token(TokenKind.ConstantChar, "\0", position),
+                TypeKind.Int32 => new Token(TokenKind.ConstantDigit, "0", position),
                 TypeKind.UInt8 or TypeKind.UInt32 or TypeKind.UInt64 or TypeKind.Int64 => new CastExpressionNode()
                 {
-                    Expression = new Token(TokenKind.ConstantChar, "\0", new()),
-                    Type = type
+                    Expression = new Token(TokenKind.ConstantChar, "\0", position),
+                    Type = type,
+                    Position = position
                 },
-                TypeKind.Bool => new Token(TokenKind.ConstantBoolean, "false", new()),
-                TypeKind.String => new Token(TokenKind.ConstantString, "", new()),
+                TypeKind.Bool => new Token(TokenKind.ConstantBoolean, "false", position),
+                TypeKind.String => new Token(TokenKind.ConstantString, "", position),
                 TypeKind.Array => new ArrayAllocationNode()
                 {
                     Type = type.BaseType is TypeKind kind ? new MugType(position, kind) : (MugType)type.BaseType,
-                    Size = new Token(TokenKind.ConstantDigit, "0", new())
+                    Size = new Token(TokenKind.ConstantDigit, "0", position),
+                    Position = position
                 },
                 TypeKind.DefinedType => new TypeAllocationNode()
                 {
                     Name = type,
-                    Body = GetDefaultValueOfFields(type.BaseType.ToString(), position)
+                    Body = GetDefaultValueOfFields(type.BaseType.ToString(), position),
+                    Position = position
                 },
                 TypeKind.Pointer => _generator.Error<INode>(position, "Pointers must be initialized"),
                 TypeKind.GenericDefinedType => new TypeAllocationNode()
                 {
-                    Name = type
+                    Name = type,
+                    Position = position
                 }
             };
         }
@@ -814,7 +826,9 @@ namespace Mug.Models.Generator
 
                 var type = _function.Type.ToMugValueType(@return.Position, _generator);
 
-                _generator.ExpectSameTypes(type, @return.Position, $"Expected {type} type, got {_emitter.PeekType()} type", _emitter.PeekType());
+                _emitter.ForceConstantIntSizeTo(type);
+
+                _generator.ExpectSameTypes(type, @return.Body.Position, $"Expected {type} type, got {_emitter.PeekType()} type", _emitter.PeekType());
                 _emitter.Ret();
             }
         }
@@ -826,7 +840,7 @@ namespace Mug.Models.Generator
             if (!variable.IsAssigned)
             {
                 if (variable.Type.IsAutomatic())
-                    Error(variable.Position, "Unable to allocate a new variable of `Auto` type");
+                    Error(variable.Position, "Unable to allocate implicitly a variable with no type specification");
 
                 variable.Body = GetDefaultValueOf(variable.Type, variable.Position);
             }
@@ -843,7 +857,7 @@ namespace Mug.Models.Generator
             else // if the type is not specified, it will come directly allocate a variable with the same type as the expression result
                 _emitter.DeclareVariable(variable.Name, _emitter.PeekType(), variable.Position);
 
-            _emitter.StoreVariable(variable.Name, variable.Position);
+            _emitter.StoreVariable(variable.Name, variable.Position, variable.Body.Position);
         }
 
         private string IncrementOperatorToString(TokenKind kind)
@@ -874,7 +888,7 @@ namespace Mug.Models.Generator
                     var expressionType = _emitter.PeekType();
 
                     if (operatorkind == TokenKind.AddAssignment)
-                        EmitSum(variableType, expressionType, position);
+                        EmitSum(/*variableType, expressionType*/position);
                     else if (operatorkind == TokenKind.SubAssignment)
                         EmitSub(variableType, expressionType, position);
                     else if (operatorkind == TokenKind.MulAssignment)
@@ -898,7 +912,10 @@ namespace Mug.Models.Generator
             else
             {
                 EvaluateExpression(body);
-                _generator.ExpectSameTypes(allocation.Type, position, $"Expected type {allocation.Type}, but got {_emitter.PeekType()}", _emitter.PeekType());
+
+                _emitter.ForceConstantIntSizeTo(variableType);
+
+                _generator.ExpectSameTypes(allocation.Type, body.Position, $"Expected type {allocation.Type}, but got {_emitter.PeekType()}", _emitter.PeekType());
             }
         }
 
@@ -928,7 +945,7 @@ namespace Mug.Models.Generator
                     _emitter.EmitGCDecrementReferenceCounter();
                 }
 
-                _emitter.StoreVariable(t.Value, t.Position);
+                _emitter.StoreVariable(t.Value, t.Position, a.Body.Position);
             }
             else if (a.Name is ArraySelectElemNode aa)
             {
@@ -938,9 +955,14 @@ namespace Mug.Models.Generator
 
                 EvaluateExpression(aa.IndexExpression);
 
+                // arrays are indexed by int32
+                _emitter.ForceConstantIntSizeTo(MugValueType.Int32);
+
                 var indexExpr = _emitter.Pop();
 
                 EvaluateExpression(a.Body);
+
+                _emitter.ForceConstantIntSizeTo(leftExpr.Type.ArrayBaseElementType);
 
                 var expr = _emitter.Pop();
 
@@ -971,12 +993,16 @@ namespace Mug.Models.Generator
             // evaluating the body expression of the constant
             EvaluateExpression(constant.Body);
 
+            var constType = constant.Type.ToMugValueType(
+                        constant.Position,
+                        _generator);
+
+            _emitter.ForceConstantIntSizeTo(constType);
+
             // match the constant explicit type and expression type are the same
             if (!constant.Type.IsAutomatic())
-                _generator.ExpectSameTypes(
-                    constant.Type.ToMugValueType(
-                        constant.Position,
-                        _generator), constant.Body.Position, $"Expected {constant.Type} type, got {_emitter.PeekType()} type", _emitter.PeekType());
+                _generator.ExpectSameTypes(constType,
+                    constant.Body.Position, $"Expected {constant.Type} type, got {_emitter.PeekType()} type", _emitter.PeekType());
 
             // declaring the constant with a name
             _emitter.DeclareConstant(constant.Name, constant.Position);

@@ -311,10 +311,12 @@ namespace Mug.Models.Parser
         {
             e = null;
 
-            if (!MatchAdvance(TokenKind.OpenPar))
+            if (!MatchAdvance(TokenKind.OpenPar, out var token))
                 return false;
 
             e = ExpectExpression(true, TokenKind.ClosePar);
+
+            e.Position = token.Position.Start..e.Position.End;
 
             return true;
         }
@@ -755,7 +757,7 @@ namespace Mug.Models.Parser
                 return true;
             }
 
-            Expect("To define the value of a variable must open the body with `=`, or you can only declare a variable putting after type spec the symbol `;`", TokenKind.Equal);
+            Expect("", TokenKind.Equal);
 
             var body = ExpectExpression(true, TokenKind.Semicolon);
             statement = new VariableStatement() { Body = body, IsAssigned = true, Name = name.Value.ToString(), Position = name.Position, Type = type };
@@ -776,7 +778,7 @@ namespace Mug.Models.Parser
             if (Match(TokenKind.Semicolon))
                 ParseError("A constant cannot be declared without a body");
 
-            Expect("To define the value of a constant must open the body with `=`", TokenKind.Equal);
+            Expect("", TokenKind.Equal);
 
             var body = ExpectExpression(true, TokenKind.Semicolon);
             statement = new ConstantStatement() { Body = body, Name = name.Value.ToString(), Position = name.Position, Type = type };

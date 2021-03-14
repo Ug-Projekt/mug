@@ -43,5 +43,10 @@ namespace Mug.MugValueSystem
         {
             return LLVMValue.IsAFunction.Handle != IntPtr.Zero;
         }
+
+        public bool IsConstant()
+        {
+            return LLVMValue.IsAConstantInt.Handle != IntPtr.Zero;
+        }
     }
 }
