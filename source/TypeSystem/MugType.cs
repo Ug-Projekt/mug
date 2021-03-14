@@ -116,7 +116,7 @@ namespace Mug.TypeSystem
         private MugValueType EvaluateStruct(string name, List<MugType> genericsInput, Range position, IRGenerator generator)
         {
             if (generator.IsIllegalType(name))
-                generator.Error(position, "Illegal recursion in recursion");
+                generator.Error(position, "Illegal recursion");
 
             if (generator.IsGenericParameter(name, out var genericParameterType))
             {

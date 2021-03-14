@@ -9,6 +9,7 @@ namespace Mug.Compilation
 {
     public class CompilationUnit
     {
+        public bool FailedOpeningPath { get; } = false;
         public IRGenerator IRGenerator;
         private const string ClangFilename = "C:/Program Files/LLVM/bin/clang.exe";
 
@@ -17,12 +18,17 @@ namespace Mug.Compilation
             IRGenerator = new(moduleName, source);
         }
 
-        public CompilationUnit(string path)
+        public CompilationUnit(string path, bool throwerror)
         {
             if (!File.Exists(path))
-                CompilationErrors.Throw($"Unable to open path: `{path}`");
+            {
+                if (throwerror)
+                    CompilationErrors.Throw($"Unable to open path: `{path}`");
 
-            IRGenerator = new(path, File.ReadAllText(path));
+                FailedOpeningPath = true;
+            }
+            else
+                IRGenerator = new(path, File.ReadAllText(path));
         }
 
         public void Compile(int optimizazioneLevel, string output, bool onlyBitcode, string optionalFlag)

@@ -129,7 +129,7 @@ namespace Mug.Models.Parser
             return expect;
         }
 
-        private MugType ExpectType(bool acceptGeneric = true)
+        private MugType ExpectType()
         {
             if (MatchAdvance(TokenKind.OpenBracket, out var token))
             {
@@ -139,14 +139,14 @@ namespace Mug.Models.Parser
             }
             else if (MatchAdvance(TokenKind.KeyTPtr, out token))
             {
-                var type = ExpectType(acceptGeneric);
+                var type = ExpectType();
                 return new MugType(token.Position.Start..type.Position.End, TypeKind.Pointer, type);
             }
 
             var find = ExpectBaseType();
 
             // struct generics
-            if (acceptGeneric && MatchAdvance(TokenKind.BooleanLess))
+            if (MatchAdvance(TokenKind.BooleanLess))
             {
                 if (find.Kind != TypeKind.DefinedType)
                 {
@@ -502,14 +502,17 @@ namespace Mug.Models.Parser
 
             while (MatchAdvance(TokenKind.Dot))
             {
-                if (allowCallStatement && MatchCallStatement(out var call, false))
+                var name = Expect("Expected member after `.`", TokenKind.Identifier);
+
+                if (allowCallStatement && MatchCallStatement(out var call, false, name))
                 {
                     (call as CallStatement).Parameters.Insert(0, e);
                     e = call;
                 }
-
-                if (MatchAdvance(TokenKind.Identifier, out var token))
-                    e = new MemberNode() { Base = e, Member = token, Position = (e.Position.Start)..(token.Position.End) };
+                else
+                {
+                    e = new MemberNode() { Base = e, Member = name, Position = (e.Position.Start)..(name.Position.End) };
+                }
             }
 
             CollectPossibleArrayAccessNode(ref e);
@@ -642,7 +645,7 @@ namespace Mug.Models.Parser
                 return array;
             }
 
-            var name = ExpectType(true);
+            var name = ExpectType();
             var allocation = new TypeAllocationNode() { Name = name, Position = newposition };
 
             /*// struct generics

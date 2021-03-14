@@ -9,19 +9,18 @@ try
 #if DEBUG
 
     var test = @"
+import ""person.mug"";
 
-func main() {
-  var x = new A<u8, i32> { };
+func main(): i32 {
+  (new Person<i32> {  }).age.ageee();
 }
 
-";
+"; // as operator broken or (new Struct { }).field
 
     var unit = new CompilationUnit("test", test);
-
-    /*unit.IRGenerator.Parser.Lexer.Tokenize();
-    Console.WriteLine(((INode)unit.IRGenerator.Parser.Parse()).Dump());*/
-    //Console.WriteLine(unit.GenerateAST().Dump());
-    unit.Generate(true, true);
+    
+    Console.WriteLine(unit.GenerateAST().Dump());
+    // unit.Generate(true, true);
 
 #else
 

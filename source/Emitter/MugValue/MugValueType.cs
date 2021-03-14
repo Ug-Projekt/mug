@@ -2,7 +2,9 @@
 using Mug.Models.Generator;
 using Mug.Models.Parser.NodeKinds;
 using Mug.Models.Parser.NodeKinds.Statements;
+using Mug.TypeSystem;
 using System;
+using System.Collections.Generic;
 
 namespace Mug.MugValueSystem
 {
@@ -18,7 +20,7 @@ namespace Mug.MugValueSystem
                     return LLVMTypeRef.CreatePointer(((MugValueType)BaseType).LLVMType, 0);
 
                 if (TypeKind == MugValueTypeKind.Struct)
-                    return (((LLVMTypeRef, TypeStatement))BaseType).Item1;
+                    return ((StructureInfo)BaseType).LLVMValue;
 
                 if (TypeKind == MugValueTypeKind.Enum)
                     return (((LLVMTypeRef, EnumStatement))BaseType).Item1;
@@ -54,13 +56,30 @@ namespace Mug.MugValueSystem
             return new MugValueType() { TypeKind = MugValueTypeKind.Pointer, BaseType = type };
         }
 
-        public static MugValueType Struct(MugValueType[] body, TypeStatement structure)
+        public static MugValueType Struct(string name, MugValueType[] body, string[] structure, Range[] positions)
         {
             return new MugValueType()
             {
-                BaseType = (LLVMTypeRef.CreateStruct(IRGenerator.MugTypesToLLVMTypes(body), false), structure),
+                BaseType = new StructureInfo()
+                {
+                    Name = name,
+                    FieldNames = structure,
+                    FieldPositions = positions,
+                    FieldTypes = body,
+                    LLVMValue = LLVMTypeRef.CreateStruct(GetLLVMTypes(body), false)
+                },
                 TypeKind = MugValueTypeKind.Struct
             };
+        }
+
+        private static LLVMTypeRef[] GetLLVMTypes(MugValueType[] body)
+        {
+            var result = new LLVMTypeRef[body.Length];
+
+            for (int i = 0; i < body.Length; i++)
+                result[i] = body[i].LLVMType;
+
+            return result;
         }
 
         public static MugValueType Enum(MugValueType basetype, EnumStatement enumstatement)
@@ -92,7 +111,7 @@ namespace Mug.MugValueSystem
                 MugValueTypeKind.Void => "?",
                 MugValueTypeKind.Char => "chr",
                 MugValueTypeKind.String => "str",
-                MugValueTypeKind.Struct => (((LLVMTypeRef, TypeStatement))BaseType).Item2.Name,
+                MugValueTypeKind.Struct => ((StructureInfo)BaseType).Name,
                 MugValueTypeKind.Pointer => $"ptr {BaseType}".Replace("*", ""),
                 MugValueTypeKind.Enum => (((LLVMTypeRef, EnumStatement))BaseType).Item2.Name,
                 MugValueTypeKind.Array => $"[{BaseType}]"
@@ -131,9 +150,9 @@ namespace Mug.MugValueSystem
             return TypeKind == MugValueTypeKind.Pointer;
         }
 
-        public TypeStatement GetStructure()
+        public StructureInfo GetStructure()
         {
-            return (((LLVMTypeRef, TypeStatement))BaseType).Item2;
+            return (StructureInfo)BaseType;
         }
 
         public EnumStatement GetEnum()

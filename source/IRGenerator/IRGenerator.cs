@@ -21,7 +21,7 @@ namespace Mug.Models.Generator
         public LLVMModuleRef Module { get; set; }
         public readonly List<Symbol> Map = new();
 
-        private readonly List<string> _illegalTypes = new();
+        internal readonly List<string> IllegalTypes = new();
         internal List<(string, MugValueType)> _genericParameters = new();
 
         private const string EntryPointName = "main";
@@ -88,8 +88,8 @@ namespace Mug.Models.Generator
 
         internal bool IsIllegalType(string name)
         {
-            for (int i = 0; i < _illegalTypes.Count; i++)
-                if (_illegalTypes[i] == name)
+            for (int i = 0; i < IllegalTypes.Count; i++)
+                if (IllegalTypes[i] == name)
                     return true;
 
             return false;
@@ -117,7 +117,7 @@ namespace Mug.Models.Generator
         /// <summary>
         /// calls the function <see cref="TypeToMugType(MugType, Range)"/> for each parameter in the past array
         /// </summary>
-        internal MugValueType[] ParameterTypesToMugTypes(ParameterNode[] parameterTypes)
+        internal MugValueType[] ParameterTypesToMugTypes(ParameterNode[] parameterTypes, bool expectedPublicMember)
         {
             var result = new MugValueType[parameterTypes.Length];
             for (int i = 0; i < parameterTypes.Length; i++)
@@ -158,33 +158,36 @@ namespace Mug.Models.Generator
 
         private void PopIllegalType()
         {
-            _illegalTypes.RemoveAt(_illegalTypes.Count - 1);
+            IllegalTypes.RemoveAt(IllegalTypes.Count - 1);
         }
 
         private void PushIllegalType(string illegalType)
         {
-            _illegalTypes.Add(illegalType);
+            IllegalTypes.Add(illegalType);
         }
 
         internal MugValue EvaluateStruct(string name, List<MugValueType> genericsInput, Range position)
         {
-            PushIllegalType(name);
+            var symbolname = $"{name}{(genericsInput.Count != 0 ? $"<{string.Join(", ", genericsInput)}>" : "")}";
 
-            var symbolname = $"{name}{(genericsInput.Count > 0 ? $"<{string.Join(", ", genericsInput)}>" : "")}";
-
-            if (IsDeclared(symbolname, out var declared))
+            if (IsDeclared(symbolname, out var declared) && declared.IsDefined)
                 return declared.GetValue<MugValue>();
+
+            PushIllegalType(name);
 
             var symbol = GetSymbol(name, position);
 
             name = symbolname;
 
-            if (symbol.IsDefined)
-                return symbol.GetValue<MugValue>();
-
             symbol.IsDefined = true;
 
-            var structure = (TypeStatement)symbol.Value;
+            if (symbol.Value is not TypeStatement type)
+            {
+                Error(position, "This member is not declared as type");
+                throw new();
+            }
+
+            var structure = type;
 
             if (structure.Generics.Count != genericsInput.Count)
                 Error(position, "Incorrect number of generic parameters");
@@ -195,8 +198,9 @@ namespace Mug.Models.Generator
             for (int i = 0; i < structure.Generics.Count; i++)
                 _genericParameters.Add((structure.Generics[i].Value, genericsInput[i]));
 
-            var fields = new List<string>();
+            var fields = new string[structure.Body.Count];
             var structModel = new MugValueType[structure.Body.Count];
+            var fieldPositions = new Range[structure.Body.Count];
 
             for (int i = 0; i < structure.Body.Count; i++)
             {
@@ -205,15 +209,15 @@ namespace Mug.Models.Generator
                 if (fields.Contains(field.Name))
                     Error(field.Position, "Already declared field");
 
-                fields.Add(field.Name);
-
+                fields[i] = field.Name;
                 structModel[i] = field.Type.ToMugValueType(field.Type.Position, this);
+                fieldPositions[i] = field.Position;
             }
 
-            var structuretype = MugValueType.Struct(structModel, structure);
+            var structuretype = MugValueType.Struct(structure.Name, structModel, fields, fieldPositions);
             var structsymbol = MugValue.Struct(Module.AddGlobal(structuretype.LLVMType, structure.Name), structuretype);
 
-            DefineSymbol(name, structsymbol, position, false);
+            DefineSymbol(name, structsymbol, position, true);
             PopIllegalType();
 
             _genericParameters = oldGenericParameters;
@@ -228,7 +232,7 @@ namespace Mug.Models.Generator
         /// </summary>
         private void InstallFunction(bool ispublic, Pragmas pragmas, string name, MugType type, Range position, ParameterListNode paramTypes)
         {
-            var parameterTypes = ParameterTypesToMugTypes(paramTypes.Parameters);
+            var parameterTypes = ParameterTypesToMugTypes(paramTypes.Parameters, ispublic);
 
             var t = type.ToMugValueType(position, this);
 
@@ -401,7 +405,7 @@ namespace Mug.Models.Generator
             // change the name of the function in the corresponding with the types of parameters, to allow overload of the methods
             function.Name = BuildFunctionName(
                 function.Name,
-                ParameterTypesToMugTypes(function.ParameterList.Parameters),
+                ParameterTypesToMugTypes(function.ParameterList.Parameters, function.Modifier == TokenKind.KeyPub),
                 function.Type.ToMugValueType(function.Position, this));
             
             DefineFunction(function);
@@ -423,7 +427,7 @@ namespace Mug.Models.Generator
 
             prototype.Pragmas.SetExtern(prototype.Name);
 
-            var parameters = ParameterTypesToMugTypes(prototype.ParameterList.Parameters);
+            var parameters = ParameterTypesToMugTypes(prototype.ParameterList.Parameters, prototype.Modifier == TokenKind.KeyPub);
             // search for the function
             var function = Module.GetNamedFunction(prototype.Pragmas.GetPragma("extern"));
 
@@ -505,7 +509,11 @@ namespace Mug.Models.Generator
                     return;
 
                 EmitIncludeGuard(path);
-                unit = new CompilationUnit(path);
+
+                unit = new CompilationUnit(path, false);
+
+                if (unit.FailedOpeningPath)
+                    Error(import.Member.Position, "Unable to find package");
             }
             else
             {
@@ -524,14 +532,19 @@ namespace Mug.Models.Generator
                     return;
                 }
                 else if (filekind == ".mug") // dirof(file.mug)
-                    unit = new CompilationUnit(fullpath);
+                {
+                    unit = new CompilationUnit(fullpath, false);
+
+                    if (unit.FailedOpeningPath)
+                        Error(import.Member.Position, "Unable to open source file");
+                }
                 else if (filekind == ".c") // c code
                 {
                     IncludeCHeader(fullpath);
                     return;
                 }
                 else
-                    CompilationErrors.Throw("Unrecognized file kind: `", path.Value, "`");
+                    Error((import.Member.Position.Start.Value+path.Value.Length-filekind.Length+2)..(import.Member.Position.End.Value-1), "Unrecognized file kind");
             }
 
             // pass the current module to generate the llvm code together by the irgenerator
@@ -644,6 +657,11 @@ namespace Mug.Models.Generator
             // memebers' definition
             foreach (var member in Parser.Module.Members.Nodes)
                 RecognizeMember(member, false, false, false);
+
+            /*for (int i = 0; i < Map.Count; i++)
+            {
+                Console.WriteLine($"isdefined: {Map[i].IsDefined}, value: {Map[i].Value}, name: {Map[i].Name}, ispublic: {Map[i].IsPublic}");
+            }*/
         }
     }
 }

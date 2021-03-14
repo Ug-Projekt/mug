@@ -135,7 +135,7 @@ HELP: uses the next argument as output file name. The extension is not required
             if (loadArgs)
                 LoadArguments();
 
-            var unit = new CompilationUnit(GetFile());
+            var unit = new CompilationUnit(GetFile(), true);
 
             switch (GetFlag<CompilationTarget>("target"))
             {

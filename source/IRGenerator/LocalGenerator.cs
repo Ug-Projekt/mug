@@ -239,7 +239,7 @@ namespace Mug.Models.Generator
                     var structure = _emitter.PeekType().GetStructure();
                     _emitter.LoadField(
                         _emitter.Pop(),
-                        structure.GetFieldTypeFromName(m.Member.Value).ToMugValueType(m.Position, _generator),
+                        structure.GetFieldTypeFromName(m.Member.Value),
                         structure.GetFieldIndexFromName(m.Member.Value), load);
                     break;
                 case Token t:
@@ -430,18 +430,15 @@ namespace Mug.Models.Generator
                 if (!structureInfo.ContainsFieldWithName(field.Name))
                     Error(field.Position, "Undeclared field");
 
-                MugValueType fieldType;
-
-                var fieldMugType = structureInfo.GetFieldTypeFromName(field.Name);
+                var fieldType = structureInfo.GetFieldTypeFromName(field.Name);
                 var fieldPosition = structureInfo.GetFieldPositionFromName(field.Name);
 
-                if (structureInfo.HasThisGenericParameter(fieldMugType, out int index))
+                /*if (HasThisGenericParameter(fieldMugType, out int index))
                 {
                     var genericStructure = ta.Name.GetGenericStructure();
                     fieldType = genericStructure.Item2[index].ToMugValueType(genericStructure.Item2[index].Position, _generator);
                 }
-                else
-                    fieldType = fieldMugType.ToMugValueType(fieldPosition, _generator);
+                else*/
 
                 _generator.ExpectSameTypes(
                     fieldType, field.Body.Position, $"expected {fieldType}, but got {_emitter.PeekType()}", _emitter.PeekType());
@@ -475,7 +472,7 @@ namespace Mug.Models.Generator
             var index = structure.GetFieldIndexFromName(m.Member.Value);
             var instance = _emitter.Pop();
 
-            _emitter.LoadField(instance, type.ToMugValueType(m.Member.Position, _generator), index, true);
+            _emitter.LoadField(instance, type, index, true);
         }
 
         /// <summary>
@@ -550,6 +547,8 @@ namespace Mug.Models.Generator
             {
                 // alias for ...
                 var parameter = parameters[i];
+
+                Console.WriteLine("param: {0}", string.Join(", ", _generator.IllegalTypes));
 
                 var parametertype = parameter.Type.ToMugValueType(parameter.Position, _generator);
 
@@ -742,21 +741,20 @@ namespace Mug.Models.Generator
 
         private List<FieldAssignmentNode> GetDefaultValueOfFields(string name, Range position)
         {
-            var s = _generator.GetSymbol(name, position).GetValue<MugValue>().Type.GetStructure();
-            var fields = new FieldAssignmentNode[s.Body.Count];
+            return new();
+            /*var s = _generator.GetSymbol(name, position).GetValue<MugValue>().Type.GetStructure();
+            var fields = new FieldAssignmentNode[s.FieldNames.Length];
 
-            for (int i = 0; i < s.Body.Count; i++)
+            for (int i = 0; i < s.FieldNames.Length; i++)
             {
-                var field = s.Body[i];
-
                 fields[i] = new FieldAssignmentNode()
                 {
-                    Name = field.Name,
-                    Body = GetDefaultValueOf(field.Type, field.Position)
+                    Name = s.FieldNames[i],
+                    Body = GetDefaultValueOf(s.FieldTypes[i], s.FieldPositions[i])
                 };
             }
 
-            return fields.ToList();
+            return fields.ToList();*/
         }
 
         private INode GetDefaultValueOf(MugType type, Range position)
