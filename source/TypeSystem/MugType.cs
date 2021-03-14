@@ -113,13 +113,22 @@ namespace Mug.TypeSystem
                 Kind == TypeKind.UInt64;
         }
 
-        private MugValueType EvaluateStruct(string name, List<MugType> generics, Range position, IRGenerator generator)
+        private MugValueType EvaluateStruct(string name, List<MugType> genericsInput, Range position, IRGenerator generator)
         {
-            if (generator.IsAlias(BaseType.ToString(), out var symbol))
-                return symbol.GetValue<MugType>().ToMugValueType(position, generator);
-
-            if (generator.IsIllegalType(BaseType.ToString()))
+            if (generator.IsIllegalType(name))
                 generator.Error(position, "Illegal recursion in recursion");
+
+            if (generator.IsGenericParameter(name, out var genericParameterType))
+            {
+                if (genericsInput.Count != 0)
+                    generator.Error(position, "Unable to pass generic arguments to a generic argument");
+
+                return genericParameterType;
+            }
+
+            var generics = new List<MugValueType>();
+            for (int i = 0; i < genericsInput.Count; i++)
+                generics.Add(genericsInput[i].ToMugValueType(genericsInput[i].Position, generator));
 
             return generator.EvaluateStruct(name, generics, position).Type;
         }

@@ -22,6 +22,7 @@ namespace Mug.Models.Generator
         public readonly List<Symbol> Map = new();
 
         private readonly List<string> _illegalTypes = new();
+        internal List<(string, MugValueType)> _genericParameters = new();
 
         private const string EntryPointName = "main";
         private const string AsOperatorOverloading = "as";
@@ -125,17 +126,16 @@ namespace Mug.Models.Generator
             return result;
         }
 
-        internal bool IsAlias(string name, out Symbol symbol)
+        internal bool IsGenericParameter(string name, out MugValueType genericParameter)
         {
-            for (int i = 0; i < Map.Count; i++)
-                if (Map[i].Name == name)
+            for (int i = 0; i < _genericParameters.Count; i++)
+                if (_genericParameters[i].Item1 == name)
                 {
-                    symbol = Map[i];
-                    return Map[i].Value is MugType;
+                    genericParameter = _genericParameters[i].Item2;
+                    return true;
                 }
 
-            symbol = null;
-
+            genericParameter = new();
             return false;
         }
 
@@ -166,11 +166,18 @@ namespace Mug.Models.Generator
             _illegalTypes.Add(illegalType);
         }
 
-        internal MugValue EvaluateStruct(string name, List<MugType> genericsInput, Range position)
+        internal MugValue EvaluateStruct(string name, List<MugValueType> genericsInput, Range position)
         {
             PushIllegalType(name);
 
+            var symbolname = $"{name}{(genericsInput.Count > 0 ? $"<{string.Join(", ", genericsInput)}>" : "")}";
+
+            if (IsDeclared(symbolname, out var declared))
+                return declared.GetValue<MugValue>();
+
             var symbol = GetSymbol(name, position);
+
+            name = symbolname;
 
             if (symbol.IsDefined)
                 return symbol.GetValue<MugValue>();
@@ -182,14 +189,11 @@ namespace Mug.Models.Generator
             if (structure.Generics.Count != genericsInput.Count)
                 Error(position, "Incorrect number of generic parameters");
 
-            var replacedSymbols = new List<Symbol>();
-            for (int i = 0; i < structure.Generics.Count; i++)
-            {
-                if (IsDeclared(structure.Generics[i].Value, out var toreplace))
-                    replacedSymbols.Add(toreplace);
+            var oldGenericParameters = _genericParameters;
 
-                DefineSymbol(structure.Generics[i].Value, genericsInput[i], structure.Generics[i].Position, false);
-            }
+            _genericParameters = new();
+            for (int i = 0; i < structure.Generics.Count; i++)
+                _genericParameters.Add((structure.Generics[i].Value, genericsInput[i]));
 
             var fields = new List<string>();
             var structModel = new MugValueType[structure.Body.Count];
@@ -202,7 +206,7 @@ namespace Mug.Models.Generator
                     Error(field.Position, "Already declared field");
 
                 fields.Add(field.Name);
-            
+
                 structModel[i] = field.Type.ToMugValueType(field.Type.Position, this);
             }
 
@@ -212,8 +216,7 @@ namespace Mug.Models.Generator
             DefineSymbol(name, structsymbol, position, false);
             PopIllegalType();
 
-            for (int i = 0; i < replacedSymbols.Count; i++)
-                Map[Map.FindIndex(s => s.Name == structure.Generics[i].Value)] = replacedSymbols[i];
+            _genericParameters = oldGenericParameters;
 
             return structsymbol;
         }

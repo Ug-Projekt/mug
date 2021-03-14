@@ -407,10 +407,7 @@ namespace Mug.Models.Generator
             if (!ta.Name.IsAllocableTypeNew())
                 Error(ta.Position, "Unable to allocate type ", ta.Name.ToString(), " with `new` operator");
 
-            /*if (ta.HasGenerics())
-                structure = _generator.EvaluateGenericStruct(, ta.Name.Position).Type;
-            else*/
-            var structure = _generator.GetSymbol(ta.Name.ToMugValueType(ta.Name.Position, _generator).ToString(), ta.Position).GetValue<MugValue>().Type;
+            var structure = ta.Name.ToMugValueType(ta.Name.Position, _generator);
 
             var tmp = _emitter.Builder.BuildAlloca(
                 structure.LLVMType);
