@@ -326,6 +326,8 @@ namespace Mug.Models.Lexer
             if (_currentIndex == Source.Length && Source[_currentIndex - 1] != '"')
                 this.Throw(_currentIndex - 1, $"Char has not been correctly enclosed");
 
+            end++;
+
             //longer than one char
             if (_currentSymbol.Length > 1)
                 this.Throw(start..end, "Too many characters in const char");
@@ -333,7 +335,7 @@ namespace Mug.Models.Lexer
                 this.Throw(start..end, "Not enough characters in const char");
 
             //else add closing simbol
-            TokenCollection.Add(new(TokenKind.ConstantChar, _currentSymbol.ToString(), new(start, end + 1)));
+            TokenCollection.Add(new(TokenKind.ConstantChar, _currentSymbol.ToString(), new(start, end)));
             _currentSymbol.Clear();
         }
 

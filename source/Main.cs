@@ -10,23 +10,41 @@ try
 
     var test = @"
 
-enum UserKind: u8
-{
-  NormalUser: 0,
+func puts(text: str);
+func exit(code: i32);
+
+func panic(error: str) {
+  puts(error);
+  exit(1);
+}
+
+enum UserKind: u8 {
+  Normal: 0,
   Admin: 1,
   Bot: 2
 }
 
-type Person
-{
-  name: str,
-  age: i32
+
+type Result<T> {
+  is_err: u1,
+  result: T
 }
 
-func main()
-{
-  var x: [u8];
-  x[0] = 1;
+func userkind_from_category(category: chr): Result<UserKind> {
+  if   category == 'a' { return new Result<UserKind> { result: UserKind.Normal }; }
+  elif category == 'b' { return new Result<UserKind> { result: UserKind.Admin  }; }
+  elif category == 'c' { return new Result<UserKind> { result: UserKind.Bot    }; }
+  return new Result<UserKind> { is_err: true };
+}
+
+func main(): i32 {
+  var result = userkind_from_category('a');
+
+  if result.is_err {
+    panic(""Unable to recognize userkind"");
+  }
+
+  return (result.result as u8) as i32;
 }
 
 "; // as operator broken or (new Struct { }).field

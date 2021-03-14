@@ -104,32 +104,50 @@ namespace Mug.Models.Generator
                 _emitter.CallOperator("+", position, true, types.Item1, types.Item2);
         }
 
-        private void EmitSub(MugValueType ft, MugValueType st, Range position)
+        private void EmitSub(Range position)
         {
-            if (ft.MatchSameIntType(st))
+            _emitter.ForceCoupleConstantIntSize();
+
+            var types = _emitter.GetCoupleTypes();
+
+            if (types.Item1.MatchSameIntType(types.Item2))
                 _emitter.SubInt();
             else
-                _emitter.CallOperator("-", position, true, ft, st);
+                _emitter.CallOperator("-", position, true, types.Item1, types.Item2);
         }
 
-        private void EmitMul(MugValueType ft, MugValueType st, Range position)
+        private void EmitMul(Range position)
         {
-            if (ft.MatchSameIntType(st))
+            _emitter.ForceCoupleConstantIntSize();
+
+            var types = _emitter.GetCoupleTypes();
+
+            if (types.Item1.MatchSameIntType(types.Item2))
                 _emitter.MulInt();
             else
-                _emitter.CallOperator("*", position, true, ft, st);
+                _emitter.CallOperator("*", position, true, types.Item1, types.Item2);
         }
 
-        private void EmitDiv(MugValueType ft, MugValueType st, Range position)
+        private void EmitDiv(Range position)
         {
-            if (ft.MatchSameIntType(st))
+            _emitter.ForceCoupleConstantIntSize();
+
+            var types = _emitter.GetCoupleTypes();
+
+            if (types.Item1.MatchSameIntType(types.Item2))
                 _emitter.DivInt();
             else
-                _emitter.CallOperator("/", position, true, ft, st);
+                _emitter.CallOperator("/", position, true, types.Item1, types.Item2);
         }
 
-        private void EmitBooleanOperator(string literal, LLVMIntPredicate llvmpredicate, OperatorKind kind, ref MugValueType ft, ref MugValueType st, Range position)
+        private void EmitBooleanOperator(string literal, LLVMIntPredicate llvmpredicate, OperatorKind kind, Range position)
         {
+            _emitter.ForceCoupleConstantIntSize();
+
+            var types = _emitter.GetCoupleTypes();
+            var ft = types.Item1;
+            var st = types.Item2;
+
             if ((kind == OperatorKind.CompareEQ || kind == OperatorKind.CompareNEQ) && ft.IsSameEnumOf(st))
             {
                 if (_emitter.OneOfTwoIsOnlyTheEnumType())
@@ -137,11 +155,15 @@ namespace Mug.Models.Generator
 
                 EmitOperator(
                     kind,
-                    ft.GetEnum().BaseType.ToMugValueType(position, _generator),
-                    st.GetEnum().BaseType.ToMugValueType(position, _generator),
+                    /*,
+                    st.GetEnum().BaseType.ToMugValueType(position, _generator),*/
                     position);
             }
             else if (ft.MatchSameIntType(st))
+                _emitter.CompareInt(llvmpredicate);
+            else if (ft.TypeKind == MugValueTypeKind.Char &&
+                st.TypeKind == MugValueTypeKind.Char &&
+                (kind == OperatorKind.CompareEQ || kind == OperatorKind.CompareNEQ))
                 _emitter.CompareInt(llvmpredicate);
             else
                 _emitter.CallOperator(literal, position, true, ft, st);
@@ -150,7 +172,7 @@ namespace Mug.Models.Generator
         /// <summary>
         /// the function manages the operator implementations for all the types
         /// </summary>
-        private void EmitOperator(OperatorKind kind, MugValueType ft, MugValueType st, Range position)
+        private void EmitOperator(OperatorKind kind, Range position)
         {
             switch (kind)
             {
@@ -158,31 +180,31 @@ namespace Mug.Models.Generator
                     EmitSum(position);
                     break;
                 case OperatorKind.Subtract:
-                    EmitSub(ft, st, position);
+                    EmitSub(position);
                     break;
                 case OperatorKind.Multiply:
-                    EmitMul(ft, st, position);
+                    EmitMul(position);
                     break;
                 case OperatorKind.Divide:
-                    EmitDiv(ft, st, position);
+                    EmitDiv(position);
                     break;
                 case OperatorKind.CompareEQ:
-                    EmitBooleanOperator("==", LLVMIntPredicate.LLVMIntEQ, kind, ref ft, ref st, position);
+                    EmitBooleanOperator("==", LLVMIntPredicate.LLVMIntEQ, kind, position);
                     break;
                 case OperatorKind.CompareNEQ:
-                    EmitBooleanOperator("!=", LLVMIntPredicate.LLVMIntNE, kind, ref ft, ref st, position);
+                    EmitBooleanOperator("!=", LLVMIntPredicate.LLVMIntNE, kind, position);
                     break;
                 case OperatorKind.CompareMajor:
-                    EmitBooleanOperator(">", LLVMIntPredicate.LLVMIntSGT, kind, ref ft, ref st, position);
+                    EmitBooleanOperator(">", LLVMIntPredicate.LLVMIntSGT, kind, position);
                     break;
                 case OperatorKind.CompareMajorEQ:
-                    EmitBooleanOperator(">=", LLVMIntPredicate.LLVMIntSGE, kind, ref ft, ref st, position);
+                    EmitBooleanOperator(">=", LLVMIntPredicate.LLVMIntSGE, kind, position);
                     break;
                 case OperatorKind.CompareMinor:
-                    EmitBooleanOperator("<", LLVMIntPredicate.LLVMIntSLT, kind, ref ft, ref st, position);
+                    EmitBooleanOperator("<", LLVMIntPredicate.LLVMIntSLT, kind, position);
                     break;
                 case OperatorKind.CompareMinorEQ:
-                    EmitBooleanOperator("<=", LLVMIntPredicate.LLVMIntSLE, kind, ref ft, ref st, position);
+                    EmitBooleanOperator("<=", LLVMIntPredicate.LLVMIntSLE, kind, position);
                     break;
                 /*case OperatorKind.And
                     break;*/
@@ -204,16 +226,23 @@ namespace Mug.Models.Generator
             if (castType.IsEnum())
             {
                 var enumerated = castType.GetEnum();
+                var enumBaseType = enumerated.BaseType.ToMugValueType(position, _generator);
 
-                if (expressionType.TypeKind != enumerated.BaseType.ToMugValueType(position, _generator).TypeKind)
+                _emitter.ForceConstantIntSizeTo(enumBaseType);
+
+                if (_emitter.PeekType().TypeKind != enumBaseType.TypeKind)
                     Error(position, "The base type of enum `", enumerated.Name, "` is incompatible with type `", expressionType.ToString(), "`");
 
                 _emitter.CastToEnumMemberFromBaseType(castType);
             }
             else if (expressionType.TypeKind == MugValueTypeKind.Enum)
             {
-                if (expressionType.GetEnum().BaseType.ToMugValueType(new(), _generator).TypeKind != castType.TypeKind)
-                    Error(position, "Enum base type is incompatible with type `", castType.ToString(), "`");
+                var enumBaseType = expressionType.GetEnum().BaseType.ToMugValueType(new(), _generator);
+
+                _emitter.ForceConstantIntSizeTo(enumBaseType);
+
+                if (_emitter.PeekType().GetEnum().BaseType.ToMugValueType(new(), _generator).TypeKind != castType.TypeKind)
+                    Error(type.Position, "Enum base type is incompatible with type `", castType.ToString(), "`");
 
                 _emitter.CastEnumMemberToBaseType(castType);
             }
@@ -330,23 +359,17 @@ namespace Mug.Models.Generator
         {
             // evaluated left
             EvaluateExpression(e.Left);
-            // the left expression type
-            var ft = _emitter.PeekType();
             // evaluated right
             EvaluateExpression(e.Right);
-            // right expression type
-            var st = _emitter.PeekType();
             // operator implementation
-            EmitOperator(e.Operator, ft, st, e.Position);
+            EmitOperator(e.Operator, e.Position);
         }
 
         private void EmitExprBool(BooleanExpressionNode b)
         {
             EvaluateExpression(b.Left);
-            var ft = _emitter.PeekType();
             EvaluateExpression(b.Right);
-            var st = _emitter.PeekType();
-            EmitOperator(b.Operator, ft, st, b.Position);
+            EmitOperator(b.Operator, b.Position);
         }
 
         private void EmitExprArrayElemSelect(ArraySelectElemNode a)
@@ -555,8 +578,6 @@ namespace Mug.Models.Generator
             {
                 // alias for ...
                 var parameter = parameters[i];
-
-                Console.WriteLine("param: {0}", string.Join(", ", _generator.IllegalTypes));
 
                 var parametertype = parameter.Type.ToMugValueType(parameter.Position, _generator);
 
@@ -888,13 +909,13 @@ namespace Mug.Models.Generator
                     var expressionType = _emitter.PeekType();
 
                     if (operatorkind == TokenKind.AddAssignment)
-                        EmitSum(/*variableType, expressionType*/position);
+                        EmitSum(position);
                     else if (operatorkind == TokenKind.SubAssignment)
-                        EmitSub(variableType, expressionType, position);
+                        EmitSub(position);
                     else if (operatorkind == TokenKind.MulAssignment)
-                        EmitMul(variableType, expressionType, position);
+                        EmitMul(position);
                     else if (operatorkind == TokenKind.DivAssignment)
-                        EmitDiv(variableType, expressionType, position);
+                        EmitDiv(position);
                 }
                 else if (variableType.MatchIntType())
                 {
