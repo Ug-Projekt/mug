@@ -7,10 +7,10 @@ using System.Text;
 
 namespace Mug.Models.Parser.NodeKinds
 {
-    public class CompTimeDeclaredExpression : INode
+    public class CompTimeExpression : INode
     {
         public string NodeKind => "CompTimeWhen";
-        public Token Symbol { get; set; }
+        public List<Token> Expression { get; set; } = new();
         public Range Position { get; set; }
     }
 }

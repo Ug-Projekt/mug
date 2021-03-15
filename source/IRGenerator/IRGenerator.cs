@@ -12,6 +12,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Resources;
 
 namespace Mug.Models.Generator
 {
@@ -628,15 +629,33 @@ namespace Mug.Models.Generator
                 Parser.Module.Members.Add(statement);
         }
 
+        internal bool EvaluateCompTimeExprAndGetResult(CompTimeExpression comptimeExpr)
+        {
+            bool result = true;
+            var lastOP = new Token(TokenKind.Bad, null, new());
+
+            foreach (var token in comptimeExpr.Expression)
+            {
+                if (token.Kind != TokenKind.Identifier)
+                    lastOP = token;
+                else
+                {
+                    var symbolResult = IsCompilerSymbolDeclared(token.Value);
+
+                    if (lastOP.Kind == TokenKind.BooleanOR)
+                        result |= symbolResult;
+                    else
+                        result &= symbolResult;
+                }
+            }
+
+            return result;
+        }
+
         private void EmitCompTimeWhen(CompTimeWhenStatement when)
         {
-            if (when.Expression is CompTimeDeclaredExpression declared)
-            {
-                if (IsCompilerSymbolDeclared(declared.Symbol.Value))
-                    MergeTree((NodeBuilder)when.Body);
-            }
-            else
-                Error(when.Expression.Position, "Unable to evaluate compile-time expression in global scope");
+            if (EvaluateCompTimeExprAndGetResult(when.Expression))
+                MergeTree((NodeBuilder)when.Body);
         }
 
         /// <summary>

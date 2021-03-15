@@ -86,7 +86,6 @@ namespace Mug.Models.Lexer
             "unknown" => AddKeyword(TokenKind.KeyTunknown, s),
             "when" => AddKeyword(TokenKind.KeyWhen, s),
             "declare" => AddKeyword(TokenKind.KeyDeclare, s),
-            "declared" => AddKeyword(TokenKind.KeyDeclared, s),
             _ => false
         };
 

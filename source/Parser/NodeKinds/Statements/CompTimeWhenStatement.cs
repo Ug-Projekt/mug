@@ -1,4 +1,5 @@
-﻿using Mug.Models.Parser;
+﻿using Mug.Models.Lexer;
+using Mug.Models.Parser;
 using Mug.Models.Parser.NodeKinds;
 using System;
 using System.Collections.Generic;
@@ -9,7 +10,7 @@ namespace Mug.Models.Parser.NodeKinds.Statements
     public class CompTimeWhenStatement : INode
     {
         public string NodeKind => "CompTimeWhen";
-        public INode Expression { get; set; }
+        public CompTimeExpression Expression { get; set; }
         public object Body { get; set; } // 
         public Range Position { get; set; }
     }

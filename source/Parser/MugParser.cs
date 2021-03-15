@@ -1105,22 +1105,21 @@ namespace Mug.Models.Parser
             return true;
         }
 
-        private INode ExpectCompTimeExpression()
+        private CompTimeExpression ExpectCompTimeExpression()
         {
-            if (MatchAdvance(TokenKind.KeyDeclared, out var token))
+            CompTimeExpression comptimeExpr = new();
+            var boolOP = new Token(TokenKind.Bad, null, new());
+
+            do
             {
-                Expect("", TokenKind.OpenPar);
-                var symbol = Expect("Expected symbol", TokenKind.Identifier);
-                Expect("", TokenKind.ClosePar);
-                return new CompTimeDeclaredExpression() { Position = token.Position, Symbol = symbol };
-            }
-            else
-            {
-                var expr = ExpectExpression(true, TokenKind.OpenBrace);
-                _currentIndex--;
-                Console.WriteLine(Current);
-                return expr;
-            }
+                if (boolOP.Kind != TokenKind.Bad)
+                    comptimeExpr.Expression.Add(boolOP);
+
+                comptimeExpr.Expression.Add(Expect("Expected symbol", TokenKind.Identifier));
+
+            } while (MatchAdvance(TokenKind.BooleanAND, out boolOP) || MatchAdvance(TokenKind.BooleanOR, out boolOP));
+
+            return comptimeExpr;
         }
 
         private NodeBuilder ExpectWhenBlockGlobalScope()

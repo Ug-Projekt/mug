@@ -1043,13 +1043,8 @@ namespace Mug.Models.Generator
 
         private void EmitCompTimeWhen(CompTimeWhenStatement when)
         {
-            if (when.Expression is CompTimeDeclaredExpression declared)
-            {
-                if (_generator.IsCompilerSymbolDeclared(declared.Symbol.Value))
-                    Generate((BlockNode)when.Body);
-            }
-            else
-                Error(when.Expression.Position, "Compile-time expressions are not supported yet");
+            if (_generator.EvaluateCompTimeExprAndGetResult(when.Expression))
+                Generate((BlockNode)when.Body);
         }
 
         /// <summary>
