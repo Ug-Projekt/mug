@@ -18,7 +18,7 @@ namespace Mug.Compilation
             IRGenerator = new(moduleName, source);
         }
 
-        public CompilationUnit(string path, bool throwerror)
+        public CompilationUnit(string path, bool throwerror = true)
         {
             if (!File.Exists(path))
             {

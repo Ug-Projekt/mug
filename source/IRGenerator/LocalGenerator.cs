@@ -966,7 +966,7 @@ namespace Mug.Models.Generator
                     _emitter.EmitGCDecrementReferenceCounter();
                 }
 
-                _emitter.StoreVariable(t.Value, t.Position, a.Body.Position);
+                _emitter.StoreVariable(t.Value, t.Position, a.Body is not null ? a.Body.Position : a.Position);
             }
             else if (a.Name is ArraySelectElemNode aa)
             {
@@ -1014,16 +1014,18 @@ namespace Mug.Models.Generator
             // evaluating the body expression of the constant
             EvaluateExpression(constant.Body);
 
-            var constType = constant.Type.ToMugValueType(
+            // match the constant explicit type and expression type are the same
+            if (!constant.Type.IsAutomatic())
+            {
+                var constType = constant.Type.ToMugValueType(
                         constant.Position,
                         _generator);
 
-            _emitter.ForceConstantIntSizeTo(constType);
+                _emitter.ForceConstantIntSizeTo(constType);
 
-            // match the constant explicit type and expression type are the same
-            if (!constant.Type.IsAutomatic())
                 _generator.ExpectSameTypes(constType,
                     constant.Body.Position, $"Expected {constant.Type} type, got {_emitter.PeekType()} type", _emitter.PeekType());
+            }
 
             // declaring the constant with a name
             _emitter.DeclareConstant(constant.Name, constant.Position);

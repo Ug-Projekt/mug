@@ -151,7 +151,7 @@ namespace Mug.Models.Generator.Emitter
         {
             var value = Pop();
 
-            if (value.Type.MatchIntType() && value.IsConstant())
+            if (value.Type.MatchIntType() && value.IsConstant() && type.MatchIntType())
                 value = MugValue.From(Builder.BuildIntCast(value.LLVMValue, type.LLVMType), type);
 
             Load(value);

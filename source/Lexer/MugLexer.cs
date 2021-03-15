@@ -82,7 +82,7 @@ namespace Mug.Models.Lexer
             "u8" => AddKeyword(TokenKind.KeyTu8, s),
             "u32" => AddKeyword(TokenKind.KeyTu32, s),
             "u64" => AddKeyword(TokenKind.KeyTu64, s),
-            "ptr" => AddKeyword(TokenKind.KeyTPtr, s),
+            // "ptr" => AddKeyword(TokenKind.KeyTPtr, s), temponely replaced by * for pointers
             "unknown" => AddKeyword(TokenKind.KeyTunknown, s),
             "when" => AddKeyword(TokenKind.KeyWhen, s),
             "declare" => AddKeyword(TokenKind.KeyDeclare, s),

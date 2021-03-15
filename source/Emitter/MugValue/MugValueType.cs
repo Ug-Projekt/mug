@@ -112,7 +112,7 @@ namespace Mug.MugValueSystem
                 MugValueTypeKind.Char => "chr",
                 MugValueTypeKind.String => "str",
                 MugValueTypeKind.Struct => ((StructureInfo)BaseType).Name,
-                MugValueTypeKind.Pointer => $"ptr {BaseType}".Replace("*", ""),
+                MugValueTypeKind.Pointer => $"*{BaseType}",
                 MugValueTypeKind.Enum => (((LLVMTypeRef, EnumStatement))BaseType).Item2.Name,
                 MugValueTypeKind.Array => $"[{BaseType}]"
             };

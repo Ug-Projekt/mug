@@ -137,7 +137,7 @@ namespace Mug.Models.Parser
                 Expect("An array type definition must end by `]`", TokenKind.CloseBracket);
                 return new MugType(token.Position.Start..Back.Position.End, TypeKind.Array, type);
             }
-            else if (MatchAdvance(TokenKind.KeyTPtr, out token))
+            else if (MatchAdvance(TokenKind.Star, out token))
             {
                 var type = ExpectType();
                 return new MugType(token.Position.Start..type.Position.End, TypeKind.Pointer, type);

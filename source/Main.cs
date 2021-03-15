@@ -11,6 +11,7 @@ try
     var test = @"
 
 func main() {
+  var x: chr = 1;
 }
 
 ";
