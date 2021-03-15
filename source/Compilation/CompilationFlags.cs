@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 
 namespace Mug.Compilation
@@ -139,7 +140,7 @@ HELP: uses the next argument as output file name. The extension is not required
                 PlatformID.Win32NT => "nt"
             });
 
-            DeclareSymbol(Environment.Is64BitOperatingSystem ? "x64" : "x86");
+            DeclareSymbol(RuntimeInformation.ProcessArchitecture.ToString());
         }
 
         private void Build(bool loadArgs = true)
