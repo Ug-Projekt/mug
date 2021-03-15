@@ -76,6 +76,7 @@ HELP: uses the next argument as output file name. The extension is not required
         private readonly string[] _allowedExtensions = new[] { ".mug" };
         private string[] _arguments = null;
         private int _argumentSelector = 0;
+        private CompilationUnit unit = null;
         private readonly Dictionary<string, object> _flags = new()
         {
             ["output"]      = null,
@@ -130,45 +131,69 @@ HELP: uses the next argument as output file name. The extension is not required
             File.WriteAllText(path, head.Dump());
         }
 
+        private void DeclarePlatformSymbol()
+        {
+            DeclareSymbol(Environment.OSVersion.Platform switch
+            {
+                PlatformID.Unix => "unix",
+                PlatformID.Win32NT => "nt"
+            });
+
+            DeclareSymbol(Environment.Is64BitOperatingSystem ? "x64" : "x86");
+        }
+
         private void Build(bool loadArgs = true)
         {
             if (loadArgs)
                 LoadArguments();
 
-            var unit = new CompilationUnit(GetFile(), true);
+            unit = new CompilationUnit(GetFile(), true);
+
+            DeclareSymbol(GetFlag<CompilationMode>("mode").ToString());
+            DeclarePlatformSymbol();
 
             switch (GetFlag<CompilationTarget>("target"))
             {
                 case CompilationTarget.Bitcode:
-                    compile("", true);
+                    DeclareSymbol("bc");
+                    Compile("", true);
                     break;
                 case CompilationTarget.Bytecode:
+                    DeclareSymbol("ll");
                     unit.Generate();
                     DumpBytecode(GetOutputPath(), unit.IRGenerator.Module);
                     break;
                 case CompilationTarget.AbstractSyntaxTree:
+                    DeclareSymbol("ast");
                     unit.GenerateAST();
                     DumpAbstractSyntaxTree(GetOutputPath(), unit.IRGenerator.Parser.Module);
                     break;
                 case CompilationTarget.Assembly:
-                    compile("-S");
+                    DeclareSymbol("asm");
+                    Compile("-S");
                     break;
                 case CompilationTarget.Executable:
-                    compile();
+                    DeclareSymbol("exe");
+                    Compile();
                     break;
                 default:
                     CompilationErrors.Throw("Unsupported target, try with another");
                     break;
             }
+        }
 
-            void compile(string flag = "", bool onylBitcode = false)
-            {
-                unit.Compile(
-                    (int)GetFlag<CompilationMode>("mode"),
-                    GetFlag<string>("output"),
-                    onylBitcode,
-                    flag);
-            }
+        private void DeclareSymbol(string name)
+        {
+            unit.IRGenerator.DeclareCompilerSymbol(name);
+        }
+
+        private void Compile(string flag = "", bool onlyBitcode = false)
+        {
+            unit.Compile(
+                (int)GetFlag<CompilationMode>("mode"),
+                GetFlag<string>("output"),
+                onlyBitcode,
+                flag);
         }
 
         private void BuildRun()

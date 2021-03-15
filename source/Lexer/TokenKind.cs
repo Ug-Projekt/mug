@@ -147,6 +147,9 @@ namespace Mug.Models.Lexer
         [Description("priv")]
         KeyPriv,
         [Description("enum")]
-        KeyEnum
+        KeyEnum,
+        KeyWhen,
+        KeyDeclare,
+        KeyDeclared
     }
 }

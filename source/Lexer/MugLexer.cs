@@ -12,8 +12,8 @@ namespace Mug.Models.Lexer
 
         public List<Token> TokenCollection { get; set; }
 
-        private StringBuilder _currentSymbol { get; set; }
-        private int _currentIndex { get; set; }
+        private StringBuilder CurrentSymbol { get; set; }
+        private int CurrentIndex { get; set; }
 
         /// <summary>
         /// restores all the fields to their default values
@@ -21,8 +21,8 @@ namespace Mug.Models.Lexer
         public void Reset()
         {
             TokenCollection = new();
-            _currentIndex = 0;
-            _currentSymbol = new();
+            CurrentIndex = 0;
+            CurrentSymbol = new();
         }
 
         public int Length
@@ -44,7 +44,7 @@ namespace Mug.Models.Lexer
         /// </summary>
         private bool AddKeyword(TokenKind kind, string keyword)
         {
-            TokenCollection.Add(new(kind, keyword, (_currentIndex - keyword.Length).._currentIndex));
+            TokenCollection.Add(new(kind, keyword, (CurrentIndex - keyword.Length)..CurrentIndex));
             return true;
         }
 
@@ -84,12 +84,15 @@ namespace Mug.Models.Lexer
             "u64" => AddKeyword(TokenKind.KeyTu64, s),
             "ptr" => AddKeyword(TokenKind.KeyTPtr, s),
             "unknown" => AddKeyword(TokenKind.KeyTunknown, s),
+            "when" => AddKeyword(TokenKind.KeyWhen, s),
+            "declare" => AddKeyword(TokenKind.KeyDeclare, s),
+            "declared" => AddKeyword(TokenKind.KeyDeclared, s),
             _ => false
         };
 
         private T InExpressionError<T>(string error)
         {
-            this.Throw(_currentIndex, error);
+            this.Throw(CurrentIndex, error);
             throw new Exception("unreachable");
         }
 
@@ -98,12 +101,12 @@ namespace Mug.Models.Lexer
         /// </summary>
         private bool HasNext()
         {
-            return _currentIndex + 1 < Source.Length;
+            return CurrentIndex + 1 < Source.Length;
         }
 
         private char GetNext()
         {
-            return Source[_currentIndex + 1];
+            return Source[CurrentIndex + 1];
         }
 
         /// <summary>
@@ -142,9 +145,9 @@ namespace Mug.Models.Lexer
                 CheckValidIdentifier(value);
 
             if (value is not null)
-                TokenCollection.Add(new(kind, value, (_currentIndex - value.ToString().Length).._currentIndex));
+                TokenCollection.Add(new(kind, value, (CurrentIndex - value.ToString().Length)..CurrentIndex));
             else // chatching null reference exception
-                TokenCollection.Add(new(kind, value, _currentIndex..(_currentIndex + 1)));
+                TokenCollection.Add(new(kind, value, CurrentIndex..(CurrentIndex + 1)));
         }
 
         /// <summary>
@@ -153,7 +156,7 @@ namespace Mug.Models.Lexer
         private void AddSingle(TokenKind kind, string value)
         {
             InsertCurrentSymbol();
-            TokenCollection.Add(new(kind, value, _currentIndex..(_currentIndex + 1)));
+            TokenCollection.Add(new(kind, value, CurrentIndex..(CurrentIndex + 1)));
         }
 
         /// <summary>
@@ -166,7 +169,7 @@ namespace Mug.Models.Lexer
              * moves the index by one: a double token occupies 2 chars
              */
 
-            TokenCollection.Add(new(kind, value, _currentIndex..(++_currentIndex + 1)));
+            TokenCollection.Add(new(kind, value, CurrentIndex..(++CurrentIndex + 1)));
         }
 
         /// <summary>
@@ -174,11 +177,11 @@ namespace Mug.Models.Lexer
         /// </summary>
         private void InsertCurrentSymbol()
         {
-            if (!string.IsNullOrWhiteSpace(_currentSymbol.ToString()))
+            if (!string.IsNullOrWhiteSpace(CurrentSymbol.ToString()))
             {
                 // symbol recognition
-                ProcessSymbol(_currentSymbol.ToString());
-                _currentSymbol.Clear();
+                ProcessSymbol(CurrentSymbol.ToString());
+                CurrentSymbol.Clear();
             }
         }
 
@@ -203,7 +206,7 @@ namespace Mug.Models.Lexer
         /// </summary>
         private void CheckValidIdentifier(string identifier)
         {
-            var bad = new Token(TokenKind.Bad, null, (_currentIndex - identifier.Length).._currentIndex);
+            var bad = new Token(TokenKind.Bad, null, (CurrentIndex - identifier.Length)..CurrentIndex);
 
             if (!char.IsLetter(identifier[0]) && identifier[0] != '_')
                 this.Throw(bad, "Invalid identifier, following the mug's syntax rules, an ident cannot start by `", identifier[0].ToString(), "`;");
@@ -254,7 +257,7 @@ namespace Mug.Models.Lexer
         /// </summary>
         private bool MatchInlineComment()
         {
-            return Source[_currentIndex] == '#';
+            return Source[CurrentIndex] == '#';
         }
 
         /// <summary>
@@ -262,7 +265,7 @@ namespace Mug.Models.Lexer
         /// </summary>
         private bool MatchEolOrEof()
         {
-            return _currentIndex == Source.Length || Source[_currentIndex] == '\n';
+            return CurrentIndex == Source.Length || Source[CurrentIndex] == '\n';
         }
 
         /// <summary>
@@ -270,7 +273,7 @@ namespace Mug.Models.Lexer
         /// </summary>
         private bool MatchStartMultiLineComment()
         {
-            return HasNext() && Source[_currentIndex] == '#' && GetNext() == '[';
+            return HasNext() && Source[CurrentIndex] == '#' && GetNext() == '[';
         }
 
         /// <summary>
@@ -278,7 +281,7 @@ namespace Mug.Models.Lexer
         /// </summary>
         private bool MatchEndMultiLineComment()
         {
-            return HasNext() && Source[_currentIndex] == ']' && GetNext() == '#';
+            return HasNext() && Source[CurrentIndex] == ']' && GetNext() == '#';
         }
 
         /// <summary>
@@ -289,17 +292,17 @@ namespace Mug.Models.Lexer
             if (MatchStartMultiLineComment())
             {
                 // eats first two chars '#['
-                _currentIndex += 2;
+                CurrentIndex += 2;
 
-                while (!MatchEndMultiLineComment() && _currentIndex != Source.Length)
-                    _currentIndex++;
+                while (!MatchEndMultiLineComment() && CurrentIndex != Source.Length)
+                    CurrentIndex++;
 
                 if (MatchEndMultiLineComment())
-                    _currentIndex += 2;
+                    CurrentIndex += 2;
             }
             else if (MatchInlineComment())
                 while (!MatchEolOrEof())
-                    _currentIndex++;
+                    CurrentIndex++;
         }
 
         /// <summary>
@@ -307,36 +310,36 @@ namespace Mug.Models.Lexer
         /// </summary>
         private void CollectChar()
         {
-            var start = _currentIndex++;
+            var start = CurrentIndex++;
 
             //consume string until EOF or closed " is found
-            while (_currentIndex < Source.Length && Source[_currentIndex] != '\'')
+            while (CurrentIndex < Source.Length && Source[CurrentIndex] != '\'')
             {
-                char c = Source[_currentIndex++];
+                char c = Source[CurrentIndex++];
 
                 if (c == '\\')
-                    c = RecognizeEscapedChar(Source[_currentIndex++]);
+                    c = RecognizeEscapedChar(Source[CurrentIndex++]);
 
-                _currentSymbol.Append(c);
+                CurrentSymbol.Append(c);
             }
 
-            var end = _currentIndex;
+            var end = CurrentIndex;
 
             //if you found an EOF, throw
-            if (_currentIndex == Source.Length && Source[_currentIndex - 1] != '"')
-                this.Throw(_currentIndex - 1, $"Char has not been correctly enclosed");
+            if (CurrentIndex == Source.Length && Source[CurrentIndex - 1] != '"')
+                this.Throw(CurrentIndex - 1, $"Char has not been correctly enclosed");
 
             end++;
 
             //longer than one char
-            if (_currentSymbol.Length > 1)
+            if (CurrentSymbol.Length > 1)
                 this.Throw(start..end, "Too many characters in const char");
-            else if (_currentSymbol.Length < 1)
+            else if (CurrentSymbol.Length < 1)
                 this.Throw(start..end, "Not enough characters in const char");
 
             //else add closing simbol
-            TokenCollection.Add(new(TokenKind.ConstantChar, _currentSymbol.ToString(), new(start, end)));
-            _currentSymbol.Clear();
+            TokenCollection.Add(new(TokenKind.ConstantChar, CurrentSymbol.ToString(), new(start, end)));
+            CurrentSymbol.Clear();
         }
 
         private char RecognizeEscapedChar(char escapedchar)
@@ -357,28 +360,28 @@ namespace Mug.Models.Lexer
         /// </summary>
         private void CollectString()
         {
-            var start = _currentIndex++;
+            var start = CurrentIndex++;
 
             //consume string until EOF or closed " is found
-            while (_currentIndex < Source.Length && Source[_currentIndex] != '"')
+            while (CurrentIndex < Source.Length && Source[CurrentIndex] != '"')
             {
-                char c = Source[_currentIndex++];
+                char c = Source[CurrentIndex++];
 
                 if (c == '\\')
-                    c = RecognizeEscapedChar(Source[_currentIndex++]);
+                    c = RecognizeEscapedChar(Source[CurrentIndex++]);
 
-                _currentSymbol.Append(c);
+                CurrentSymbol.Append(c);
             }
 
-            var end = _currentIndex;
+            var end = CurrentIndex;
 
             //if you found an EOF, throw
-            if (_currentIndex == Source.Length && Source[_currentIndex - 1] != '"')
-                this.Throw(_currentIndex - 1, $"String has not been correctly enclosed");
+            if (CurrentIndex == Source.Length && Source[CurrentIndex - 1] != '"')
+                this.Throw(CurrentIndex - 1, $"String has not been correctly enclosed");
 
             //else add closing simbol
-            TokenCollection.Add(new(TokenKind.ConstantString, _currentSymbol.ToString(), new(start, end + 1)));
-            _currentSymbol.Clear();
+            TokenCollection.Add(new(TokenKind.ConstantString, CurrentSymbol.ToString(), new(start, end + 1)));
+            CurrentSymbol.Clear();
         }
 
         /// <summary>
@@ -386,24 +389,24 @@ namespace Mug.Models.Lexer
         /// </summary>
         private void CollectBacktick()
         {
-            var start = _currentIndex++;
+            var start = CurrentIndex++;
 
             //consume string until EOF or closed ` is found
-            while (_currentIndex < Source.Length && Source[_currentIndex] != '`')
-                _currentSymbol.Append(Source[_currentIndex++]);
+            while (CurrentIndex < Source.Length && Source[CurrentIndex] != '`')
+                CurrentSymbol.Append(Source[CurrentIndex++]);
 
-            var end = _currentIndex;
+            var end = CurrentIndex;
 
             //if you found an EOF, throw
-            if (_currentIndex == Source.Length && Source[_currentIndex - 1] != '`')
-                this.Throw(_currentIndex - 1, $"Backtick sequence has not been correctly enclosed");
+            if (CurrentIndex == Source.Length && Source[CurrentIndex - 1] != '`')
+                this.Throw(CurrentIndex - 1, $"Backtick sequence has not been correctly enclosed");
 
-            if (_currentSymbol.Length < 1)
+            if (CurrentSymbol.Length < 1)
                 this.Throw(start..end, "Not enough characters in backtick sequence");
 
             //else add closing simbol, removing whitespaces
-            TokenCollection.Add(new(TokenKind.Identifier, _currentSymbol.ToString().Replace(" ", ""), new(start, end + 1)));
-            _currentSymbol.Clear();
+            TokenCollection.Add(new(TokenKind.Identifier, CurrentSymbol.ToString().Replace(" ", ""), new(start, end + 1)));
+            CurrentSymbol.Clear();
         }
 
         /// <summary>
@@ -471,16 +474,16 @@ namespace Mug.Models.Lexer
             ConsumeComments();
 
             // check if the newly stripped code is empty
-            if (_currentIndex >= Source.Length)
+            if (CurrentIndex >= Source.Length)
                 return;
 
             // to avoid a massive array access, also better to read
-            char current = Source[_currentIndex];
+            char current = Source[CurrentIndex];
 
             if (IsEscapedChar(current)) // skipping it and add the symbol if it's not empty
                 InsertCurrentSymbol();
             else if (IsValidIdentifierChar(current)) // adding a char to the current symbol
-                _currentSymbol.Append(current);
+                CurrentSymbol.Append(current);
             else
                 ProcessSpecial(current); // if current is not a valid id char, a control or a string quote
         }
@@ -494,10 +497,10 @@ namespace Mug.Models.Lexer
             Reset();
 
             // go to the next char while there is one
-            while (_currentIndex < Source.Length)
+            while (CurrentIndex < Source.Length)
             {
                 ProcessCurrentChar();
-                _currentIndex++;
+                CurrentIndex++;
             }
 
 

@@ -10,45 +10,11 @@ try
 
     var test = @"
 
-func puts(text: str);
-func exit(code: i32);
-
-func panic(error: str) {
-  puts(error);
-  exit(1);
+func main() {
 }
 
-enum UserKind: u8 {
-  Normal: 0,
-  Admin: 1,
-  Bot: 2
-}
-
-
-type Result<T> {
-  is_err: u1,
-  result: T
-}
-
-func userkind_from_category(category: chr): Result<UserKind> {
-  if   category == 'a' { return new Result<UserKind> { result: UserKind.Normal }; }
-  elif category == 'b' { return new Result<UserKind> { result: UserKind.Admin  }; }
-  elif category == 'c' { return new Result<UserKind> { result: UserKind.Bot    }; }
-  return new Result<UserKind> { is_err: true };
-}
-
-func main(): i32 {
-  var result = userkind_from_category('a');
-
-  if result.is_err {
-    panic(""Unable to recognize userkind"");
-  }
-
-  return (result.result as u8) as i32;
-}
-
-"; // as operator broken or (new Struct { }).field
-
+";
+    
     var unit = new CompilationUnit("test", test);
     
     // Console.WriteLine(unit.GenerateAST().Dump());

@@ -98,7 +98,7 @@ namespace Mug.Models.Generator
         /// <summary>
         /// the function tries to declare the symbol: if it has already been declared launches a compilation-error
         /// </summary>
-        private void DeclareSymbol(string name, bool isdefined, object value, Range position, bool ispublic)
+        public void DeclareSymbol(string name, bool isdefined, object value, Range position, bool ispublic)
         {
             if (IsDeclared(name, out _))
                 Error(position, "`", name, "` member already declared");
@@ -106,7 +106,7 @@ namespace Mug.Models.Generator
             Map.Add(new Symbol(name, isdefined, value, position, ispublic));
         }
 
-        private void DeclareSymbol(Symbol symbol)
+        public void DeclareSymbol(Symbol symbol)
         {
             if (IsDeclared(symbol.Name, out _))
                 Error(symbol.Position, "`", symbol.Name, "` member already declared");
@@ -223,6 +223,28 @@ namespace Mug.Models.Generator
             _genericParameters = oldGenericParameters;
 
             return structsymbol;
+        }
+
+        public bool IsCompilerSymbolDeclared(string symbol)
+        {
+            return IsDeclared($"`@symbol {symbol.ToLower()}", out _);
+        }
+
+        public void DeclareCompilerSymbol(string symbol, bool hasGoodPosition = false, Range position = new())
+        {
+            symbol = symbol.ToLower();
+
+            if (IsCompilerSymbolDeclared(symbol))
+            {
+                var error = $"Compiler symbol `{symbol}` is already declared";
+
+                if (!hasGoodPosition)
+                    CompilationErrors.Throw(error);
+
+                Error(position, error);
+            }
+
+            DeclareSymbol(new Symbol($"`@symbol {symbol}", false));
         }
 
         /// <summary>
@@ -600,6 +622,23 @@ namespace Mug.Models.Generator
                 enumstatement.Modifier == TokenKind.KeyPub);
         }
 
+        private void MergeTree(NodeBuilder body)
+        {
+            foreach (var statement in body.Nodes)
+                Parser.Module.Members.Add(statement);
+        }
+
+        private void EmitCompTimeWhen(CompTimeWhenStatement when)
+        {
+            if (when.Expression is CompTimeDeclaredExpression declared)
+            {
+                if (IsCompilerSymbolDeclared(declared.Symbol.Value))
+                    MergeTree((NodeBuilder)when.Body);
+            }
+            else
+                Error(when.Expression.Position, "Unable to evaluate compile-time expression in global scope");
+        }
+
         /// <summary>
         /// recognize the type of the AST node and depending on the type call methods
         /// to convert it to the corresponding low-level code
@@ -629,6 +668,14 @@ namespace Mug.Models.Generator
                 case ImportDirective import:
                     if (secondDeclaration)
                         EmitImport(import);
+                    break;
+                case CompTimeWhenStatement comptimewhen:
+                    if (firstDeclaration)
+                        EmitCompTimeWhen(comptimewhen);
+                    break;
+                case DeclareDirective declare:
+                    if (firstDeclaration)
+                        DeclareCompilerSymbol(declare.Symbol.Value, true, declare.Position);
                     break;
                 default:
                     Error(member.Position, "Declaration not supported yet");

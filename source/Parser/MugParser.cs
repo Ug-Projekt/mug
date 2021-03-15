@@ -398,7 +398,7 @@ namespace Mug.Models.Parser
             if (previousMember is null)
             {
                 if (!MatchTerm(out _leftvalue, false))
-                    ParseError("Missing a `;`?");
+                    ParseError("Expressions not allowed as imperative statement");
             }
             else
                 name = previousMember;
@@ -726,12 +726,12 @@ namespace Mug.Models.Parser
                 ParseError("Expected expression, found `", Current.Value.ToString(), "`");
             }
 
-            if (MatchBooleanOperator(out var boolOP))
-                return CollectBooleanExpression(ref e, boolOP, isFirst, end);
-            else if (MatchAdvance(TokenKind.KeyAs, out var asToken))
+           if (MatchAdvance(TokenKind.KeyAs, out var asToken))
                 e = new CastExpressionNode() { Expression = e, Type = ExpectType(), Position = asToken.Position };
+           if (MatchBooleanOperator(out var boolOP))
+                return CollectBooleanExpression(ref e, boolOP, isFirst, end);
 
-            ExpectMultiple("Invalid token in the current context, maybe `;` missing?", end);
+            ExpectMultiple($"Invalid token in the current context, maybe missing one of `{string.Join("`, `", end)}`", end);
 
             return e;
         }
@@ -931,29 +931,31 @@ namespace Mug.Models.Parser
 
         private INode ExpectStatement()
         {
-            if (!VariableDefinition(out var statement)) // var x = value;
-                if (!ReturnDeclaration(out statement)) // return value;
-                    if (!ConstantDefinition(out statement)) // const x = value;
-                        if (!ConditionDefinition(out statement)) // if condition {}, elif
-                            if (!ForLoopDefinition(out statement)) // for x: type to, in value {}
-                                if (!LoopManagerDefintion(out statement)) // continue, break
-                                    if (!MatchCallStatement(out statement, true)) // f();
-                                        if (!ValueAssignment(out statement)) // x = value;
-                                            ParseError("Invalid token here");
+            if (!VariableDefinition(out var statement)    && // var x = value;
+                !ReturnDeclaration(out statement)         && // return value;
+                !ConstantDefinition(out statement)        && // const x = value;
+                !ConstantDefinition(out statement)        && // const x = value;
+                !ConditionDefinition(out statement)       &&
+                !MatchWhenStatement(out statement, false) && // when comptimecondition {}
+                !ForLoopDefinition(out statement)         && // for x: type to, in value {}
+                !LoopManagerDefintion(out statement)      && // continue, break
+                !MatchCallStatement(out statement, true)  && // f();
+                !ValueAssignment(out statement)) // x = value;
+                ParseError("Invalid token here");
 
             return statement;
         }
 
         private BlockNode ExpectBlock()
         {
-            Expect("A block statement must start by `{` token", TokenKind.OpenBrace);
+            Expect("", TokenKind.OpenBrace);
 
             var block = new BlockNode();
 
             while (!Match(TokenKind.CloseBrace))
                 block.Add(ExpectStatement());
 
-            Expect("A block statement must end with `}` token", TokenKind.CloseBrace);
+            Expect("", TokenKind.CloseBrace);
 
             return block;
         }
@@ -1091,24 +1093,72 @@ namespace Mug.Models.Parser
             return true;
         }
 
-        private bool DirectiveDefinition(out INode directive)
+        private bool MatchDeclareDirective(out INode directive)
         {
-            if (!MatchImportDirective(out directive))
-                if (!MatchUseDirective(out directive))
-                    return false;
+            directive = null;
 
+            if (!MatchAdvance(TokenKind.KeyDeclare, out var token))
+                return false;
+
+            directive = new DeclareDirective() { Position = token.Position, Symbol = Expect("Expected symbol", TokenKind.Identifier) };
+            Expect("", TokenKind.Semicolon);
             return true;
         }
 
-        private Token ExpectGenericType(bool isFirst = true)
+        private INode ExpectCompTimeExpression()
         {
-            if (!isFirst)
-                Expect("Generic types must be separated by a `,`", TokenKind.Comma);
+            if (MatchAdvance(TokenKind.KeyDeclared, out var token))
+            {
+                Expect("", TokenKind.OpenPar);
+                var symbol = Expect("Expected symbol", TokenKind.Identifier);
+                Expect("", TokenKind.ClosePar);
+                return new CompTimeDeclaredExpression() { Position = token.Position, Symbol = symbol };
+            }
+            else
+            {
+                var expr = ExpectExpression(true, TokenKind.OpenBrace);
+                _currentIndex--;
+                Console.WriteLine(Current);
+                return expr;
+            }
+        }
 
-            if (!MatchAdvance(TokenKind.KeyType))
-                ParseError("`", Current.Value.ToString(), "` invalid token in generic type definition");
+        private NodeBuilder ExpectWhenBlockGlobalScope()
+        {
+            Expect("Expected when body", TokenKind.OpenBrace);
 
-            return Expect("In generic type definition, expected ident after `type` keyword", TokenKind.Identifier);
+            var members = ExpectNamespaceMembers(TokenKind.CloseBrace);
+
+            Expect("", TokenKind.CloseBrace);
+
+            return members;
+        }
+
+        private bool MatchWhenStatement(out INode directive, bool isGlobalScope)
+        {
+            directive = null;
+
+            if (!MatchAdvance(TokenKind.KeyWhen, out var token))
+                return false;
+
+            var expression = ExpectCompTimeExpression();
+
+            directive = new CompTimeWhenStatement()
+            {
+                Position = token.Position,
+                Expression = expression,
+                Body = isGlobalScope ? (object)ExpectWhenBlockGlobalScope() : (object)ExpectBlock()
+            };
+            return true;
+        }
+
+        private bool DirectiveDefinition(out INode directive)
+        {
+            return
+                MatchImportDirective(out directive)  ||
+                MatchUseDirective(out directive)     ||
+                MatchDeclareDirective(out directive) ||
+                MatchWhenStatement(out directive, true);
         }
 
         private FieldNode ExpectFieldDefinition()
@@ -1204,7 +1254,7 @@ namespace Mug.Models.Parser
             var statement = new EnumStatement() { Modifier = modifier, Pragmas = pragmas, Name = name.Value.ToString(), Position = name.Position };
 
             // base type
-            Expect("An enum must have a base type (i32, str, ...)", TokenKind.Colon);
+            Expect("An enum must have a base type (u8, chr, ...)", TokenKind.Colon);
             statement.BaseType = ExpectPrimitiveType();
 
             // enum body

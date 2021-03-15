@@ -1041,6 +1041,17 @@ namespace Mug.Models.Generator
                 _emitter.Exit();
         }
 
+        private void EmitCompTimeWhen(CompTimeWhenStatement when)
+        {
+            if (when.Expression is CompTimeDeclaredExpression declared)
+            {
+                if (_generator.IsCompilerSymbolDeclared(declared.Symbol.Value))
+                    Generate((BlockNode)when.Body);
+            }
+            else
+                Error(when.Expression.Position, "Compile-time expressions are not supported yet");
+        }
+
         /// <summary>
         /// 
         /// </summary>
@@ -1068,6 +1079,9 @@ namespace Mug.Models.Generator
                     break;
                 case LoopManagementStatement loopmanagement:
                     EmitLoopManagementStatement(loopmanagement);
+                    break;
+                case CompTimeWhenStatement comptimewhen:
+                    EmitCompTimeWhen(comptimewhen);
                     break;
                 /*case ForLoopStatement loop:
                     break;*/
