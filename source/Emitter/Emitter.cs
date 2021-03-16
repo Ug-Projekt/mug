@@ -1,15 +1,16 @@
 ﻿using LLVMSharp.Interop;
+using Mug.Models.Lexer;
+using Mug.Models.Parser;
 using Mug.Models.Parser.NodeKinds.Statements;
 using Mug.MugValueSystem;
 using System;
 using System.Collections.Generic;
-using static LLVMSharp.Interop.LLVM;
 
 namespace Mug.Models.Generator.Emitter
 {
     internal class MugEmitter
     {
-        public unsafe LLVMBuilderRef Builder { get; private set; } = CreateBuilder();
+        public unsafe LLVMBuilderRef Builder { get; private set; } = LLVM.CreateBuilder();
 
         private readonly Stack<MugValue> _stack = new();
         private readonly IRGenerator _generator;
@@ -116,7 +117,7 @@ namespace Mug.Models.Generator.Emitter
             DeclareVariable(
                 variable.Name,
                 variable.Type.ToMugValueType(variable.Type.Position, _generator),
-                variable.Position);
+                variable.Position, false);
         }
 
         public (MugValueType, MugValueType) GetCoupleTypes()
@@ -157,14 +158,17 @@ namespace Mug.Models.Generator.Emitter
             Load(value);
         }
 
-        public void DeclareVariable(string name, MugValueType type, Range position)
+        public void DeclareVariable(string name, MugValueType type, Range position, bool isreference = false)
         {
             if (IsDeclared(name))
                 _generator.Error(position, "Variable already declared");
 
+            if (isreference)
+                type = MugValueType.Pointer(type);
+
             SetMemory(
                 name,
-                MugValue.From(Builder.BuildAlloca(type.LLVMType, name), type));
+                MugValue.From(Builder.BuildAlloca(type.LLVMType, name), type, isreference));
         }
 
         public void DeclareConstant(string name, Range position)
@@ -177,21 +181,29 @@ namespace Mug.Models.Generator.Emitter
 
         public void StoreVariable(string name, Range position, Range bodyPosition)
         {
-            var variable = GetMemoryAllocation(name, position);
+            StoreVariable(GetMemoryAllocation(name, position), position, bodyPosition);
+        }
 
+        public void InitializeParameter(string name, LLVMValueRef llvmparameter)
+        {
+            Builder.BuildStore(llvmparameter, Memory[name].LLVMValue);
+        }
+
+        public void StoreVariable(MugValue allocation, Range position, Range bodyPosition)
+        {
             // check it is a variable and not a constant
-            if (!variable.IsAllocaInstruction())
+            if (!allocation.IsAllocaInstruction())
                 _generator.Error(position, "Unable to change the value of a constant");
 
-            ForceConstantIntSizeTo(variable.Type);
+            ForceConstantIntSizeTo(allocation.Type);
 
             _generator.ExpectSameTypes(
-                variable.Type,
+                allocation.Type,
                 bodyPosition,
-                $"Expected {variable.Type} type, got {PeekType()} type",
+                $"Expected {allocation.Type} type, got {PeekType()} type",
                 PeekType());
 
-            Builder.BuildStore(Pop().LLVMValue, variable.LLVMValue);
+            Builder.BuildStore(Pop().LLVMValue, allocation.LLVMValue);
         }
 
         public bool OneOfTwoIsOnlyTheEnumType()
@@ -439,18 +451,41 @@ namespace Mug.Models.Generator.Emitter
                 _generator.Error(position, "`", PeekType().ToString(), "` is not an indexer type");
         }
 
-        public void StoreInside(MugValue field)
+        public void LoadReference(INode expression, Range position)
         {
-            Builder.BuildStore(Pop().LLVMValue, field.LLVMValue);
+            if (expression is not Token t || t.Kind != TokenKind.Identifier)
+            {
+                _generator.Error(position, "Unable to take the address of a constant value");
+                throw new();
+            }
+
+            var allocation = GetMemoryAllocation(t.Value, t.Position);
+
+            Load(MugValue.From(allocation.LLVMValue, MugValueType.Pointer(allocation.Type)));
         }
 
-        public void LoadUnknownAllocation(MugValue allocation)
+        public void LoadFromPointer(Range position)
+        {
+            var value = Pop();
+
+            if (!value.Type.IsPointer())
+                _generator.Error(position, "Expected a pointer");
+
+            Load(MugValue.From(Builder.BuildLoad(value.LLVMValue), value.Type.PointerBaseElementType));
+        }
+
+        public void StoreInsidePointer(MugValue ptr)
+        {
+            Builder.BuildStore(Pop().LLVMValue, ptr.LLVMValue);
+        }
+
+        /*public void LoadUnknownAllocation(MugValue allocation)
         {
             if (allocation.IsAllocaInstruction() || allocation.IsGEP())
                 Load(MugValue.From(Builder.BuildLoad(allocation.LLVMValue), allocation.Type));
             else
                 throw new("unable to recognize unknonwn allocation");
-        }
+        }*/
 
         public void StoreElementArray(LLVMValueRef arrayload, int i)
         {
@@ -462,25 +497,33 @@ namespace Mug.Models.Generator.Emitter
             Builder.BuildStore(Pop().LLVMValue, ptr);
         }
 
-        public void SelectArrayElement()
+        public void MakePostfixIntOperation(Func<LLVMValueRef, LLVMValueRef, string, LLVMValueRef> operation)
+        {
+            var target = Pop();
+            var result = operation(Builder.BuildLoad(target.LLVMValue), LLVMValueRef.CreateConstInt(target.Type.LLVMType, 1), "");
+
+            Builder.BuildStore(result, target.LLVMValue);
+        }
+
+        public void OperateInsidePointer(MugValue target, Func<LLVMValueRef, LLVMValueRef, string, LLVMValueRef> operation)
+        {
+            var result = operation(Builder.BuildLoad(target.LLVMValue), Pop().LLVMValue, "");
+
+            Builder.BuildStore(result, target.LLVMValue);
+        }
+
+        public void SelectArrayElement(bool buildload)
         {
             var index = Pop();
             var array = Pop();
 
-            Load(
-                MugValue.From(
-                    // load from pointer
-                    Builder.BuildLoad(
-                        // selecting the element
-                        Builder.BuildGEP(
-                            array.LLVMValue,
-                            new[]
-                            {
-                                index.LLVMValue,
-                            })
-                        )
-                    , array.Type.ArrayBaseElementType)
-                );
+            // selecting the element
+            var ptr = Builder.BuildGEP( array.LLVMValue, new[] { index.LLVMValue });
+
+            if (buildload) // load from pointer 
+                ptr = Builder.BuildLoad(ptr);
+
+            Load(MugValue.From(ptr, array.Type.ArrayBaseElementType));
         }
     }
 }

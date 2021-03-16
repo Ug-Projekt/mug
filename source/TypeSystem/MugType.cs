@@ -97,7 +97,7 @@ namespace Mug.TypeSystem
                 TypeKind.UInt8 => "u8",
                 TypeKind.UInt32 => "u32",
                 TypeKind.UInt64 => "u64",
-                TypeKind.Pointer => $"ptr {BaseType}",
+                TypeKind.Pointer => $"*{BaseType}",
                 TypeKind.String => "str",
                 TypeKind.Void => "?",
             };

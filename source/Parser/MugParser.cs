@@ -212,6 +212,10 @@ namespace Mug.Models.Parser
             if (!isFirst)
                 Expect("Parameters must be separated by a comma", TokenKind.Comma);
 
+            bool isreference = false;
+
+            if (MatchAdvance(TokenKind.BooleanAND)) isreference = true;
+
             var name = Expect("Expected parameter name", TokenKind.Identifier);
 
             Expect("Expected parameter type", TokenKind.Colon);
@@ -225,7 +229,7 @@ namespace Mug.Models.Parser
             ExpectMultiple("", TokenKind.Comma, TokenKind.ClosePar);
             _currentIndex--;
 
-            return new ParameterNode(type, name.Value, defaultvalue, name.Position);
+            return new ParameterNode(isreference, type, name.Value, defaultvalue, name.Position);
         }
 
         private OperatorKind ToOperatorKind(TokenKind op)
@@ -466,9 +470,11 @@ namespace Mug.Models.Parser
 
         private bool MatchTerm(out INode e, bool allowCallStatement = true)
         {
-            if (MatchAdvance(TokenKind.Minus) ||
-                MatchAdvance(TokenKind.Plus) ||
-                MatchAdvance(TokenKind.Negation))
+            if (MatchAdvance(TokenKind.Minus)      ||
+                MatchAdvance(TokenKind.Plus)       ||
+                MatchAdvance(TokenKind.Negation)   ||
+                MatchAdvance(TokenKind.BooleanAND) ||
+                MatchAdvance(TokenKind.Star))
             {
                 var prefixOp = Back;
 

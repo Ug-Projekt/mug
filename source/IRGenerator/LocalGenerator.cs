@@ -341,6 +341,12 @@ namespace Mug.Models.Generator
 
         private void EmitExprPrefixOperator(PrefixOperator p)
         {
+            if (p.Prefix == TokenKind.BooleanAND) // &x reference
+            {
+                _emitter.LoadReference(p.Expression, p.Position);
+                return;
+            }
+
             EvaluateExpression(p.Expression);
 
             if (p.Prefix == TokenKind.Negation) // '!' operator
@@ -353,6 +359,8 @@ namespace Mug.Models.Generator
                 _generator.ExpectIntType(_emitter.PeekType(), p.Position);
                 _emitter.NegInt();
             }
+            else if (p.Prefix == TokenKind.Star)
+                _emitter.LoadFromPointer(p.Position);
         }
 
         private void EmitExpr(ExpressionNode e)
@@ -372,7 +380,7 @@ namespace Mug.Models.Generator
             EmitOperator(b.Operator, b.Position);
         }
 
-        private void EmitExprArrayElemSelect(ArraySelectElemNode a)
+        private void EmitExprArrayElemSelect(ArraySelectElemNode a, bool buildload = true)
         {
             // loading the array
             EvaluateMemberAccess(a.Left, true);
@@ -389,9 +397,8 @@ namespace Mug.Models.Generator
 
             var index = _emitter.PeekType();
 
-            if (indexed.IsIndexable())
-                // loading the element
-                _emitter.SelectArrayElement();
+            if (indexed.IsIndexable()) // loading the element
+                _emitter.SelectArrayElement(buildload);
             else
                 _emitter.CallOperator("[]", a.Position, true, indexed, index);
         }
@@ -480,12 +487,14 @@ namespace Mug.Models.Generator
             _emitter.Load(MugValue.From(_emitter.Builder.BuildLoad(tmp), structure));
         }
 
-        private void EmitExprMemberAccess(MemberNode m)
+        private void EmitExprMemberAccess(MemberNode m, bool buildload = true)
         {
             if (m.Base is Token token)
             {
                 if (_emitter.IsDeclared(token.Value))
+                {
                     _emitter.LoadFieldName(token.Value, token.Position);
+                }
                 else
                 {
                     _emitter.LoadEnumMember(token.Value, m.Member.Value, m.Member.Position, this);
@@ -503,7 +512,7 @@ namespace Mug.Models.Generator
             var index = structure.GetFieldIndexFromName(m.Member.Value);
             var instance = _emitter.Pop();
 
-            _emitter.LoadField(instance, type, index, true);
+            _emitter.LoadField(instance, type, index, buildload);
         }
 
         /// <summary>
@@ -585,13 +594,10 @@ namespace Mug.Models.Generator
                 _emitter.DeclareVariable(
                     parameter.Name,
                     parametertype,
-                    parameter.Position);
-
-                // loading onto the stack the parameter
-                _emitter.Load(MugValue.From(_llvmfunction.GetParam((uint)i), parametertype));
+                    parameter.Position, parameter.IsReference);
 
                 // storing the parameter into the variable
-                _emitter.StoreVariable(parameter.Name, parameter.Position, parameter.Position);
+                _emitter.InitializeParameter(parameter.Name, _llvmfunction.GetParam((uint)i));
             }
         }
 
@@ -770,20 +776,8 @@ namespace Mug.Models.Generator
 
         private List<FieldAssignmentNode> GetDefaultValueOfFields(string name, Range position)
         {
+            Error(position, "Default fields assignment currently disabled");
             throw new();
-            /*var s = _generator.GetSymbol(name, position).GetValue<MugValue>().Type.GetStructure();
-            var fields = new FieldAssignmentNode[s.FieldNames.Length];
-
-            for (int i = 0; i < s.FieldNames.Length; i++)
-            {
-                fields[i] = new FieldAssignmentNode()
-                {
-                    Name = s.FieldNames[i],
-                    Body = GetDefaultValueOf(s.FieldTypes[i], s.FieldPositions[i])
-                };
-            }
-
-            return fields.ToList();*/
         }
 
         private INode GetDefaultValueOf(MugType type, Range position)
@@ -861,7 +855,7 @@ namespace Mug.Models.Generator
             if (!variable.IsAssigned)
             {
                 if (variable.Type.IsAutomatic())
-                    Error(variable.Position, "Unable to allocate implicitly a variable with no type specification");
+                    Error(variable.Position, "Type specification needed");
 
                 variable.Body = GetDefaultValueOf(variable.Type, variable.Position);
             }
@@ -881,7 +875,7 @@ namespace Mug.Models.Generator
             _emitter.StoreVariable(variable.Name, variable.Position, variable.Body.Position);
         }
 
-        private string IncrementOperatorToString(TokenKind kind)
+        private string PostfixOperatorToString(TokenKind kind)
         {
             return kind switch
             {
@@ -891,7 +885,7 @@ namespace Mug.Models.Generator
             };
         }
 
-        private void EvaluateVariableAssignment(MugValue allocation, TokenKind operatorkind, INode body, Range position, bool isfieldpointer)
+        /*private void EvaluateVariableAssignment(ref MugValue allocation, TokenKind operatorkind, INode body, Range position, bool isfieldpointer)
         {
             if (!allocation.IsAllocaInstruction() && !isfieldpointer)
                 Error(position, "Unable to change a constant value");
@@ -906,26 +900,24 @@ namespace Mug.Models.Generator
 
                     EvaluateExpression(body);
 
-                    var expressionType = _emitter.PeekType();
-
-                    if (operatorkind == TokenKind.AddAssignment)
-                        EmitSum(position);
-                    else if (operatorkind == TokenKind.SubAssignment)
-                        EmitSub(position);
-                    else if (operatorkind == TokenKind.MulAssignment)
-                        EmitMul(position);
-                    else if (operatorkind == TokenKind.DivAssignment)
-                        EmitDiv(position);
+                    switch (operatorkind)
+                    {
+                        case TokenKind.AddAssignment: EmitSum(position); break;
+                        case TokenKind.SubAssignment: EmitSub(position); break;
+                        case TokenKind.MulAssignment: EmitMul(position); break;
+                        case TokenKind.DivAssignment: EmitDiv(position); break;
+                    }
                 }
                 else if (variableType.MatchIntType())
                 {
                     _emitter.LoadUnknownAllocation(allocation);
                     _emitter.Load(MugValue.From(LLVMValueRef.CreateConstInt(variableType.LLVMType, 1), variableType));
 
-                    if (operatorkind == TokenKind.OperatorIncrement)
-                        _emitter.AddInt();
-                    else if (operatorkind == TokenKind.OperatorIncrement)
-                        _emitter.SubInt();
+                    switch (operatorkind)
+                    {
+                        case TokenKind.OperatorIncrement: _emitter.AddInt(); break;
+                        case TokenKind.OperatorDecrement: _emitter.SubInt(); break;
+                    }
                 }
                 else
                     _emitter.CallOperator(IncrementOperatorToString(operatorkind), position, false, variableType);
@@ -945,7 +937,7 @@ namespace Mug.Models.Generator
             EvaluateMemberAccess(member, false);
             var field = _emitter.Pop();
 
-            EvaluateVariableAssignment(field, operatorkind, body, position, true);
+            EvaluateVariableAssignment(ref field, operatorkind, body, position, true);
 
             _emitter.StoreInside(field);
         }
@@ -958,7 +950,7 @@ namespace Mug.Models.Generator
                     Error(a.Position, "Unable to assign a value to an expression");
 
                 var allocation = _emitter.GetMemoryAllocation(t.Value, t.Position);
-                EvaluateVariableAssignment(allocation, a.Operator, a.Body, a.Position, false);
+                EvaluateVariableAssignment(ref allocation, a.Operator, a.Body, a.Position, allocation.IsReference);
 
                 if (allocation.Type.IsPointer())
                 {
@@ -1007,6 +999,81 @@ namespace Mug.Models.Generator
                 EmitFieldAssignment(m, a.Operator, a.Body, a.Position);
             else
                 Error(a.Position, "Not supported yet");
+        }*/
+
+        private void EmitPostfixOperator(MugValue variabile, TokenKind kind, Range position)
+        {
+            _emitter.Load(variabile);
+
+            if (_emitter.PeekType().MatchIntType())
+            {
+                if (kind == TokenKind.OperatorIncrement)
+                    _emitter.MakePostfixIntOperation(_emitter.Builder.BuildAdd);
+                else
+                    _emitter.MakePostfixIntOperation(_emitter.Builder.BuildSub);
+            }
+            else
+                _emitter.CallOperator(PostfixOperatorToString(kind), position, false, variabile.Type);
+        }
+
+        /// <summary>
+        /// returns a llvm pointer to store the expression in
+        /// </summary>
+        private MugValue EvaluateLeftValue(INode leftexpression)
+        {
+            if (leftexpression is Token token)
+            {
+                if (token.Kind != TokenKind.Identifier)
+                    Error(token.Position, "Invalid value in left expression");
+
+                return _emitter.GetMemoryAllocation(token.Value, token.Position);
+            }
+            else if (leftexpression is ArraySelectElemNode indexing)
+            {
+                EmitExprArrayElemSelect(indexing, false);
+
+                return _emitter.Pop();
+            }
+            else if (leftexpression is MemberNode member)
+            {
+                EmitExprMemberAccess(member, false);
+
+                return _emitter.Pop();
+            }
+            else
+            {
+                Error(leftexpression.Position, "Invalid value in left expression");
+                throw new();
+            }
+        }
+
+        private void EmitAssignmentStatement(AssignmentStatement assignment)
+        {
+            var ptr = EvaluateLeftValue(assignment.Name);
+
+            if (assignment.Operator == TokenKind.OperatorIncrement || assignment.Operator == TokenKind.OperatorDecrement)    
+                EmitPostfixOperator(ptr, assignment.Operator, assignment.Position);
+            else
+            {
+                EvaluateExpression(assignment.Body);
+
+                if (assignment.Operator == TokenKind.Equal)
+                    _emitter.StoreInsidePointer(ptr);
+                else
+                {
+                    void operate(Func<LLVMValueRef, LLVMValueRef, string, LLVMValueRef> operation) =>
+                        _emitter.OperateInsidePointer(ptr, operation);
+                    
+                    switch (assignment.Operator)
+                    {
+                        case TokenKind.AddAssignment: operate(_emitter.Builder.BuildAdd); break;
+                        case TokenKind.SubAssignment: operate(_emitter.Builder.BuildSub); break;
+                        case TokenKind.MulAssignment: operate(_emitter.Builder.BuildMul); break;
+                        case TokenKind.DivAssignment: operate(_emitter.Builder.BuildSDiv); break;
+                        default: throw new();
+                    }
+                }
+            }
         }
 
         private void EmitConstantStatement(ConstantStatement constant)

@@ -31,6 +31,13 @@ namespace Mug.MugValueSystem
                 return (LLVMTypeRef)BaseType;
             }
         }
+        public MugValueType PointerBaseElementType
+        {
+            get
+            {
+                return (MugValueType)BaseType;
+            }
+        }
 
         public MugValueType ArrayBaseElementType
         {

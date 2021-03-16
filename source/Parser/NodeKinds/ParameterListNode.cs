@@ -9,20 +9,14 @@ namespace Mug.Models.Parser.NodeKinds
     {
         public string NodeKind => "Parameter";
         public MugType Type { get; }
-        public String Name { get; }
+        public string Name { get; }
         public Token DefaultConstantValue { get; }
-        public Boolean IsOptional
-        {
-            get
-            {
-                return DefaultConstantValue.Kind != TokenKind.Bad;
-            }
-        }
-
+        public bool IsReference { get; }
         public Range Position { get; set; }
 
-        public ParameterNode(MugType type, string name, Token defaultConstValue, Range position)
+        public ParameterNode(bool isreference, MugType type, string name, Token defaultConstValue, Range position)
         {
+            IsReference = isreference;
             Type = type;
             Name = name;
             Position = position;

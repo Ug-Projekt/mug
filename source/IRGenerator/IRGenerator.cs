@@ -118,11 +118,16 @@ namespace Mug.Models.Generator
         /// <summary>
         /// calls the function <see cref="TypeToMugType(MugType, Range)"/> for each parameter in the past array
         /// </summary>
-        internal MugValueType[] ParameterTypesToMugTypes(ParameterNode[] parameterTypes, bool expectedPublicMember)
+        internal MugValueType[] ParameterTypesToMugTypes(ParameterNode[] parameterTypes)
         {
             var result = new MugValueType[parameterTypes.Length];
             for (int i = 0; i < parameterTypes.Length; i++)
+            {
                 result[i] = parameterTypes[i].Type.ToMugValueType(parameterTypes[i].Position, this);
+
+                if (parameterTypes[i].IsReference)
+                    result[i] = MugValueType.Pointer(result[i]);
+            }
 
             return result;
         }
@@ -255,7 +260,7 @@ namespace Mug.Models.Generator
         /// </summary>
         private void InstallFunction(bool ispublic, Pragmas pragmas, string name, MugType type, Range position, ParameterListNode paramTypes)
         {
-            var parameterTypes = ParameterTypesToMugTypes(paramTypes.Parameters, ispublic);
+            var parameterTypes = ParameterTypesToMugTypes(paramTypes.Parameters);
 
             var t = type.ToMugValueType(position, this);
 
@@ -348,7 +353,6 @@ namespace Mug.Models.Generator
         /// </summary>
         private void DefineFunction(FunctionNode function)
         {
-
             var llvmfunction = Map.Find(s => s.Name == function.Name).GetValue<MugValue>().LLVMValue;
             // basic block, won't be emitted any block because the name is empty
             var entry = llvmfunction.AppendBasicBlock("");
@@ -428,7 +432,7 @@ namespace Mug.Models.Generator
             // change the name of the function in the corresponding with the types of parameters, to allow overload of the methods
             function.Name = BuildFunctionName(
                 function.Name,
-                ParameterTypesToMugTypes(function.ParameterList.Parameters, function.Modifier == TokenKind.KeyPub),
+                ParameterTypesToMugTypes(function.ParameterList.Parameters),
                 function.Type.ToMugValueType(function.Position, this));
             
             DefineFunction(function);
@@ -450,7 +454,7 @@ namespace Mug.Models.Generator
 
             prototype.Pragmas.SetExtern(prototype.Name);
 
-            var parameters = ParameterTypesToMugTypes(prototype.ParameterList.Parameters, prototype.Modifier == TokenKind.KeyPub);
+            var parameters = ParameterTypesToMugTypes(prototype.ParameterList.Parameters);
             // search for the function
             var function = Module.GetNamedFunction(prototype.Pragmas.GetPragma("extern"));
 
@@ -720,7 +724,7 @@ namespace Mug.Models.Generator
             foreach (var member in Parser.Module.Members.Nodes)
                 RecognizeMember(member, false, false, true);
 
-            // memebers' definition
+            // members' definition
             foreach (var member in Parser.Module.Members.Nodes)
                 RecognizeMember(member, false, false, false);
 

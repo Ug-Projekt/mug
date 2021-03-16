@@ -10,8 +10,13 @@ try
 
     var test = @"
 
+type Result {
+  ok: [u1]
+}
+
 func main() {
-  var x: chr = 1;
+  const k = new [u1] { true, false };
+  const result = new Result { ok: k };
 }
 
 ";
