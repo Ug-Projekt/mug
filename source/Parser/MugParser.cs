@@ -30,6 +30,14 @@ namespace Mug.Models.Parser
             Lexer.Throw(Current, error);
         }
 
+        private void ParseError(Range position, params string[] error)
+        {
+            if (Match(TokenKind.EOF))
+                ParseErrorEOF();
+
+            Lexer.Throw(position, error);
+        }
+
         private void ParseErrorEOF(params string[] error)
         {
             var errors = string.Join("", error);
@@ -229,7 +237,7 @@ namespace Mug.Models.Parser
             ExpectMultiple("", TokenKind.Comma, TokenKind.ClosePar);
             _currentIndex--;
 
-            return new ParameterNode(isreference, type, name.Value, defaultvalue, name.Position);
+            return new ParameterNode(type, name.Value, defaultvalue, name.Position);
         }
 
         private OperatorKind ToOperatorKind(TokenKind op)
@@ -417,12 +425,12 @@ namespace Mug.Models.Parser
 
             var parameters = new NodeBuilder();
 
-            if (name is MemberNode instanceAccesses)
+            /*if (name is MemberNode instanceAccesses)
             {
-                parameters.Add(instanceAccesses.Base);
+                // parameters.Add(instanceAccesses.Base);
 
-                name = instanceAccesses.Member;
-            }
+                name = instanceAccesses*//*.Member*//*;
+            }*/
 
             var generics = CollectGenericParameters();
 
@@ -450,9 +458,9 @@ namespace Mug.Models.Parser
 
                     CollectParameters(ref parameters);
 
-                    parameters.Insert(0, e);
+                    // parameters.Insert(0, e);
 
-                    e = new CallStatement() { Generics = generics, Name = name, Parameters = parameters };
+                    e = new CallStatement() { Generics = generics, Name = new MemberNode() { Base = e, Member = (Token)name, Position = e.Position.Start..name.Position.End }, Parameters = parameters };
                 }
                 else
                 {
@@ -479,10 +487,7 @@ namespace Mug.Models.Parser
                 var prefixOp = Back;
 
                 if (!MatchTerm(out e, allowCallStatement))
-                {
-                    _currentIndex--;
                     ParseError("Unexpected prefix operator");
-                }
 
                 e = new PrefixOperator() { Expression = e, Position = prefixOp.Position, Prefix = prefixOp.Kind };
 
@@ -514,7 +519,8 @@ namespace Mug.Models.Parser
 
                 if (allowCallStatement && MatchCallStatement(out var call, false, name))
                 {
-                    (call as CallStatement).Parameters.Insert(0, e);
+                    // (call as CallStatement).Parameters.Insert(0, e);
+                    (call as CallStatement).Name = new MemberNode() { Base = e, Member = name };
                     e = call;
                 }
                 else
@@ -1009,6 +1015,19 @@ namespace Mug.Models.Parser
             return result;
         }
 
+        private ParameterNode? CollectBaseDefinition()
+        {
+            if (!MatchAdvance(TokenKind.OpenPar))
+                return null;
+
+            var name = Expect("Expected the base instance name", TokenKind.Identifier);
+            Expect("", TokenKind.Colon);
+            var type = ExpectType();
+            Expect("", TokenKind.ClosePar);
+
+            return new ParameterNode(type, name.Value, new(), name.Position);
+        }
+
         private bool FunctionDefinition(out INode node)
         {
             node = null;
@@ -1019,6 +1038,9 @@ namespace Mug.Models.Parser
             var modifier = GetModifier();
             var pragmas = GetPramas();
             var generics = new List<Token>();
+
+            var @base = CollectBaseDefinition();
+
             var name = Expect("In function definition must specify the name", TokenKind.Identifier); // func <name>
 
             CollectGenericParameterDefinitions(generics);
@@ -1036,7 +1058,7 @@ namespace Mug.Models.Parser
             {
                 var body = ExpectBlock();
 
-                var f = new FunctionNode() { Modifier = modifier, Pragmas = pragmas, Body = body, Name = name.Value.ToString(), ParameterList = parameters, Type = type, Position = name.Position };
+                var f = new FunctionNode() { Base = @base, Modifier = modifier, Pragmas = pragmas, Body = body, Name = name.Value.ToString(), ParameterList = parameters, Type = type, Position = name.Position };
 
                 f.Generics = generics;
 
@@ -1045,6 +1067,9 @@ namespace Mug.Models.Parser
             else // prototype
             {
                 Expect("", TokenKind.Semicolon);
+
+                if (@base is not null)
+                    ParseError(@base.Value.Position, "The function base cannot be defined in function prototypes");
 
                 var f = new FunctionPrototypeNode() { Modifier = modifier, Pragmas = pragmas, Name = name.Value.ToString(), ParameterList = parameters, Type = type, Position = name.Position };
                 f.Generics = generics;

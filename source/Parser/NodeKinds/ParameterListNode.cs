@@ -11,12 +11,10 @@ namespace Mug.Models.Parser.NodeKinds
         public MugType Type { get; }
         public string Name { get; }
         public Token DefaultConstantValue { get; }
-        public bool IsReference { get; }
         public Range Position { get; set; }
 
-        public ParameterNode(bool isreference, MugType type, string name, Token defaultConstValue, Range position)
+        public ParameterNode(MugType type, string name, Token defaultConstValue, Range position)
         {
-            IsReference = isreference;
             Type = type;
             Name = name;
             Position = position;

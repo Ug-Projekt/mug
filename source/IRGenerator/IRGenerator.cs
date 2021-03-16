@@ -122,12 +122,7 @@ namespace Mug.Models.Generator
         {
             var result = new MugValueType[parameterTypes.Length];
             for (int i = 0; i < parameterTypes.Length; i++)
-            {
-                result[i] = parameterTypes[i].Type.ToMugValueType(parameterTypes[i].Position, this);
-
-                if (parameterTypes[i].IsReference)
-                    result[i] = MugValueType.Pointer(result[i]);
-            }
+                result[i] = parameterTypes[i].Type.ToMugValueType(parameterTypes[i].Type.Position, this);
 
             return result;
         }
@@ -262,7 +257,7 @@ namespace Mug.Models.Generator
         {
             var parameterTypes = ParameterTypesToMugTypes(paramTypes.Parameters);
 
-            var t = type.ToMugValueType(position, this);
+            var t = type.ToMugValueType(type.Position, this);
 
             var ft = LLVMTypeRef.CreateFunction(
                     t.LLVMType,

@@ -117,7 +117,7 @@ namespace Mug.Models.Generator.Emitter
             DeclareVariable(
                 variable.Name,
                 variable.Type.ToMugValueType(variable.Type.Position, _generator),
-                variable.Position, false);
+                variable.Position);
         }
 
         public (MugValueType, MugValueType) GetCoupleTypes()
@@ -158,17 +158,14 @@ namespace Mug.Models.Generator.Emitter
             Load(value);
         }
 
-        public void DeclareVariable(string name, MugValueType type, Range position, bool isreference = false)
+        public void DeclareVariable(string name, MugValueType type, Range position)
         {
             if (IsDeclared(name))
                 _generator.Error(position, "Variable already declared");
 
-            if (isreference)
-                type = MugValueType.Pointer(type);
-
             SetMemory(
                 name,
-                MugValue.From(Builder.BuildAlloca(type.LLVMType, name), type, isreference));
+                MugValue.From(Builder.BuildAlloca(type.LLVMType, name), type));
         }
 
         public void DeclareConstant(string name, Range position)

@@ -10,19 +10,18 @@ try
 
     var test = @"
 
+func (self: Person) say() {}
+
 func main() {
-  var x = 0;
-  var y = &x;
-  var z = &y;
-  **z = 4;
+  *base.function();
 }
 
 ";
     
     var unit = new CompilationUnit("test", test);
-    
-    // Console.WriteLine(unit.GenerateAST().Dump());
-    unit.Generate(true, true);
+
+    Console.WriteLine(unit.GenerateAST().Dump());
+    // unit.Generate(true, true);
 
 #else
 

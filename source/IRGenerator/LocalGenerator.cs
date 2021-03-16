@@ -322,7 +322,13 @@ namespace Mug.Models.Generator
              * the symbol of the function is taken by passing the name of the complete function which consists
              * of the function id and in brackets the list of parameter types separated by ', '
              */
-            var function = (MugValue)_generator.GetSymbol(BuildName(((Token)c.Name).Value, parameters), c.Position).Value;
+            if (c.Name is not Token t)
+            {
+                Error(c.Position, "Bad construction");
+                throw new();
+            }
+
+            var function = (MugValue)_generator.GetSymbol(BuildName(t.Value, parameters), c.Position).Value;
 
             if (!function.IsFunction())
                 _generator.Error(c.Position, "Unable to call this member");
@@ -588,13 +594,13 @@ namespace Mug.Models.Generator
                 // alias for ...
                 var parameter = parameters[i];
 
-                var parametertype = parameter.Type.ToMugValueType(parameter.Position, _generator);
+                var parametertype = parameter.Type.ToMugValueType(parameter.Type.Position, _generator);
 
                 // allocating the local variable
                 _emitter.DeclareVariable(
                     parameter.Name,
                     parametertype,
-                    parameter.Position, parameter.IsReference);
+                    parameter.Position);
 
                 // storing the parameter into the variable
                 _emitter.InitializeParameter(parameter.Name, _llvmfunction.GetParam((uint)i));
@@ -1048,9 +1054,12 @@ namespace Mug.Models.Generator
             }
             else
             {
-                Error(leftexpression.Position, "Invalid value in left expression");
-                throw new();
+                EvaluateExpression(leftexpression);
+
+                return _emitter.Pop();
             }
+                /*Error(leftexpression.Position, "Invalid value in left expression");
+                throw new();*/
         }
 
         private void EmitAssignmentStatement(AssignmentStatement assignment)

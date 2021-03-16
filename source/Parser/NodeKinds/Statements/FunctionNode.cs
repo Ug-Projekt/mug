@@ -16,5 +16,6 @@ namespace Mug.Models.Parser.NodeKinds.Statements
         public BlockNode Body { get; set; } = new();
         public Range Position { get; set; }
         public TokenKind Modifier { get; set; }
+        public ParameterNode? Base { get; set; }
     }
 }
