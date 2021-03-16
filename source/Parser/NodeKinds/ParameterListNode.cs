@@ -24,27 +24,15 @@ namespace Mug.Models.Parser.NodeKinds
     public class ParameterListNode : INode
     {
         public string NodeKind => "ParameterList";
-        public ParameterNode[] Parameters
-        {
-            get
-            {
-                return parameters.ToArray();
-            }
-        }
-
         public Range Position { get; set; }
         public int Lenght
         {
             get
             {
-                return parameters.Count;
+                return Parameters.Count;
             }
         }
 
-        private readonly List<ParameterNode> parameters = new();
-        public void Add(ParameterNode parameter)
-        {
-            parameters.Add(parameter);
-        }
+        public readonly List<ParameterNode> Parameters = new();
     }
 }

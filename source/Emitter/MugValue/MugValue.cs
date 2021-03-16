@@ -8,10 +8,11 @@ namespace Mug.MugValueSystem
     {
         public MugValueType Type { get; set; }
         public LLVMValueRef LLVMValue { get; set; }
+        public bool IsConst { get; set; }
 
-        public static MugValue From(LLVMValueRef value, MugValueType type)
+        public static MugValue From(LLVMValueRef value, MugValueType type, bool isconst = false)
         {
-            return new MugValue() { LLVMValue = value, Type = type };
+            return new MugValue() { LLVMValue = value, Type = type, IsConst = isconst };
         }
 
         public static MugValue Struct(LLVMValueRef structure, MugValueType type)

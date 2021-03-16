@@ -300,7 +300,34 @@ namespace Mug.Models.Generator
             return $"{name}({string.Join(", ", parameters)})";
         }
 
-        ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        private void EvaluateFunctionCallName(INode leftexpression, MugValueType[] parameters, out bool hasbase)
+        {
+            string name;
+            Range position;
+            hasbase = false;
+
+            if (leftexpression is Token token)
+            {
+                name = token.Value;
+                position = token.Position;
+            }
+            else if (leftexpression is MemberNode member) // (expr).function()
+            {
+                EvaluateExpression(member.Base);
+
+                name = $"{_emitter.PeekType()}.{member.Member.Value}";
+                position = member.Member.Position;
+                hasbase = true;
+            }
+            else // (expr)()
+            {
+                EvaluateExpression(leftexpression);
+                return;
+            }
+
+            _emitter.Load(_generator.GetSymbol(BuildName(name, parameters), position).GetValue<MugValue>());
+        }
+
         /// <summary>
         /// the function converts a Callstatement node to the corresponding low-level code
         /// </summary>
@@ -322,13 +349,10 @@ namespace Mug.Models.Generator
              * the symbol of the function is taken by passing the name of the complete function which consists
              * of the function id and in brackets the list of parameter types separated by ', '
              */
-            if (c.Name is not Token t)
-            {
-                Error(c.Position, "Bad construction");
-                throw new();
-            }
 
-            var function = (MugValue)_generator.GetSymbol(BuildName(t.Value, parameters), c.Position).Value;
+            EvaluateFunctionCallName(c.Name, parameters, out bool hasbase);
+
+            var function = _emitter.Pop();
 
             if (!function.IsFunction())
                 _generator.Error(c.Position, "Unable to call this member");
@@ -342,7 +366,7 @@ namespace Mug.Models.Generator
                     functionType,
                     c.Position);
 
-            _emitter.Call(function.LLVMValue, c.Parameters.Lenght, function.Type);
+            _emitter.Call(function.LLVMValue, c.Parameters.Lenght + (hasbase ? 1 : 0), function.Type);
         }
 
         private void EmitExprPrefixOperator(PrefixOperator p)
@@ -513,6 +537,9 @@ namespace Mug.Models.Generator
                 _emitter.LoadFieldName();
             }
 
+            if (_emitter.PeekType().IsPointer())
+                Error(m.Position, "Unable to access to a pointer");
+
             var structure = _emitter.PeekType().GetStructure();
             var type = structure.GetFieldTypeFromName(m.Member.Value);
             var index = structure.GetFieldIndexFromName(m.Member.Value);
@@ -586,10 +613,18 @@ namespace Mug.Models.Generator
 
         private void AllocParameters()
         {
+            if (_function.Base.HasValue)
+            {
+                var baseparameter = _function.Base.Value;
+                var type = baseparameter.Type.ToMugValueType(baseparameter.Type.Position, _generator);
+                _emitter.Load(MugValue.From(_llvmfunction.GetParam(0), type, true));
+                _emitter.DeclareConstant(baseparameter.Name, baseparameter.Position);
+            }
+
             // alias for ...
             var parameters = _function.ParameterList.Parameters;
 
-            for (int i = 0; i < parameters.Length; i++)
+            for (int i = _function.Base.HasValue ? 1 : 0; i < parameters.Count; i++)
             {
                 // alias for ...
                 var parameter = parameters[i];
@@ -1025,7 +1060,7 @@ namespace Mug.Models.Generator
         /// <summary>
         /// returns a llvm pointer to store the expression in
         /// </summary>
-        private MugValue EvaluateLeftValue(INode leftexpression)
+        private MugValue EvaluateLeftValue(INode leftexpression, bool isfirst = true)
         {
             if (leftexpression is Token token)
             {
@@ -1048,7 +1083,7 @@ namespace Mug.Models.Generator
             }
             else if (leftexpression is PrefixOperator prefix && prefix.Prefix == TokenKind.Star)
             {
-                var ptr = EvaluateLeftValue(prefix.Expression);
+                var ptr = EvaluateLeftValue(prefix.Expression, false);
 
                 return MugValue.From(_emitter.Builder.BuildLoad(ptr.LLVMValue), ptr.Type.PointerBaseElementType);
             }
@@ -1066,11 +1101,17 @@ namespace Mug.Models.Generator
         {
             var ptr = EvaluateLeftValue(assignment.Name);
 
+            if (ptr.IsConst)
+                Error(assignment.Position, "Unable to change a constant value");
+
             if (assignment.Operator == TokenKind.OperatorIncrement || assignment.Operator == TokenKind.OperatorDecrement)    
                 EmitPostfixOperator(ptr, assignment.Operator, assignment.Position);
             else
             {
                 EvaluateExpression(assignment.Body);
+
+                if (!ptr.Type.Equals(_emitter.PeekType()))
+                    Error(assignment.Body.Position, "Expected ", ptr.Type.ToString(), ", got ", _emitter.PeekType().ToString());
 
                 if (assignment.Operator == TokenKind.Equal)
                     _emitter.StoreInsidePointer(ptr);

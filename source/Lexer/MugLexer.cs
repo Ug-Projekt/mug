@@ -1,6 +1,7 @@
 ﻿using Mug.Compilation;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 
 namespace Mug.Models.Lexer
@@ -9,6 +10,7 @@ namespace Mug.Models.Lexer
     {
         public readonly string Source;
         public readonly string ModuleName;
+        public readonly char[] ValidBacktickSequenceCharacters = { '[', ']', '!', '-', '+', '*', '/', '=' };
 
         public List<Token> TokenCollection { get; set; }
 
@@ -383,6 +385,28 @@ namespace Mug.Models.Lexer
             CurrentSymbol.Clear();
         }
 
+        private bool IsValidBackTickSequence(string sequence)
+        {
+            for (int i = 0; i < sequence.Length; i++)
+            {
+                var chr = sequence[i];
+
+                if (!ValidBacktickSequenceCharacters.Contains(chr))
+                    return false;
+            }
+
+            return true;
+        }
+
+        private bool IsKeyword(string sequence)
+        {
+            var iskeyword = CheckAndSetKeyword(sequence);
+
+            if (iskeyword) TokenCollection.RemoveAt(TokenCollection.Count - 1);
+
+            return iskeyword;
+        }
+
         /// <summary>
         /// collects a symbol incapsulated in a backtick string and add it to the token stream as identifier
         /// </summary>
@@ -400,11 +424,18 @@ namespace Mug.Models.Lexer
             if (CurrentIndex == Source.Length && Source[CurrentIndex - 1] != '`')
                 this.Throw(CurrentIndex - 1, $"Backtick sequence has not been correctly enclosed");
 
+            var pos = start..(end+1);
+
             if (CurrentSymbol.Length < 1)
-                this.Throw(start..end, "Not enough characters in backtick sequence");
+                this.Throw(pos, "Not enough characters in backtick sequence");
+
+            string sequence = CurrentSymbol.ToString().Replace(" ", "");
+
+            if (!IsValidBackTickSequence(sequence) && !IsKeyword(sequence))
+                this.Throw(pos, "Invalid backtick sequence");
 
             //else add closing simbol, removing whitespaces
-            TokenCollection.Add(new(TokenKind.Identifier, CurrentSymbol.ToString().Replace(" ", ""), new(start, end + 1)));
+            TokenCollection.Add(new(TokenKind.Identifier, sequence, pos));
             CurrentSymbol.Clear();
         }
 

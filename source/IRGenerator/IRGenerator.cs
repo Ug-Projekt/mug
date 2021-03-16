@@ -118,10 +118,10 @@ namespace Mug.Models.Generator
         /// <summary>
         /// calls the function <see cref="TypeToMugType(MugType, Range)"/> for each parameter in the past array
         /// </summary>
-        internal MugValueType[] ParameterTypesToMugTypes(ParameterNode[] parameterTypes)
+        internal MugValueType[] ParameterTypesToMugTypes(List<ParameterNode> parameterTypes)
         {
-            var result = new MugValueType[parameterTypes.Length];
-            for (int i = 0; i < parameterTypes.Length; i++)
+            var result = new MugValueType[parameterTypes.Count];
+            for (int i = 0; i < parameterTypes.Count; i++)
                 result[i] = parameterTypes[i].Type.ToMugValueType(parameterTypes[i].Type.Position, this);
 
             return result;
@@ -253,21 +253,24 @@ namespace Mug.Models.Generator
         /// in this function and will convert the ast of the function node into the corresponding low-level code appending the result to the symbol
         /// body
         /// </summary>
-        private void InstallFunction(bool ispublic, Pragmas pragmas, string name, MugType type, Range position, ParameterListNode paramTypes)
+        private void InstallFunction(bool ispublic, ParameterNode? basetype, Pragmas pragmas, string name, MugType type, Range position, ParameterListNode paramTypes)
         {
             var parameterTypes = ParameterTypesToMugTypes(paramTypes.Parameters);
 
-            var t = type.ToMugValueType(type.Position, this);
+            var returnType = type.ToMugValueType(type.Position, this);
 
             var ft = LLVMTypeRef.CreateFunction(
-                    t.LLVMType,
-                    MugTypesToLLVMTypes(parameterTypes));
+                    returnType.LLVMType,
+                    MugTypesToLLVMTypes(
+                        basetype.HasValue ?
+                        parameterTypes.Prepend(basetype.Value.Type.ToMugValueType(basetype.Value.Type.Position, this)).ToArray() :
+                        parameterTypes));
 
-            pragmas.SetName(name = BuildFunctionName(name, parameterTypes, t));
+            pragmas.SetName(name = BuildFunctionName(basetype, name, parameterTypes, returnType));
 
-            var f = Module.AddFunction(pragmas.GetPragma("export"), ft);
+            var llvmfunction = Module.AddFunction(pragmas.GetPragma("export"), ft);
 
-            DeclareSymbol(name, true, MugValue.From(f, t), position, ispublic);
+            DeclareSymbol(name, true, MugValue.From(llvmfunction, returnType), position, ispublic);
         }
 
         /// <summary>
@@ -383,14 +386,19 @@ namespace Mug.Models.Generator
         /// <summary>
         /// create a string representing the name of a function that includes its id and the list of parameters, separated by ', ', in brackets
         /// </summary>
-        private string BuildFunctionName(string name, MugValueType[] types, MugValueType returntype)
+        private string BuildFunctionName(ParameterNode? basetype, string name, MugValueType[] types, MugValueType returntype)
         {
             if (IsEntryPoint(name, types.Length))
+            {
+                if (basetype.HasValue)
+                    Error(basetype.Value.Position, "Cannot define a base parameter for the entrypoint");
+
                 return name;
+            }
             else if (IsAsOperatorOverloading(name))
                 return $"as({string.Join(", ", types)}): {returntype}";
             else
-                return $"{name}({string.Join(", ", types)})";
+                return $"{(basetype.HasValue ? basetype.Value.Type.ToMugValueType(basetype.Value.Position, this) + "." : "")}{name}({string.Join(", ", types)})";
         }
 
         private void ReadModule(string filename)
@@ -415,7 +423,7 @@ namespace Mug.Models.Generator
 
         private void DeclareFunction(FunctionNode function)
         {
-            InstallFunction(function.Modifier == TokenKind.KeyPub, function.Pragmas, function.Name, function.Type, function.Position, function.ParameterList);
+            InstallFunction(function.Modifier == TokenKind.KeyPub, function.Base, function.Pragmas, function.Name, function.Type, function.Position, function.ParameterList);
 
             // allowing to call entrypoint
             if (function.Name == EntryPointName)
@@ -426,6 +434,7 @@ namespace Mug.Models.Generator
         {
             // change the name of the function in the corresponding with the types of parameters, to allow overload of the methods
             function.Name = BuildFunctionName(
+                function.Base,
                 function.Name,
                 ParameterTypesToMugTypes(function.ParameterList.Parameters),
                 function.Type.ToMugValueType(function.Position, this));
@@ -465,7 +474,7 @@ namespace Mug.Models.Generator
 
             // adding a new symbol
             DeclareSymbol(
-                BuildFunctionName(prototype.Name, parameters, type),
+                BuildFunctionName(null, prototype.Name, parameters, type),
                 false,
                 MugValue.From(function, type),
                 prototype.Position, prototype.Modifier == TokenKind.KeyPub);

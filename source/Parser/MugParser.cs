@@ -406,6 +406,10 @@ namespace Mug.Models.Parser
         {
             e = null;
             INode name = null;
+            var prefixes = new List<Token>();
+
+            while (MatchPrefixOperator(out var prefix))
+           		prefixes.Add(prefix);
 
             if (previousMember is null)
             {
@@ -470,26 +474,34 @@ namespace Mug.Models.Parser
                     e = new MemberNode() { Base = e, Member = (Token)name, Position = e.Position.Start..name.Position.End };
                 }
             }
+
             if (isImperativeStatement)
                 Expect("", TokenKind.Semicolon);
+
+            for (int i = 0; i < prefixes.Count; i++)
+                e = new PrefixOperator() { Prefix = prefixes[i].Kind, Position = prefixes[i].Position, Expression = e };
 
             return true;
         }
 
+        private bool MatchPrefixOperator(out Token prefix)
+        {
+            return
+                MatchAdvance(TokenKind.Minus, out prefix)      ||
+                MatchAdvance(TokenKind.Plus, out prefix)       ||
+                MatchAdvance(TokenKind.Negation, out prefix)   ||
+                MatchAdvance(TokenKind.BooleanAND, out prefix) ||
+                MatchAdvance(TokenKind.Star, out prefix);
+        }
+
         private bool MatchTerm(out INode e, bool allowCallStatement = true)
         {
-            if (MatchAdvance(TokenKind.Minus)      ||
-                MatchAdvance(TokenKind.Plus)       ||
-                MatchAdvance(TokenKind.Negation)   ||
-                MatchAdvance(TokenKind.BooleanAND) ||
-                MatchAdvance(TokenKind.Star))
+            if (MatchPrefixOperator(out var prefixOP))
             {
-                var prefixOp = Back;
-
                 if (!MatchTerm(out e, allowCallStatement))
                     ParseError("Unexpected prefix operator");
 
-                e = new PrefixOperator() { Expression = e, Position = prefixOp.Position, Prefix = prefixOp.Kind };
+                e = new PrefixOperator() { Expression = e, Position = prefixOP.Position, Prefix = prefixOP.Kind };
 
                 return true;
             }
@@ -981,7 +993,7 @@ namespace Mug.Models.Parser
 
             while (!MatchAdvance(TokenKind.ClosePar))
             {
-                parameters.Add(ExpectParameter(count == 0));
+                parameters.Parameters.Add(ExpectParameter(count == 0));
                 count++;
             }
 

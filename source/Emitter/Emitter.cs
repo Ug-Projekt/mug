@@ -158,6 +158,15 @@ namespace Mug.Models.Generator.Emitter
             Load(value);
         }
 
+        private void MakeConst()
+        {
+            var value = Pop();
+
+            value.IsConst = true;
+
+            Load(value);
+        }
+
         public void DeclareVariable(string name, MugValueType type, Range position)
         {
             if (IsDeclared(name))
@@ -172,6 +181,8 @@ namespace Mug.Models.Generator.Emitter
         {
             if (IsDeclared(name))
                 _generator.Error(position, "Variable already declared");
+
+            MakeConst();
 
             SetMemory(name, Pop());
         }
@@ -189,7 +200,7 @@ namespace Mug.Models.Generator.Emitter
         public void StoreVariable(MugValue allocation, Range position, Range bodyPosition)
         {
             // check it is a variable and not a constant
-            if (!allocation.IsAllocaInstruction())
+            if (allocation.IsConst)
                 _generator.Error(position, "Unable to change the value of a constant");
 
             ForceConstantIntSizeTo(allocation.Type);
@@ -237,7 +248,7 @@ namespace Mug.Models.Generator.Emitter
             var variable = GetMemoryAllocation(name, position);
 
             // variable
-            if (variable.IsAllocaInstruction())
+            if (!variable.IsConst)
             {
                 if (variable.Type.IsPointer())
                     EmitGCIncrementReferenceCounter(variable.LLVMValue);
@@ -457,6 +468,9 @@ namespace Mug.Models.Generator.Emitter
             }
 
             var allocation = GetMemoryAllocation(t.Value, t.Position);
+
+            if (allocation.IsConst)
+                _generator.Error(position, "Unable to take the address of a constant value");
 
             Load(MugValue.From(allocation.LLVMValue, MugValueType.Pointer(allocation.Type)));
         }

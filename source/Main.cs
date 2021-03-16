@@ -10,18 +10,24 @@ try
 
     var test = @"
 
-func (self: Person) say() {}
+type Person { name: str, age: u8 }
+
+func (self: *Person) say() {
+  self.say();
+}
 
 func main() {
-  *base.function();
+  var me = new Person {};
+  const meref = &me;
+  meref.say();
 }
 
 ";
-    
+
     var unit = new CompilationUnit("test", test);
 
-    Console.WriteLine(unit.GenerateAST().Dump());
-    // unit.Generate(true, true);
+    // Console.WriteLine(unit.GenerateAST().Dump());
+    unit.Generate(true, true);
 
 #else
 
