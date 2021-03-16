@@ -10,13 +10,11 @@ try
 
     var test = @"
 
-type Result {
-  ok: [u1]
-}
-
 func main() {
-  const k = new [u1] { true, false };
-  const result = new Result { ok: k };
+  var x = 0;
+  var y = &x;
+  var z = &y;
+  **z = 4;
 }
 
 ";

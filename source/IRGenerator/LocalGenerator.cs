@@ -1040,6 +1040,12 @@ namespace Mug.Models.Generator
 
                 return _emitter.Pop();
             }
+            else if (leftexpression is PrefixOperator prefix && prefix.Prefix == TokenKind.Star)
+            {
+                var ptr = EvaluateLeftValue(prefix.Expression);
+
+                return MugValue.From(_emitter.Builder.BuildLoad(ptr.LLVMValue), ptr.Type.PointerBaseElementType);
+            }
             else
             {
                 Error(leftexpression.Position, "Invalid value in left expression");
