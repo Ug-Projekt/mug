@@ -596,7 +596,7 @@ namespace Mug.Models.Generator
                     EmitExprMemberAccess(m);
                     break;
                 default:
-                    Error(expression.Position, "expression not supported yet");
+                    Error(expression.Position, "Expression not supported yet");
                     break;
             }
         }

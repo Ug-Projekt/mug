@@ -77,6 +77,20 @@ namespace Mug.Models.Parser
             }
         }
 
+        private string TokenKindsToString(TokenKind[] kinds)
+        {
+            StringBuilder result = new();
+
+            for (int i = 0; i < kinds.Length; i++)
+            {
+                result.Append(kinds[i].GetDescription());
+                if (i < kinds.Length - 1)
+                    result.Append("`, `");
+            }
+
+            return result.ToString();
+        }
+
         private Token ExpectMultiple(string error, params TokenKind[] kinds)
         {
             for (int i = 0; i < kinds.Length; i++)
@@ -87,25 +101,11 @@ namespace Mug.Models.Parser
                 }
 
             if (error == "")
-                ParseError("Expected `", matchString(), "`, found `", Current.Value, "`");
+                ParseError("Expected `", TokenKindsToString(kinds), "`, found `", Current.Value, "`");
             else
                 ParseError(error);
 
             throw new(); // unreachable
-
-            string matchString()
-            {
-                StringBuilder result = new();
-
-                for (int i = 0; i < kinds.Length; i++)
-                {
-                    result.Append(kinds[i].GetDescription());
-                    if (i < kinds.Length - 1)
-                        result.Append("`, `");
-                }
-
-                return result.ToString();
-            }
         }
 
         private Token Expect(string error, TokenKind kind)
@@ -219,10 +219,6 @@ namespace Mug.Models.Parser
         {
             if (!isFirst)
                 Expect("Parameters must be separated by a comma", TokenKind.Comma);
-
-            bool isreference = false;
-
-            if (MatchAdvance(TokenKind.BooleanAND)) isreference = true;
 
             var name = Expect("Expected parameter name", TokenKind.Identifier);
 
@@ -349,7 +345,7 @@ namespace Mug.Models.Parser
         private bool MatchMember(out INode name)
         {
             name = null;
-
+            
             if (!MatchValue())
                 return false;
 
@@ -408,8 +404,9 @@ namespace Mug.Models.Parser
             INode name = null;
             var prefixes = new List<Token>();
 
-            while (MatchPrefixOperator(out var prefix))
-           		prefixes.Add(prefix);
+            if (isImperativeStatement)
+                while (MatchPrefixOperator(out var prefix))
+           		    prefixes.Add(prefix);
 
             if (previousMember is null)
             {
@@ -476,10 +473,12 @@ namespace Mug.Models.Parser
             }
 
             if (isImperativeStatement)
+            {
                 Expect("", TokenKind.Semicolon);
 
-            for (int i = 0; i < prefixes.Count; i++)
-                e = new PrefixOperator() { Prefix = prefixes[i].Kind, Position = prefixes[i].Position, Expression = e };
+                if (prefixes.Count > 0)
+                    ParseError(prefixes[0].Position, "Not allowed when imperative statement");
+            }
 
             return true;
         }
@@ -520,10 +519,10 @@ namespace Mug.Models.Parser
                 }
 
                 if (allowCallStatement && MatchCallStatement(out var call, false, e))
-                {
                     e = call;
-                }
             }
+
+            CollectPossibleArrayAccessNode(ref e);
 
             while (MatchAdvance(TokenKind.Dot))
             {
@@ -536,9 +535,7 @@ namespace Mug.Models.Parser
                     e = call;
                 }
                 else
-                {
-                    e = new MemberNode() { Base = e, Member = name, Position = (e.Position.Start)..(name.Position.End) };
-                }
+                    e = new MemberNode() { Base = e, Member = name, Position = e.Position.Start..name.Position.End };
             }
 
             CollectPossibleArrayAccessNode(ref e);
@@ -593,7 +590,7 @@ namespace Mug.Models.Parser
                 return false;
 
             e = left;
-
+            
             if (MatchFactorOps())
             {
                 var op = Back;
@@ -755,7 +752,7 @@ namespace Mug.Models.Parser
            if (MatchBooleanOperator(out var boolOP))
                 return CollectBooleanExpression(ref e, boolOP, isFirst, end);
 
-            ExpectMultiple($"Invalid token in the current context, maybe missing one of `{string.Join("`, `", end)}`", end);
+            ExpectMultiple($"Invalid token in the current context, maybe missing one of `{TokenKindsToString(end)}`", end);
 
             return e;
         }

@@ -10,16 +10,8 @@ try
 
     var test = @"
 
-type Person { name: str, age: u8 }
-
-func (self: *Person) say() {
-  self.say();
-}
-
 func main() {
-  var me = new Person {};
-  const meref = &me;
-  meref.say();
+  *c = 2;
 }
 
 ";
