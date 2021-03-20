@@ -23,7 +23,7 @@ namespace Mug.Models.Generator
         internal readonly IRGenerator _generator;
         private readonly LLVMValueRef _llvmfunction;
         private LLVMBasicBlockRef _oldcondition;
-        private LLVMBasicBlockRef _cycleExitBlock { get; set; }
+        private LLVMBasicBlockRef CycleExitBlock { get; set; }
 
         internal LocalGenerator(IRGenerator errorHandler, ref LLVMValueRef llvmfunction, ref FunctionNode function, ref MugEmitter emitter)
         {
@@ -366,7 +366,7 @@ namespace Mug.Models.Generator
                     functionType,
                     c.Position);
 
-            _emitter.Call(function.LLVMValue, c.Parameters.Lenght + (hasbase ? 1 : 0), function.Type);
+            _emitter.Call(function.LLVMValue, c.Parameters.Lenght, function.Type, hasbase);
         }
 
         private void EmitExprPrefixOperator(PrefixOperator p)
@@ -621,10 +621,12 @@ namespace Mug.Models.Generator
                 _emitter.DeclareConstant(baseparameter.Name, baseparameter.Position);
             }
 
+            var offset = _function.Base.HasValue ? (uint)1 : 0;
+
             // alias for ...
             var parameters = _function.ParameterList.Parameters;
 
-            for (int i = _function.Base.HasValue ? 1 : 0; i < parameters.Count; i++)
+            for (int i = 0; i < parameters.Count; i++)
             {
                 // alias for ...
                 var parameter = parameters[i];
@@ -638,7 +640,7 @@ namespace Mug.Models.Generator
                     parameter.Position);
 
                 // storing the parameter into the variable
-                _emitter.InitializeParameter(parameter.Name, _llvmfunction.GetParam((uint)i));
+                _emitter.InitializeParameter(parameter.Name, _llvmfunction.GetParam((uint)i + offset));
             }
         }
 
@@ -695,8 +697,8 @@ namespace Mug.Models.Generator
 
             // generating the low-level code
             Generate(body);
-
-            // back to the main block, jump ou of the if scope
+            
+            // back to the main block, jump out of the if scope
             _emitter.JumpOutOfScope(then.Terminator, endifelse);
         }
 
@@ -726,29 +728,29 @@ namespace Mug.Models.Generator
             var endcondition = _llvmfunction.AppendBasicBlock("");
 
             // compare
-            _emitter.CompareJump(then, !_emitter.IsInsideSubBlock && i.ElseNode is null ? endcondition : @else);
+            _emitter.CompareJump(then,  i.ElseNode is null ? endcondition : @else);
 
             // save the old emitter
             var oldemitter = _emitter;
 
             // define if and else bodies
-            // if
+            // if body
             DefineConditionBody(then, endcondition, i.Body, oldemitter);
 
-            // else
+            // else body
             if (i.ElseNode is not null)
                 DefineElseBody(@else, endcondition, i.ElseNode, oldemitter);
 
             // restore old emitter
             _emitter = new(_generator, oldemitter.Memory, oldemitter.ExitBlock, oldemitter.IsInsideSubBlock);
 
-            if (_emitter.IsInsideSubBlock)
+            /*if (_emitter.IsInsideSubBlock)
             {
                 if (i.ElseNode is not null)
                     saveOldCondition.Terminator.SetOperand(1, @else.AsValue());
                 else
                     saveOldCondition.Terminator.SetOperand(1, endcondition.AsValue());
-            }
+            }*/
 
             _oldcondition = saveOldCondition;
 
@@ -785,9 +787,9 @@ namespace Mug.Models.Generator
             // compare
             _emitter.CompareJump(cycle, endcycle);
 
-            var oldCycleExitBlock = _cycleExitBlock;
+            var oldCycleExitBlock = CycleExitBlock;
 
-            _cycleExitBlock = endcycle;
+            CycleExitBlock = endcycle;
 
             // define if and else bodies
             DefineConditionBody(cycle, compare, i.Body, oldemitter);
@@ -795,16 +797,16 @@ namespace Mug.Models.Generator
             // restore old emitter
             _emitter = new(_generator, oldemitter.Memory, oldemitter.ExitBlock, oldemitter.IsInsideSubBlock);
 
-            if (_emitter.IsInsideSubBlock)
+            /*if (_emitter.IsInsideSubBlock)
             {
                 if (saveOldCondition.Terminator.OperandCount >= 2)
                     saveOldCondition.Terminator.SetOperand(1, endcycle.AsValue());
-            }
+            }*/
 
             // re emit the entry block
             _emitter.Builder.PositionAtEnd(endcycle);
 
-            _cycleExitBlock = oldCycleExitBlock;
+            CycleExitBlock = oldCycleExitBlock;
         }
 
         private void EmitConditionalStatement(ConditionalStatement i)
@@ -926,122 +928,6 @@ namespace Mug.Models.Generator
             };
         }
 
-        /*private void EvaluateVariableAssignment(ref MugValue allocation, TokenKind operatorkind, INode body, Range position, bool isfieldpointer)
-        {
-            if (!allocation.IsAllocaInstruction() && !isfieldpointer)
-                Error(position, "Unable to change a constant value");
-
-            var variableType = allocation.Type;
-
-            if (operatorkind != TokenKind.Equal)
-            {
-                if (body is not null)
-                {
-                    _emitter.LoadUnknownAllocation(allocation);
-
-                    EvaluateExpression(body);
-
-                    switch (operatorkind)
-                    {
-                        case TokenKind.AddAssignment: EmitSum(position); break;
-                        case TokenKind.SubAssignment: EmitSub(position); break;
-                        case TokenKind.MulAssignment: EmitMul(position); break;
-                        case TokenKind.DivAssignment: EmitDiv(position); break;
-                    }
-                }
-                else if (variableType.MatchIntType())
-                {
-                    _emitter.LoadUnknownAllocation(allocation);
-                    _emitter.Load(MugValue.From(LLVMValueRef.CreateConstInt(variableType.LLVMType, 1), variableType));
-
-                    switch (operatorkind)
-                    {
-                        case TokenKind.OperatorIncrement: _emitter.AddInt(); break;
-                        case TokenKind.OperatorDecrement: _emitter.SubInt(); break;
-                    }
-                }
-                else
-                    _emitter.CallOperator(IncrementOperatorToString(operatorkind), position, false, variableType);
-            }
-            else
-            {
-                EvaluateExpression(body);
-
-                _emitter.ForceConstantIntSizeTo(variableType);
-
-                _generator.ExpectSameTypes(allocation.Type, body.Position, $"Expected type {allocation.Type}, but got {_emitter.PeekType()}", _emitter.PeekType());
-            }
-        }
-
-        private void EmitFieldAssignment(MemberNode member, TokenKind operatorkind, INode body, Range position)
-        {
-            EvaluateMemberAccess(member, false);
-            var field = _emitter.Pop();
-
-            EvaluateVariableAssignment(ref field, operatorkind, body, position, true);
-
-            _emitter.StoreInside(field);
-        }
-
-        private void EmitAssignmentStatement(AssignmentStatement a)
-        {
-            if (a.Name is Token t)
-            {
-                if (t.Kind != TokenKind.Identifier)
-                    Error(a.Position, "Unable to assign a value to an expression");
-
-                var allocation = _emitter.GetMemoryAllocation(t.Value, t.Position);
-                EvaluateVariableAssignment(ref allocation, a.Operator, a.Body, a.Position, allocation.IsReference);
-
-                if (allocation.Type.IsPointer())
-                {
-                    _emitter.LoadFromMemory(t.Value, t.Position);
-                    _emitter.EmitGCDecrementReferenceCounter();
-                }
-
-                _emitter.StoreVariable(t.Value, t.Position, a.Body is not null ? a.Body.Position : a.Position);
-            }
-            else if (a.Name is ArraySelectElemNode aa)
-            {
-                EvaluateExpression(aa.Left);
-
-                var leftExpr = _emitter.Pop();
-
-                EvaluateExpression(aa.IndexExpression);
-
-                // arrays are indexed by int32
-                _emitter.ForceConstantIntSizeTo(MugValueType.Int32);
-
-                var indexExpr = _emitter.Pop();
-
-                EvaluateExpression(a.Body);
-
-                _emitter.ForceConstantIntSizeTo(leftExpr.Type.ArrayBaseElementType);
-
-                var expr = _emitter.Pop();
-
-                if (leftExpr.Type.IsIndexable() && leftExpr.Type.ArrayBaseElementType.Equals(expr.Type))
-                {
-                    var indexptr = _emitter.Builder.BuildGEP(
-                        leftExpr.LLVMValue,
-                        new[] { indexExpr.LLVMValue });
-
-                    _emitter.Builder.BuildStore(expr.LLVMValue, indexptr);
-                }
-                else
-                {
-                    _emitter.Load(leftExpr);
-                    _emitter.Load(indexExpr);
-                    _emitter.Load(expr);
-                    _emitter.CallOperator("[]=", aa.Position, false, leftExpr.Type, indexExpr.Type, expr.Type);
-                }
-            }
-            else if (a.Name is MemberNode m)
-                EmitFieldAssignment(m, a.Operator, a.Body, a.Position);
-            else
-                Error(a.Position, "Not supported yet");
-        }*/
-
         private void EmitPostfixOperator(MugValue variabile, TokenKind kind, Range position)
         {
             _emitter.Load(variabile);
@@ -1054,7 +940,7 @@ namespace Mug.Models.Generator
                     _emitter.MakePostfixIntOperation(_emitter.Builder.BuildSub);
             }
             else
-                _emitter.CallOperator(PostfixOperatorToString(kind), position, false, variabile.Type);
+                _emitter.CallOperator(PostfixOperatorToString(kind), position, false, _emitter.PeekType());
         }
 
         /// <summary>
@@ -1110,24 +996,23 @@ namespace Mug.Models.Generator
             {
                 EvaluateExpression(assignment.Body);
 
-                if (!ptr.Type.Equals(_emitter.PeekType()))
-                    Error(assignment.Body.Position, "Expected ", ptr.Type.ToString(), ", got ", _emitter.PeekType().ToString());
-
                 if (assignment.Operator == TokenKind.Equal)
                     _emitter.StoreInsidePointer(ptr);
                 else
                 {
-                    void operate(Func<LLVMValueRef, LLVMValueRef, string, LLVMValueRef> operation) =>
-                        _emitter.OperateInsidePointer(ptr, operation);
-                    
+                    _emitter.Load(MugValue.From(_emitter.Builder.BuildLoad(ptr.LLVMValue), ptr.Type));
+                    _emitter.Swap();
+
                     switch (assignment.Operator)
                     {
-                        case TokenKind.AddAssignment: operate(_emitter.Builder.BuildAdd); break;
-                        case TokenKind.SubAssignment: operate(_emitter.Builder.BuildSub); break;
-                        case TokenKind.MulAssignment: operate(_emitter.Builder.BuildMul); break;
-                        case TokenKind.DivAssignment: operate(_emitter.Builder.BuildSDiv); break;
+                        case TokenKind.AddAssignment: EmitSum(assignment.Position); break;
+                        case TokenKind.SubAssignment: EmitSub(assignment.Position); break;
+                        case TokenKind.MulAssignment: EmitMul(assignment.Position); break;
+                        case TokenKind.DivAssignment: EmitDiv(assignment.Position); break;
                         default: throw new();
                     }
+
+                    _emitter.OperateInsidePointer(ptr);
                 }
             }
         }
@@ -1157,11 +1042,11 @@ namespace Mug.Models.Generator
         private void EmitLoopManagementStatement(LoopManagementStatement management)
         {
             // is not inside a cycle
-            if (_cycleExitBlock.Handle == IntPtr.Zero)
+            if (CycleExitBlock.Handle == IntPtr.Zero)
                 Error(management.Position, "Loop management statements only allowed inside cycle's bodies");
 
             if (management.Management.Kind == TokenKind.KeyBreak)
-                _emitter.Jump(_cycleExitBlock);
+                _emitter.Jump(CycleExitBlock);
             else
                 _emitter.Exit();
         }

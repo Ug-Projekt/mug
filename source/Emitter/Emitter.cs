@@ -270,7 +270,7 @@ namespace Mug.Models.Generator.Emitter
                 // check the operator overloading is not void
                 _generator.ExpectNonVoidType(function.Type.LLVMType, position);
 
-            Call(function.LLVMValue, types.Length, function.Type);
+            Call(function.LLVMValue, types.Length, function.Type, false);
         }
 
         public void CallAsOperator(Range position, MugValueType type, MugValueType returntype)
@@ -280,7 +280,7 @@ namespace Mug.Models.Generator.Emitter
             if (!function.IsFunction())
                 _generator.Error(position, "Unable to call this member");
 
-            Call(function.LLVMValue, 1, returntype);
+            Call(function.LLVMValue, 1, returntype, false);
         }
 
         public void Ret()
@@ -313,15 +313,18 @@ namespace Mug.Models.Generator.Emitter
         /// <summary>
         /// buils an array of the parameters to pass and calls the function
         /// </summary>
-        public void Call(LLVMValueRef function, int paramCount, MugValueType returnType)
+        public void Call(LLVMValueRef function, int paramCount, MugValueType returnType, bool hasbase)
         {
-            var parameters = new MugValue[paramCount];
+            var baseoffset = Convert.ToInt32(hasbase);
+            var parameters = new List<MugValue>(paramCount + baseoffset);
+
+            if (hasbase)
+                parameters.Insert(0, Pop());
 
             for (int i = 0; i < paramCount; i++)
-                // paramcount - current index (the last - i) - 1 (offset)
-                parameters[paramCount - i - 1] = Pop();
+                parameters.Insert(baseoffset, Pop());
 
-            var result = Builder.BuildCall(function, _generator.MugValuesToLLVMValues(parameters));
+            var result = Builder.BuildCall(function, _generator.MugValuesToLLVMValues(parameters.ToArray()));
 
             if (result.TypeOf.Kind != LLVMTypeKind.LLVMVoidTypeKind)
                 Load(MugValue.From(result, returnType));
@@ -516,11 +519,9 @@ namespace Mug.Models.Generator.Emitter
             Builder.BuildStore(result, target.LLVMValue);
         }
 
-        public void OperateInsidePointer(MugValue target, Func<LLVMValueRef, LLVMValueRef, string, LLVMValueRef> operation)
+        public void OperateInsidePointer(MugValue target)
         {
-            var result = operation(Builder.BuildLoad(target.LLVMValue), Pop().LLVMValue, "");
-
-            Builder.BuildStore(result, target.LLVMValue);
+            Builder.BuildStore(Pop().LLVMValue, target.LLVMValue);
         }
 
         public void SelectArrayElement(bool buildload)
@@ -535,6 +536,14 @@ namespace Mug.Models.Generator.Emitter
                 ptr = Builder.BuildLoad(ptr);
 
             Load(MugValue.From(ptr, array.Type.ArrayBaseElementType));
+        }
+
+        public void Swap()
+        {
+            var second = Pop();
+            var first = Pop();
+            Load(second);
+            Load(first);
         }
     }
 }

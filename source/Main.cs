@@ -11,7 +11,16 @@ try
     var test = @"
 
 func main() {
-  *c = 2;
+  var i: i32;
+
+  while i == 9 {
+    var f = 0;
+
+    while f == 1 { f = 7; }
+    while f == 2 { f = 5; }
+    f++;
+  }
+  i++;
 }
 
 ";
