@@ -10,21 +10,15 @@ try
 
     var test = @"
 
+func ok<T>(a: i32) {
+}
+
 func main() {
-  var i: i32;
-
-  while i == 9 {
-    var f = 0;
-
-    while f == 1 { f = 7; }
-    while f == 2 { f = 5; }
-    f++;
-  }
-  i++;
+  ok<i32>(0);
 }
 
 ";
-
+    
     var unit = new CompilationUnit("test", test);
 
     // Console.WriteLine(unit.GenerateAST().Dump());

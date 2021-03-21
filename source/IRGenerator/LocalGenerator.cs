@@ -221,12 +221,12 @@ namespace Mug.Models.Generator
         {
             // the expression type to cast
             var expressionType = _emitter.PeekType();
-            var castType = type.ToMugValueType(position, _generator);
+            var castType = type.ToMugValueType(_generator);
 
             if (castType.IsEnum())
             {
                 var enumerated = castType.GetEnum();
-                var enumBaseType = enumerated.BaseType.ToMugValueType(position, _generator);
+                var enumBaseType = enumerated.BaseType.ToMugValueType(_generator);
 
                 _emitter.ForceConstantIntSizeTo(enumBaseType);
 
@@ -237,11 +237,11 @@ namespace Mug.Models.Generator
             }
             else if (expressionType.TypeKind == MugValueTypeKind.Enum)
             {
-                var enumBaseType = expressionType.GetEnum().BaseType.ToMugValueType(new(), _generator);
+                var enumBaseType = expressionType.GetEnum().BaseType.ToMugValueType(_generator);
 
                 _emitter.ForceConstantIntSizeTo(enumBaseType);
 
-                if (_emitter.PeekType().GetEnum().BaseType.ToMugValueType(new(), _generator).TypeKind != castType.TypeKind)
+                if (_emitter.PeekType().GetEnum().BaseType.ToMugValueType(_generator).TypeKind != castType.TypeKind)
                     Error(type.Position, "Enum base type is incompatible with type `", castType.ToString(), "`");
 
                 _emitter.CastEnumMemberToBaseType(castType);
@@ -256,7 +256,7 @@ namespace Mug.Models.Generator
                 castType.MatchAnyTypeOfIntType()) // LLVM has different instructions for each type convertion
                 _emitter.CastInt(castType);
             else
-                _emitter.CallAsOperator(position, expressionType, type.ToMugValueType(position, _generator));
+                _emitter.CallAsOperator(position, expressionType, type.ToMugValueType(_generator));
         }
 
         /// <summary>
@@ -290,17 +290,7 @@ namespace Mug.Models.Generator
             }
         }
 
-        /// <summary>
-        /// the function returns a string representing the function id and the array of
-        /// parameter types in parentheses separated by ', ',
-        /// to allow overload of functions
-        /// </summary>
-        private string BuildName(string name, MugValueType[] parameters)
-        {
-            return $"{name}({string.Join(", ", parameters)})";
-        }
-
-        private void EvaluateFunctionCallName(INode leftexpression, MugValueType[] parameters, out bool hasbase)
+        private void EvaluateFunctionCallName(INode leftexpression, MugValueType[] parameters, MugValueType[] genericsInput, out bool hasbase)
         {
             string name;
             Range position;
@@ -325,7 +315,7 @@ namespace Mug.Models.Generator
                 return;
             }
 
-            _emitter.Load(_generator.GetSymbol(BuildName(name, parameters), position).GetValue<MugValue>());
+            _emitter.Load(_generator.EvaluateFunction(name, parameters, genericsInput, position));
         }
 
         /// <summary>
@@ -350,7 +340,7 @@ namespace Mug.Models.Generator
              * of the function id and in brackets the list of parameter types separated by ', '
              */
 
-            EvaluateFunctionCallName(c.Name, parameters, out bool hasbase);
+            EvaluateFunctionCallName(c.Name, parameters, _generator.MugTypesToMugValueTypes(c.Generics), out bool hasbase);
 
             var function = _emitter.Pop();
 
@@ -358,7 +348,7 @@ namespace Mug.Models.Generator
                 _generator.Error(c.Position, "Unable to call this member");
 
             // function type: <ret_type> <param_types>
-            var functionType = function.Type.LLVMType;
+            var functionType = function.Type.GetFunction().Item2.LLVMType;
 
             if (expectedNonVoid)
                 _generator.ExpectNonVoidType(
@@ -366,7 +356,7 @@ namespace Mug.Models.Generator
                     functionType,
                     c.Position);
 
-            _emitter.Call(function.LLVMValue, c.Parameters.Lenght, function.Type, hasbase);
+            _emitter.Call(function.LLVMValue, c.Parameters.Lenght, function.Type.GetFunction().Item2, hasbase);
         }
 
         private void EmitExprPrefixOperator(PrefixOperator p)
@@ -390,7 +380,7 @@ namespace Mug.Models.Generator
                 _emitter.NegInt();
             }
             else if (p.Prefix == TokenKind.Star)
-                _emitter.LoadFromPointer(p.Position);
+                _emitter.Load(_emitter.LoadFromPointer(_emitter.Pop(), p.Position));
         }
 
         private void EmitExpr(ExpressionNode e)
@@ -435,7 +425,7 @@ namespace Mug.Models.Generator
 
         private void EmitExprAllocateArray(ArrayAllocationNode aa)
         {
-            var arraytype = MugValueType.Array(aa.Type.ToMugValueType(aa.Position, _generator));
+            var arraytype = MugValueType.Array(aa.Type.ToMugValueType(_generator));
 
             // loading the array
 
@@ -478,7 +468,7 @@ namespace Mug.Models.Generator
             if (!ta.Name.IsAllocableTypeNew())
                 Error(ta.Position, "Unable to allocate type ", ta.Name.ToString(), " with `new` operator");
 
-            var structure = ta.Name.ToMugValueType(ta.Name.Position, _generator);
+            var structure = ta.Name.ToMugValueType(_generator);
 
             var tmp = _emitter.Builder.BuildAlloca(
                 structure.LLVMType);
@@ -616,7 +606,7 @@ namespace Mug.Models.Generator
             if (_function.Base.HasValue)
             {
                 var baseparameter = _function.Base.Value;
-                var type = baseparameter.Type.ToMugValueType(baseparameter.Type.Position, _generator);
+                var type = baseparameter.Type.ToMugValueType(_generator);
                 _emitter.Load(MugValue.From(_llvmfunction.GetParam(0), type, true));
                 _emitter.DeclareConstant(baseparameter.Name, baseparameter.Position);
             }
@@ -631,7 +621,7 @@ namespace Mug.Models.Generator
                 // alias for ...
                 var parameter = parameters[i];
 
-                var parametertype = parameter.Type.ToMugValueType(parameter.Type.Position, _generator);
+                var parametertype = parameter.Type.ToMugValueType(_generator);
 
                 // allocating the local variable
                 _emitter.DeclareVariable(
@@ -867,7 +857,7 @@ namespace Mug.Models.Generator
             if (@return.IsVoid())
             {
                 _generator.ExpectSameTypes(
-                    _function.Type.ToMugValueType(@return.Position, _generator),
+                    _function.Type.ToMugValueType(_generator),
                     @return.Position,
                     "Expected non-void expression",
                     MugValueType.Void);
@@ -882,7 +872,7 @@ namespace Mug.Models.Generator
                  */
                 EvaluateExpression(@return.Body);
 
-                var type = _function.Type.ToMugValueType(@return.Position, _generator);
+                var type = _function.Type.ToMugValueType(_generator);
 
                 _emitter.ForceConstantIntSizeTo(type);
 
@@ -967,11 +957,14 @@ namespace Mug.Models.Generator
 
                 return _emitter.Pop();
             }
-            else if (leftexpression is PrefixOperator prefix && prefix.Prefix == TokenKind.Star)
+            else if (leftexpression is PrefixOperator prefix)
             {
+                if (prefix.Prefix != TokenKind.Star)
+                    Error(leftexpression.Position, "Unable to assign a value to an expression");
+
                 var ptr = EvaluateLeftValue(prefix.Expression, false);
 
-                return MugValue.From(_emitter.Builder.BuildLoad(ptr.LLVMValue), ptr.Type.PointerBaseElementType);
+                return MugValue.From(ptr.IsConst ? ptr.LLVMValue : _emitter.LoadFromPointer(ptr, prefix.Position).LLVMValue, ptr.Type.PointerBaseElementType);
             }
             else
             {
@@ -979,8 +972,6 @@ namespace Mug.Models.Generator
 
                 return _emitter.Pop();
             }
-                /*Error(leftexpression.Position, "Invalid value in left expression");
-                throw new();*/
         }
 
         private void EmitAssignmentStatement(AssignmentStatement assignment)
@@ -1025,9 +1016,7 @@ namespace Mug.Models.Generator
             // match the constant explicit type and expression type are the same
             if (!constant.Type.IsAutomatic())
             {
-                var constType = constant.Type.ToMugValueType(
-                        constant.Position,
-                        _generator);
+                var constType = constant.Type.ToMugValueType(_generator);
 
                 _emitter.ForceConstantIntSizeTo(constType);
 

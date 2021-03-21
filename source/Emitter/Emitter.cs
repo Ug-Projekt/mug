@@ -1,4 +1,5 @@
 ﻿using LLVMSharp.Interop;
+using Mug.Compilation;
 using Mug.Models.Lexer;
 using Mug.Models.Parser;
 using Mug.Models.Parser.NodeKinds.Statements;
@@ -101,7 +102,10 @@ namespace Mug.Models.Generator.Emitter
                 if (symbol is MugValue value)
                     variable = value;
                 else
+                {
                     _generator.Error(position, "Bad symbol in expression");
+                    throw new();
+                }
             }
 
             return variable;
@@ -116,7 +120,7 @@ namespace Mug.Models.Generator.Emitter
         {
             DeclareVariable(
                 variable.Name,
-                variable.Type.ToMugValueType(variable.Type.Position, _generator),
+                variable.Type.ToMugValueType(_generator),
                 variable.Position);
         }
 
@@ -261,21 +265,23 @@ namespace Mug.Models.Generator.Emitter
 
         public void CallOperator(string op, Range position, bool expectedNonVoid, params MugValueType[] types)
         {
-            var function = (MugValue)_generator.GetSymbol($"{op}({string.Join(", ", types)})", position).Value;
+            var function = _generator.EvaluateFunction(op, types, Array.Empty<MugValueType>(), position);
 
             if (!function.IsFunction())
                 _generator.Error(position, "Unable to call this member");
 
+            var functionRetType = function.Type.GetFunction().Item2;
+
             if (expectedNonVoid)
                 // check the operator overloading is not void
-                _generator.ExpectNonVoidType(function.Type.LLVMType, position);
+                _generator.ExpectNonVoidType(functionRetType.LLVMType, position);
 
-            Call(function.LLVMValue, types.Length, function.Type, false);
+            Call(function.LLVMValue, types.Length, functionRetType, false);
         }
 
         public void CallAsOperator(Range position, MugValueType type, MugValueType returntype)
         {
-            var function = (MugValue)_generator.GetSymbol($"as({type}): {returntype}", position).Value;
+            var function = _generator.EvaluateFunction($"as({type}): {returntype}", Array.Empty<MugValueType>(), Array.Empty<MugValueType>(), position, true);
 
             if (!function.IsFunction())
                 _generator.Error(position, "Unable to call this member");
@@ -399,7 +405,7 @@ namespace Mug.Models.Generator.Emitter
 
             var type = enumerated.Type.GetEnum();
 
-            Load(type.GetMemberValueFromName(enumerated.Type, type.BaseType.ToMugValueType(position, localgenerator._generator), membername, position, localgenerator));
+            Load(type.GetMemberValueFromName(enumerated.Type, type.BaseType.ToMugValueType(localgenerator._generator), membername, position, localgenerator));
         }
 
         public void LoadField(MugValue instance, MugValueType fieldType, int index, bool load)
@@ -478,14 +484,12 @@ namespace Mug.Models.Generator.Emitter
             Load(MugValue.From(allocation.LLVMValue, MugValueType.Pointer(allocation.Type)));
         }
 
-        public void LoadFromPointer(Range position)
+        public MugValue LoadFromPointer(MugValue value, Range position)
         {
-            var value = Pop();
-
             if (!value.Type.IsPointer())
                 _generator.Error(position, "Expected a pointer");
 
-            Load(MugValue.From(Builder.BuildLoad(value.LLVMValue), value.Type.PointerBaseElementType));
+            return MugValue.From(Builder.BuildLoad(value.LLVMValue), value.Type.PointerBaseElementType);
         }
 
         public void StoreInsidePointer(MugValue ptr)

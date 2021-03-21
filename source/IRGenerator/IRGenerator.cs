@@ -13,6 +13,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Resources;
+using System.Text;
 
 namespace Mug.Models.Generator
 {
@@ -77,7 +78,7 @@ namespace Mug.Models.Generator
         internal bool IsDeclared(string name, out Symbol symbol)
         {
             for (int i = 0; i < Map.Count; i++)
-                if (Map[i].Name == name)
+                if (Map[i].Name.Equals(name))
                 {
                     symbol = Map[i];
                     return true;
@@ -102,7 +103,7 @@ namespace Mug.Models.Generator
         public void DeclareSymbol(string name, bool isdefined, object value, Range position, bool ispublic)
         {
             if (IsDeclared(name, out _))
-                Error(position, "`", name, "` member already declared");
+                Error(position, "`", name.ToString(), "` member already declared");
 
             Map.Add(new Symbol(name, isdefined, value, position, ispublic));
         }
@@ -110,7 +111,7 @@ namespace Mug.Models.Generator
         public void DeclareSymbol(Symbol symbol)
         {
             if (IsDeclared(symbol.Name, out _))
-                Error(symbol.Position, "`", symbol.Name, "` member already declared");
+                Error(symbol.Position, "`", symbol.Name.ToString(), "` member already declared");
 
             Map.Add(symbol);
         }
@@ -122,7 +123,19 @@ namespace Mug.Models.Generator
         {
             var result = new MugValueType[parameterTypes.Count];
             for (int i = 0; i < parameterTypes.Count; i++)
-                result[i] = parameterTypes[i].Type.ToMugValueType(parameterTypes[i].Type.Position, this);
+                result[i] = parameterTypes[i].Type.ToMugValueType(this);
+
+            return result;
+        }
+
+        /// <summary>
+        /// calls the function <see cref="TypeToMugType(MugType, Range)"/> for each parameter in the past array
+        /// </summary>
+        internal MugValueType[] MugTypesToMugValueTypes(List<MugType> types)
+        {
+            var result = new MugValueType[types.Count];
+            for (int i = 0; i < types.Count; i++)
+                result[i] = types[i].ToMugValueType(this);
 
             return result;
         }
@@ -151,8 +164,11 @@ namespace Mug.Models.Generator
 
         private void DefineSymbol(string name, object value, Range position, bool ispublic)
         {
-            if (IsDeclared(name, out _))
-                Map[Map.FindIndex(symbol => symbol.Name == name)] = new Symbol(name, true, value, position, ispublic);
+            if (IsDeclared(name, out var symbol))
+            {
+                symbol.IsDefined = true;
+                symbol.Value = value;
+            }
             else
                 DeclareSymbol(name, true, value, position, ispublic);
         }
@@ -197,7 +213,7 @@ namespace Mug.Models.Generator
 
             _genericParameters = new();
             for (int i = 0; i < structure.Generics.Count; i++)
-                _genericParameters.Add((structure.Generics[i].Value, genericsInput[i]));
+                GenericParametersAdd((structure.Generics[i].Value, genericsInput[i]), structure.Generics[i].Position);
 
             var fields = new string[structure.Body.Count];
             var structModel = new MugValueType[structure.Body.Count];
@@ -211,7 +227,7 @@ namespace Mug.Models.Generator
                     Error(field.Position, "Already declared field");
 
                 fields[i] = field.Name;
-                structModel[i] = field.Type.ToMugValueType(field.Type.Position, this);
+                structModel[i] = field.Type.ToMugValueType(this);
                 fieldPositions[i] = field.Position;
             }
 
@@ -226,16 +242,24 @@ namespace Mug.Models.Generator
             return structsymbol;
         }
 
+        private void GenericParametersAdd((string, MugValueType) genericParameter, Range position)
+        {
+            if (_genericParameters.FindIndex(elem => elem.Item1 == genericParameter.Item1) != -1)
+                Error(position, "Already declared generic parameter");
+
+            _genericParameters.Add(genericParameter);
+        }
+
         public bool IsCompilerSymbolDeclared(string symbol)
         {
-            return IsDeclared($"`@symbol {symbol.ToLower()}", out _);
+            return IsDeclared($"@symbol: {symbol.ToLower()}", out _);
         }
 
         public void DeclareCompilerSymbol(string symbol, bool hasGoodPosition = false, Range position = new())
         {
             symbol = symbol.ToLower();
 
-            if (IsCompilerSymbolDeclared(symbol))
+            if (IsCompilerSymbolDeclared($"@symbol: {symbol}"))
             {
                 var error = $"Compiler symbol `{symbol}` is already declared";
 
@@ -245,32 +269,7 @@ namespace Mug.Models.Generator
                 Error(position, error);
             }
 
-            DeclareSymbol(new Symbol($"`@symbol {symbol}", false));
-        }
-
-        /// <summary>
-        /// declares the prototype symbol of a function, the function <see cref="DefineFunction(FunctionNode)"/> will take the declared symbol
-        /// in this function and will convert the ast of the function node into the corresponding low-level code appending the result to the symbol
-        /// body
-        /// </summary>
-        private void InstallFunction(bool ispublic, ParameterNode? basetype, Pragmas pragmas, string name, MugType type, Range position, ParameterListNode paramTypes)
-        {
-            var parameterTypes = ParameterTypesToMugTypes(paramTypes.Parameters);
-
-            var returnType = type.ToMugValueType(type.Position, this);
-
-            var ft = LLVMTypeRef.CreateFunction(
-                    returnType.LLVMType,
-                    MugTypesToLLVMTypes(
-                        basetype.HasValue ?
-                        parameterTypes.Prepend(basetype.Value.Type.ToMugValueType(basetype.Value.Type.Position, this)).ToArray() :
-                        parameterTypes));
-
-            pragmas.SetName(name = BuildFunctionName(basetype, name, parameterTypes, returnType));
-
-            var llvmfunction = Module.AddFunction(pragmas.GetPragma("export"), ft);
-
-            DeclareSymbol(name, true, MugValue.From(llvmfunction, returnType), position, ispublic);
+            DeclareSymbol(new Symbol($"@symbol: {symbol}", false));
         }
 
         /// <summary>
@@ -339,9 +338,40 @@ namespace Mug.Models.Generator
         internal Symbol GetSymbol(string name, Range position)
         {
             if (!IsDeclared(name, out var symbol))
-                Error(position, "`", name, "` undeclared member");
+                Error(position, "`", name.ToString(), "` undeclared member");
 
             return symbol;
+        }
+
+        /*private List<MugValue> GetFunctions(string name)
+        {
+            
+        }*/
+
+        /// <summary>
+        /// the function returns a string representing the function id and the array of
+        /// parameter types in parentheses separated by ', ',
+        /// to allow overload of functions
+        /// </summary>
+        private string BuildName(string name, MugValueType[] genericsInput, MugValueType[] parameters, bool isAsOperaor)
+        {
+            if (isAsOperaor || IsEntryPoint(name, parameters.Length))
+                return name;
+            else
+                return $"{name}{(genericsInput.Length > 0 ? $"<{string.Join<MugValueType>(", ", genericsInput)}>" : "")}({string.Join(", ", parameters)})";
+        }
+
+        internal MugValue EvaluateFunction(string name, MugValueType[] parameters, MugValueType[] genericsInput, Range position, bool isAsOperaor = false)
+        {
+            if (genericsInput.Length > 0 && IsDeclared(name, out var genericFunction))
+                return genericFunction.GetValue<MugValue>();
+
+            var symbol = GetSymbol(BuildName(name, Array.Empty<MugValueType>(), parameters, isAsOperaor), position);
+
+            if (symbol.IsDefined)
+                return symbol.GetValue<MugValue>();
+
+            return EvaluateFunction(BuildName(name, genericsInput, parameters, isAsOperaor), symbol.GetValue<FunctionNode>(), genericsInput, symbol.IsPublic, position);
         }
 
         /// <summary>
@@ -349,13 +379,41 @@ namespace Mug.Models.Generator
         /// to allow the call of a method declared under the caller.
         /// see the first part of the Generate function
         /// </summary>
-        private void DefineFunction(FunctionNode function)
+        private MugValue EvaluateFunction(string name, FunctionNode function, MugValueType[] genericsInput, bool ispublic, Range position)
         {
-            var llvmfunction = Map.Find(s => s.Name == function.Name).GetValue<MugValue>().LLVMValue;
+            if (function.Generics.Count != genericsInput.Length)
+                Error(position, "Incorrect number of generic parameters");
+
+            var oldGenericParameters = _genericParameters;
+
+            _genericParameters = new();
+            for (int i = 0; i < function.Generics.Count; i++)
+                GenericParametersAdd((function.Generics[i].Value, genericsInput[i]), function.Generics[i].Position);
+
+            var baseoffset = Convert.ToInt32(function.Base.HasValue);
+
+            var paramTypes = new MugValueType[function.ParameterList.Lenght + baseoffset];
+            var retType = function.Type.ToMugValueType(this);
+            var types = ParameterTypesToMugTypes(function.ParameterList.Parameters);
+
+            if (function.Base.HasValue)
+                paramTypes[0] = function.Base.Value.Type.ToMugValueType(this);
+
+            for (int i = 0; i < types.Length; i++)
+                paramTypes[i + baseoffset] = types[i];
+
+            var llvmfunction = Module.AddFunction(name, LLVMTypeRef.CreateFunction(
+                retType.LLVMType,
+                MugTypesToLLVMTypes(paramTypes)));
+
+            var func = MugValue.From(llvmfunction, MugValueType.Function(paramTypes, retType));
+
+            DefineSymbol(name, func, function.Position, ispublic);
+
             // basic block, won't be emitted any block because the name is empty
             var entry = llvmfunction.AppendBasicBlock("");
 
-            MugEmitter emitter = new MugEmitter(this, entry, false);
+            var emitter = new MugEmitter(this, entry, false);
 
             emitter.Builder.PositionAtEnd(entry);
 
@@ -366,6 +424,10 @@ namespace Mug.Models.Generator
             if (llvmfunction.LastBasicBlock.Terminator.IsAReturnInst.Handle == IntPtr.Zero &&
                 function.Type.Kind == TypeKind.Void)
                 generator.AddImplicitRetVoid();
+
+            _genericParameters = oldGenericParameters;
+
+            return func;
         }
 
         /// <summary>
@@ -398,7 +460,30 @@ namespace Mug.Models.Generator
             else if (IsAsOperatorOverloading(name))
                 return $"as({string.Join(", ", types)}): {returntype}";
             else
-                return $"{(basetype.HasValue ? basetype.Value.Type.ToMugValueType(basetype.Value.Position, this) + "." : "")}{name}({string.Join(", ", types)})";
+                return $"{(basetype.HasValue ? basetype.Value.Type.ToMugValueType(this) + "." : "")}{name}({string.Join(", ", types)})";
+        }
+
+        /// <summary>
+        /// the same of <see cref="BuildFunctionName(ParameterNode?, string, MugValueType[], MugValueType)"/>
+        /// </summary>
+        private string BuildFunctionTmpSymbol(ParameterNode? basetype, string name, List<ParameterNode> parameters, MugType returntype)
+        {
+            var types = new MugType[parameters.Count];
+
+            for (int i = 0; i < parameters.Count; i++)
+                types[i] = parameters[i].Type;
+
+            if (IsEntryPoint(name, parameters.Count))
+            {
+                if (basetype.HasValue)
+                    Error(basetype.Value.Position, "Cannot define a base parameter for the entrypoint");
+
+                return name;
+            }
+            else if (IsAsOperatorOverloading(name))
+                return $"{name}({string.Join<MugType>(", ", types)}): {returntype}";
+            else
+                return $"{(basetype.HasValue ? $"{basetype?.Type}." : "")}{name}({string.Join<MugType>(", ", types)})";
         }
 
         private void ReadModule(string filename)
@@ -421,29 +506,11 @@ namespace Mug.Models.Generator
             }
         }
 
-        private void DeclareFunction(FunctionNode function)
-        {
-            InstallFunction(function.Modifier == TokenKind.KeyPub, function.Base, function.Pragmas, function.Name, function.Type, function.Position, function.ParameterList);
-
-            // allowing to call entrypoint
-            if (function.Name == EntryPointName)
-                DeclareSymbol(EntryPointName + "()", false, Map.Find(s => s.Name == EntryPointName).Value, function.Position, function.Modifier == TokenKind.KeyPub);
-        }
-
-        private void EmitFunction(FunctionNode function)
-        {
-            // change the name of the function in the corresponding with the types of parameters, to allow overload of the methods
-            function.Name = BuildFunctionName(
-                function.Base,
-                function.Name,
-                ParameterTypesToMugTypes(function.ParameterList.Parameters),
-                function.Type.ToMugValueType(function.Position, this));
-            
-            DefineFunction(function);
-        }
-
         private void EmitFunctionPrototype(FunctionPrototypeNode prototype)
         {
+            if (prototype.Generics.Count > 0)
+                Error(prototype.Position, "Function prototypes cannot have generic parameters");
+
             var header = prototype.Pragmas.GetPragma("header");
             if (header != "")
             {
@@ -462,7 +529,7 @@ namespace Mug.Models.Generator
             // search for the function
             var function = Module.GetNamedFunction(prototype.Pragmas.GetPragma("extern"));
 
-            var type = prototype.Type.ToMugValueType(prototype.Position, this);
+            var type = prototype.Type.ToMugValueType(this);
 
             // if the function is not declared yet
             if (function.Handle == IntPtr.Zero)
@@ -500,13 +567,13 @@ namespace Mug.Models.Generator
         private bool AlreadyIncluded(string path)
         {
             // backtick to prevent symbol declaration via backtick sequence identifier
-            return IsDeclared($"`@import: {path}", out _);
+            return IsDeclared($"@import: {path}", out _);
         }
 
         private void EmitIncludeGuard(string path)
         {
             // pragma once
-            var symbol = $"`@import: {path}";
+            var symbol = $"@import: {path}";
             if (IsDeclared(symbol, out _))
                 return;
 
@@ -617,7 +684,7 @@ namespace Mug.Models.Generator
 
         private void EmitEnum(EnumStatement enumstatement)
         {
-            var basetype = enumstatement.BaseType.ToMugValueType(enumstatement.Position, this);
+            var basetype = enumstatement.BaseType.ToMugValueType(this);
 
             CheckCorrectEnum(ref enumstatement, basetype);
             
@@ -666,43 +733,42 @@ namespace Mug.Models.Generator
                 MergeTree((NodeBuilder)when.Body);
         }
 
+        private void GenerateEntryPoint()
+        {
+            if (!IsDeclared(EntryPointName, out var entrypoint))
+                CompilationErrors.Throw("No entry point declared");
+
+            EvaluateFunction(EntryPointName, entrypoint.GetValue<FunctionNode>(), Array.Empty<MugValueType>(), true, new());
+        }
+
         /// <summary>
         /// recognize the type of the AST node and depending on the type call methods
         /// to convert it to the corresponding low-level code
         /// </summary>
-        private void RecognizeMember(INode member, bool firstDeclaration, bool secondDeclaration, bool tirdDeclaration)
+        private void RecognizeMember(INode member)
         {
             switch (member)
             {
                 case FunctionNode function:
-                    if (tirdDeclaration) // declares the prototype of the function
-                        DeclareFunction(function);
-                    else if (!secondDeclaration && !firstDeclaration) // defines the function body
-                        EmitFunction(function);
+                    DeclareSymbol(BuildFunctionTmpSymbol(function.Base, function.Name, function.ParameterList.Parameters, function.Type), false, function, function.Position, function.Modifier == TokenKind.KeyPub);
                     break;
                 case FunctionPrototypeNode prototype:
-                    if (tirdDeclaration)
-                        EmitFunctionPrototype(prototype);
+                    EmitFunctionPrototype(prototype);
                     break;
                 case TypeStatement structure:
-                    if (secondDeclaration)
-                        DeclareSymbol(structure.Name, false, structure, structure.Position, structure.Modifier == TokenKind.KeyPub);
+                    DeclareSymbol(structure.Name, false, structure, structure.Position, structure.Modifier == TokenKind.KeyPub);
                     break;
                 case EnumStatement enumstatement:
-                    if (firstDeclaration)
-                        EmitEnum(enumstatement);
+                    EmitEnum(enumstatement);
                     break;
                 case ImportDirective import:
-                    if (secondDeclaration)
-                        EmitImport(import);
+                    EmitImport(import);
                     break;
                 case CompTimeWhenStatement comptimewhen:
-                    if (firstDeclaration)
-                        EmitCompTimeWhen(comptimewhen);
+                    EmitCompTimeWhen(comptimewhen);
                     break;
                 case DeclareDirective declare:
-                    if (firstDeclaration)
-                        DeclareCompilerSymbol(declare.Symbol.Value, true, declare.Position);
+                    DeclareCompilerSymbol(declare.Symbol.Value, true, declare.Position);
                     break;
                 default:
                     Error(member.Position, "Declaration not supported yet");
@@ -718,24 +784,9 @@ namespace Mug.Models.Generator
         {
             // prototypes' declaration
             foreach (var member in Parser.Module.Members.Nodes)
-                RecognizeMember(member, true, false, false);
+                RecognizeMember(member);
 
-            // prototypes' declaration
-            foreach (var member in Parser.Module.Members.Nodes)
-                RecognizeMember(member, false, true, false);
-
-            // prototypes' declaration
-            foreach (var member in Parser.Module.Members.Nodes)
-                RecognizeMember(member, false, false, true);
-
-            // members' definition
-            foreach (var member in Parser.Module.Members.Nodes)
-                RecognizeMember(member, false, false, false);
-
-            /*for (int i = 0; i < Map.Count; i++)
-            {
-                Console.WriteLine($"isdefined: {Map[i].IsDefined}, value: {Map[i].Value}, name: {Map[i].Name}, ispublic: {Map[i].IsPublic}");
-            }*/
+            GenerateEntryPoint();
         }
     }
 }

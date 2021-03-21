@@ -12,6 +12,7 @@
         Pointer,
         Struct,
         Enum,
-        Array
+        Array,
+        Function
     }
 }

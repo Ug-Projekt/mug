@@ -8,7 +8,7 @@ namespace Mug.Compilation
     {
         public bool IsPublic { get; }
         public string Name { get; }
-        public object Value { get; }
+        public object Value { get; set; }
         public Range Position { get; }
         public bool IsDefined { get; set; }
 

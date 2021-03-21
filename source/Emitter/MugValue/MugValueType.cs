@@ -106,6 +106,11 @@ namespace Mug.MugValueSystem
         public static MugValueType Void => From(LLVMTypeRef.Void, MugValueTypeKind.Void);
         public static MugValueType Char => From(LLVMTypeRef.Int8, MugValueTypeKind.Char);
         public static MugValueType String => From(LLVMTypeRef.CreatePointer(LLVMTypeRef.Int8, 0), MugValueTypeKind.String);
+        public static MugValueType Function(MugValueType[] paramTypes, MugValueType retType)
+        {
+            return new MugValueType() { TypeKind = MugValueTypeKind.Function, BaseType = (paramTypes, retType) };
+        }
+
 
         public override string ToString()
         {
@@ -121,7 +126,8 @@ namespace Mug.MugValueSystem
                 MugValueTypeKind.Struct => ((StructureInfo)BaseType).Name,
                 MugValueTypeKind.Pointer => $"*{BaseType}",
                 MugValueTypeKind.Enum => (((LLVMTypeRef, EnumStatement))BaseType).Item2.Name,
-                MugValueTypeKind.Array => $"[{BaseType}]"
+                MugValueTypeKind.Array => $"[{BaseType}]",
+                MugValueTypeKind.Function => $"func({string.Join(", ", GetFunction().Item1)}): {GetFunction().Item2}",
             };
         }
 
@@ -157,9 +163,19 @@ namespace Mug.MugValueSystem
             return TypeKind == MugValueTypeKind.Pointer;
         }
 
+        public bool IsFunction()
+        {
+            return TypeKind == MugValueTypeKind.Function;
+        }
+
         public StructureInfo GetStructure()
         {
             return (StructureInfo)BaseType;
+        }
+
+        public (MugValueType[], MugValueType) GetFunction()
+        {
+            return ((MugValueType[], MugValueType))BaseType;
         }
 
         public EnumStatement GetEnum()

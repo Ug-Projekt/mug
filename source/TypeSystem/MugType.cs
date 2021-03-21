@@ -128,7 +128,7 @@ namespace Mug.TypeSystem
 
             var generics = new List<MugValueType>();
             for (int i = 0; i < genericsInput.Count; i++)
-                generics.Add(genericsInput[i].ToMugValueType(genericsInput[i].Position, generator));
+                generics.Add(genericsInput[i].ToMugValueType(generator));
 
             return generator.EvaluateStruct(name, generics, position).Type;
         }
@@ -136,7 +136,7 @@ namespace Mug.TypeSystem
         /// <summary>
         /// the function converts a Mugtype to the corresponding mugvaluetype
         /// </summary>
-        public MugValueType ToMugValueType(Range position, IRGenerator generator)
+        public MugValueType ToMugValueType(IRGenerator generator)
         {
             return Kind switch
             {
@@ -147,11 +147,11 @@ namespace Mug.TypeSystem
                 TypeKind.Void => MugValueType.Void,
                 TypeKind.Char => MugValueType.Char,
                 TypeKind.String => MugValueType.String,
-                TypeKind.DefinedType => EvaluateStruct(BaseType.ToString(), new(), position, generator),
-                TypeKind.GenericDefinedType => EvaluateStruct(GetGenericStructure().Item1.ToString(), GetGenericStructure().Item2, position, generator),
-                TypeKind.Pointer => MugValueType.Pointer(((MugType)BaseType).ToMugValueType(position, generator)),
-                TypeKind.Array => MugValueType.Array(((MugType)BaseType).ToMugValueType(position, generator)),
-                _ => generator.NotSupportedType<MugValueType>(Kind.ToString(), position)
+                TypeKind.DefinedType => EvaluateStruct(BaseType.ToString(), new(), Position, generator),
+                TypeKind.GenericDefinedType => EvaluateStruct(GetGenericStructure().Item1.ToString(), GetGenericStructure().Item2, Position, generator),
+                TypeKind.Pointer => MugValueType.Pointer(((MugType)BaseType).ToMugValueType(generator)),
+                TypeKind.Array => MugValueType.Array(((MugType)BaseType).ToMugValueType(generator)),
+                _ => generator.NotSupportedType<MugValueType>(Kind.ToString(), Position)
             };
         }
 

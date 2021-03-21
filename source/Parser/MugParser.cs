@@ -406,12 +406,17 @@ namespace Mug.Models.Parser
 
             if (isImperativeStatement)
                 while (MatchPrefixOperator(out var prefix))
-           		    prefixes.Add(prefix);
+                    prefixes.Add(prefix);
 
             if (previousMember is null)
             {
                 if (!MatchTerm(out _leftvalue, false))
                     ParseError("Expressions not allowed as imperative statement");
+
+                for (int i = prefixes.Count-1; i >= 0; i--)
+                {
+                    _leftvalue = new PrefixOperator() { Prefix = prefixes[i].Kind, Expression = _leftvalue, Position = prefixes[i].Position };
+                }
             }
             else
                 name = previousMember;
