@@ -181,7 +181,7 @@ namespace Mug.Models.Parser
             type = null;
             MugType t = null;
 
-            if (!Match(TokenKind.OpenBracket) && !Match(TokenKind.KeyTPtr) && !MatchBaseType(out t))
+            if (!Match(TokenKind.OpenBracket) && !Match(TokenKind.Star) && !MatchBaseType(out t))
                 return false;
 
             if (t is not null)

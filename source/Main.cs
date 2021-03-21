@@ -10,15 +10,15 @@ try
 
     var test = @"
 
-func ok<T>(a: i32) {
-}
+func square<T>() {  }
 
 func main() {
-  ok<i32>(0);
+  square<i32>();
+  square<str>();
 }
 
 ";
-    
+
     var unit = new CompilationUnit("test", test);
 
     // Console.WriteLine(unit.GenerateAST().Dump());
