@@ -68,6 +68,11 @@ HELP: uses the next argument as compilation target:
   - ast: abstract syntax tree
   - ll: llvm bytecode
 ";
+        private const string DEC_HELP = @"
+USAGE: mug <action> <file> <options> *dec symbol
+
+HELP: uses the next argument as symbol to declare before the compilation:
+";
         private const string OUTPUT_HELP = @"
 USAGE: mug <action> <file> <options> *output <name>
 
@@ -77,6 +82,7 @@ HELP: uses the next argument as output file name. The extension is not required
         private readonly string[] _allowedExtensions = new[] { ".mug" };
         private string[] _arguments = null;
         private int _argumentSelector = 0;
+        private List<string> _preDeclaredSymbols = new();
         private CompilationUnit unit = null;
         private readonly Dictionary<string, object> _flags = new()
         {
@@ -143,6 +149,12 @@ HELP: uses the next argument as output file name. The extension is not required
             DeclareSymbol(RuntimeInformation.ProcessArchitecture.ToString());
         }
 
+        private void DeclarePreDeclaredSymbols()
+        {
+            for (int i = 0; i < _preDeclaredSymbols.Count; i++)
+                DeclareSymbol(_preDeclaredSymbols[i]);
+        }
+
         private void Build(bool loadArgs = true)
         {
             if (loadArgs)
@@ -152,6 +164,8 @@ HELP: uses the next argument as output file name. The extension is not required
 
             DeclareSymbol(GetFlag<CompilationMode>("mode").ToString());
             DeclarePlatformSymbol();
+
+            DeclarePreDeclaredSymbols();
 
             switch (GetFlag<CompilationTarget>("target"))
             {
@@ -323,6 +337,9 @@ HELP: uses the next argument as output file name. The extension is not required
                     case "output":
                         ConfigureFlag(arg, NextArgument());
                         break;
+                    case "dec":
+                        _preDeclaredSymbols.Add(NextArgument());
+                        break;
                     case "":
                         CompilationErrors.Throw("Invalid empty flag");
                         break;
@@ -364,6 +381,9 @@ HELP: uses the next argument as output file name. The extension is not required
                     break;
                 case "output":
                     Console.Write(OUTPUT_HELP);
+                    break;
+                case "dec":
+                    Console.Write(DEC_HELP);
                     break;
                 default:
                     CompilationErrors.Throw("Unkown compiler flag `", flag, "`");

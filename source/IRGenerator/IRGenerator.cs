@@ -262,7 +262,7 @@ namespace Mug.Models.Generator
         {
             symbol = symbol.ToLower();
 
-            if (IsCompilerSymbolDeclared($"@symbol: {symbol}"))
+            if (IsCompilerSymbolDeclared(symbol))
             {
                 var error = $"Compiler symbol `{symbol}` is already declared";
 
@@ -764,8 +764,8 @@ namespace Mug.Models.Generator
 
         private void MergeTree(NodeBuilder body)
         {
-            foreach (var statement in body.Nodes)
-                Parser.Module.Members.Add(statement);
+            foreach (var member in body.Nodes)
+                RecognizeMember(member);
         }
 
         internal bool EvaluateCompTimeExprAndGetResult(CompTimeExpression comptimeExpr)

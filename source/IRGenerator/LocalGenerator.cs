@@ -284,6 +284,17 @@ namespace Mug.Models.Generator
                 case ArraySelectElemNode a:
                     EmitExprArrayElemSelect(a);
                     break;
+                case PrefixOperator p:
+                    EvaluateMemberAccess(p.Expression, p.Prefix == TokenKind.Star);
+
+                    if (p.Prefix == TokenKind.Star)
+                        _emitter.Load(_emitter.LoadFromPointer(_emitter.Pop(), p.Position));
+                    else if (p.Prefix == TokenKind.BooleanAND)
+                        _emitter.LoadReference(p.Expression, p.Position);
+                    else
+                        Error(p.Position, "In member access, the base must be a non-expression");
+
+                    break;
                 default:
                     Error(member.Position, "Not supported yet");
                     break;
@@ -403,7 +414,7 @@ namespace Mug.Models.Generator
         private void EmitExprArrayElemSelect(ArraySelectElemNode a, bool buildload = true)
         {
             // loading the array
-            EvaluateMemberAccess(a.Left, true);
+            EvaluateExpression(a.Left);
 
             var indexed = _emitter.PeekType();
 
