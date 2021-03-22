@@ -256,7 +256,7 @@ namespace Mug.Models.Generator
             {
                 var value = _emitter.Pop();
 
-                if (!value.Type.IsPointer() && value.Type.TypeKind != MugValueTypeKind.Unknown)
+                if (!value.Type.IsPointer() && !value.Type.IsIndexable() && value.Type.TypeKind != MugValueTypeKind.Unknown)
                     Error(position, "Expected pointer when in cast expression something is unknown");
 
                 _emitter.Load(MugValue.From(_emitter.Builder.BuildBitCast(value.LLVMValue, castType.LLVMType), castType));

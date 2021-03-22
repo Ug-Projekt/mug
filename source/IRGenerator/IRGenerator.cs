@@ -28,7 +28,8 @@ namespace Mug.Models.Generator
         internal List<(string, MugValueType)> _genericParameters = new();
 
         private readonly Dictionary<string, List<FunctionNode>> _genericFunctions = new();
-        
+        private readonly bool _isMainModule = false;
+
         private const string EntryPointName = "main";
         private const string AsOperatorOverloading = "as";
 
@@ -40,17 +41,20 @@ namespace Mug.Models.Generator
             }
         }
 
-        public IRGenerator(string moduleName, string source)
+        public IRGenerator(string moduleName, string source, bool isMainModule)
         {
             Parser = new(moduleName, source);
 
             Module = LLVMModuleRef.CreateWithName(moduleName);
+
+            _isMainModule = isMainModule;
         }
 
-        public IRGenerator(MugParser parser)
+        public IRGenerator(MugParser parser, bool isMainModule)
         {
             Parser = parser;
             Module = LLVMModuleRef.CreateWithName(parser.Lexer.ModuleName);
+            _isMainModule = isMainModule;
         }
 
         public void Error(Range position, params string[] error)
@@ -606,8 +610,8 @@ namespace Mug.Models.Generator
             // adding a new symbol
             DeclareSymbol(
                 BuildFunctionName(null, prototype.Name, parameters, type),
-                false,
-                MugValue.From(function, type),
+                true,
+                MugValue.From(function, MugValueType.Function(parameters, type)),
                 prototype.Position, prototype.Modifier == TokenKind.KeyPub);
         }
 
@@ -672,7 +676,7 @@ namespace Mug.Models.Generator
 
                 EmitIncludeGuard(path);
 
-                unit = new CompilationUnit(path, false);
+                unit = new CompilationUnit(path, false, false);
 
                 if (unit.FailedOpeningPath)
                     Error(import.Member.Position, "Unable to find package");
@@ -695,7 +699,7 @@ namespace Mug.Models.Generator
                 }
                 else if (filekind == ".mug") // dirof(file.mug)
                 {
-                    unit = new CompilationUnit(fullpath, false);
+                    unit = new CompilationUnit(fullpath, false, false);
 
                     if (unit.FailedOpeningPath)
                         Error(import.Member.Position, "Unable to open source file");
@@ -887,7 +891,8 @@ namespace Mug.Models.Generator
             foreach (var member in Parser.Module.Members.Nodes)
                 RecognizeMember(member);
 
-            GenerateEntryPoint();
+            if (_isMainModule)
+                GenerateEntryPoint();
         }
     }
 }

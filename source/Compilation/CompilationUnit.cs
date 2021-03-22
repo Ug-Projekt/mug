@@ -13,12 +13,12 @@ namespace Mug.Compilation
         public IRGenerator IRGenerator;
         private const string ClangFilename = "C:/Program Files/LLVM/bin/clang.exe";
 
-        public CompilationUnit(string moduleName, string source)
+        public CompilationUnit(string moduleName, string source, bool isMainModule)
         {
-            IRGenerator = new(moduleName, source);
+            IRGenerator = new(moduleName, source, isMainModule);
         }
 
-        public CompilationUnit(string path, bool throwerror = true)
+        public CompilationUnit(string path, bool isMainModule, bool throwerror)
         {
             if (!File.Exists(path))
             {
@@ -28,7 +28,7 @@ namespace Mug.Compilation
                 FailedOpeningPath = true;
             }
             else
-                IRGenerator = new(path, File.ReadAllText(path));
+                IRGenerator = new(path, File.ReadAllText(path), isMainModule);
         }
 
         public void Compile(int optimizazioneLevel, string output, bool onlyBitcode, string optionalFlag)

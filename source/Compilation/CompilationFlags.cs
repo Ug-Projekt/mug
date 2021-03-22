@@ -160,7 +160,7 @@ HELP: uses the next argument as output file name. The extension is not required
             if (loadArgs)
                 LoadArguments();
 
-            unit = new CompilationUnit(GetFile(), true);
+            unit = new CompilationUnit(GetFile(), true, true);
 
             DeclareSymbol(GetFlag<CompilationMode>("mode").ToString());
             DeclarePlatformSymbol();
