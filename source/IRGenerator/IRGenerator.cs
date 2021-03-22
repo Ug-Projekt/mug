@@ -19,13 +19,16 @@ namespace Mug.Models.Generator
 {
     public class IRGenerator
     {
-        public readonly MugParser Parser;
         public LLVMModuleRef Module { get; set; }
+
+        public readonly MugParser Parser;
         public readonly List<Symbol> Map = new();
 
         internal readonly List<string> IllegalTypes = new();
         internal List<(string, MugValueType)> _genericParameters = new();
 
+        private readonly Dictionary<string, List<FunctionNode>> _genericFunctions = new();
+        
         private const string EntryPointName = "main";
         private const string AsOperatorOverloading = "as";
 
@@ -78,7 +81,7 @@ namespace Mug.Models.Generator
         internal bool IsDeclared(string name, out Symbol symbol)
         {
             for (int i = 0; i < Map.Count; i++)
-                if (Map[i].Name.Equals(name))
+                if (Map[i].Name == name)
                 {
                     symbol = Map[i];
                     return true;
@@ -338,7 +341,7 @@ namespace Mug.Models.Generator
         internal Symbol GetSymbol(string name, Range position)
         {
             if (!IsDeclared(name, out var symbol))
-                Error(position, "`", name.ToString(), "` undeclared member");
+                Error(position, "`", name, "` undeclared member");
 
             return symbol;
         }
@@ -353,31 +356,81 @@ namespace Mug.Models.Generator
         /// parameter types in parentheses separated by ', ',
         /// to allow overload of functions
         /// </summary>
-        private string BuildName(string name, MugValueType[] genericsInput, MugValueType[] parameters, bool isAsOperaor)
+        private string BuildName(string name, MugValueType? basetype, MugValueType[] genericsInput, MugValueType[] parameters, bool isAsOperaor)
         {
             if (isAsOperaor || IsEntryPoint(name, parameters.Length))
                 return name;
             else
-                return $"{name}{(genericsInput.Length > 0 ? $"<{string.Join(", ", genericsInput)}>" : "")}({string.Join(", ", parameters)})";
+                return $"{(basetype.HasValue && genericsInput.Length == 0 ? basetype.Value.ToString() : "")}{name}{(genericsInput.Length > 0 ? $"<{string.Join(", ", genericsInput)}>" : "")}({string.Join(", ", parameters)})";
         }
 
-        internal MugValue EvaluateFunction(string name, MugValueType[] parameters, MugValueType[] genericsInput, Range position, bool isAsOperaor = false)
+        private FunctionNode GetGenericFunctionSymbol(string name, MugValueType? basetype, MugValueType[] parameters, MugValueType[] genericsInput, Range position)
+        {
+            if (!_genericFunctions.TryGetValue(name, out var overloads))
+            {
+                Error(position, "Undeclared generic function");
+                throw new();
+            }
+
+            for (int i = 0; i < overloads.Count; i++)
+            {
+                var types = new MugValueType[overloads[i].ParameterList.Lenght];
+
+                var oldGenericParamters = _genericParameters;
+                _genericParameters = new();
+
+                for (int j = 0; j < overloads[i].Generics.Count; j++)
+                    GenericParametersAdd((overloads[i].Generics[j].Value, genericsInput[j]), overloads[i].Generics[j].Position);
+
+                var overloadBasetype = overloads[i].Base?.Type.ToMugValueType(this);
+
+                for (int j = 0; j < overloads[i].ParameterList.Lenght; j++)
+                    types[j] = overloads[i].ParameterList.Parameters[j].Type.ToMugValueType(this);
+
+                _genericParameters = oldGenericParamters;
+
+                if (parameters.Length != types.Length)
+                    continue;
+                
+                int h = 0;
+
+                for (; h < types.Length; h++)
+                {
+                    if (!parameters[h].Equals(types[h]))
+                        goto end;
+                }
+
+                if (basetype.HasValue)
+                    if (!basetype.Value.Equals(overloadBasetype.Value))
+                        goto end;
+
+                return overloads[i];
+            end:;
+            }
+
+            Error(position, "Undeclared generic function");
+            throw new();
+        }
+
+        internal MugValue EvaluateFunction(string name, MugValueType? basetype, MugValueType[] parameters, MugValueType[] genericsInput, Range position, bool isAsOperaor = false)
         {
             Symbol symbol;
 
             if (genericsInput.Length > 0)
             {
-                var genericFunctionName = BuildName(name, genericsInput, parameters, isAsOperaor);
+                var genericFunctionName = BuildName(name, null, genericsInput, parameters, isAsOperaor);
                 if (IsDeclared(genericFunctionName, out var genericFunction))
                     return genericFunction.GetValue<MugValue>();
 
-                symbol = GetSymbol($"{name}{(genericsInput.Length > 0 ? $"<{new string('.', genericsInput.Length)}>" : "")}({string.Join(", ", parameters)})", position);
+                var genericDeclaredFunction = GetGenericFunctionSymbol($"{name}{(genericsInput.Length > 0 ? $"<{new string('.', genericsInput.Length)}>" : "")}", basetype, parameters, genericsInput, position);
+
+                symbol = new Symbol(name, false, genericDeclaredFunction, position, genericDeclaredFunction.Modifier == TokenKind.KeyPub);
+
+                // symbol = GetSymbol($"{name}{(genericsInput.Length > 0 ? $"<{new string('.', genericsInput.Length)}>" : "")}({string.Join(", ", parameters)})", position);
                 name = genericFunctionName;
             }
             else
-            {
-                symbol = GetSymbol(name = BuildName(name, genericsInput, parameters, isAsOperaor), position);
-            }
+                symbol = GetSymbol(name = BuildName(name, basetype, genericsInput, parameters, isAsOperaor), position);
 
             if (symbol.IsDefined)
                 return symbol.GetValue<MugValue>();
@@ -477,7 +530,7 @@ namespace Mug.Models.Generator
         /// <summary>
         /// the same of <see cref="BuildFunctionName(ParameterNode?, string, MugValueType[], MugValueType)"/>
         /// </summary>
-        private string BuildFunctionTmpSymbol(ParameterNode? basetype, string name, int genericParamsCount, List<ParameterNode> parameters, MugType returntype)
+        private string BuildFunctionTmpSymbol(ParameterNode? basetype, string name/*, int genericParamsCount*/, List<ParameterNode> parameters, MugType returntype)
         {
             var types = new MugType[parameters.Count];
 
@@ -494,7 +547,7 @@ namespace Mug.Models.Generator
             else if (IsAsOperatorOverloading(name))
                 return $"{name}({string.Join<MugType>(", ", types)}): {returntype}";
             else
-                return $"{(basetype.HasValue ? $"{basetype?.Type}." : "")}{name}{(genericParamsCount > 0 ? $"<{new string('.', genericParamsCount)}>" : "")}({string.Join<MugType>(", ", types)})";
+                return $"{(basetype.HasValue ? $"{basetype?.Type}." : "")}{name}{""/*(genericParamsCount > 0 ? $"<{new string('.', genericParamsCount)}>" : "")*/}({string.Join<MugType>(", ", types)})";
         }
 
         private void ReadModule(string filename)
@@ -752,6 +805,40 @@ namespace Mug.Models.Generator
             EvaluateFunction(EntryPointName, entrypoint.GetValue<FunctionNode>(), Array.Empty<MugValueType>(), true, new());
         }
 
+        private void DeclareGenericFunctionSymbol(FunctionNode function)
+        {
+            var symbol = $"{new string('.', Convert.ToInt32(function.Base.HasValue))}{function.Name}<{new string('.', function.Generics.Count)}>";
+
+            _genericFunctions.TryAdd(symbol, new());
+
+            var types = new MugType[function.ParameterList.Lenght];
+
+            for (int i = 0; i < function.ParameterList.Lenght; i++)
+                types[i] = function.ParameterList.Parameters[i].Type;
+
+            var f = _genericFunctions[symbol];
+
+            for (int i = 0; i < f.Count; i++)
+            {
+                if (f[i].Name == function.Name && f[i].ParameterList.Lenght == function.ParameterList.Lenght)
+                {
+                    var ftypes = new MugType[f[i].ParameterList.Lenght];
+
+                    for (int j = 0; j < f[i].ParameterList.Lenght; j++)
+                        ftypes[j] = f[i].ParameterList.Parameters[j].Type;
+
+                    for (int j = 0; j < types.Length; j++)
+                        if (!types[j].Equals(ftypes[j]))
+                            goto end;
+
+                    Error(function.Position, "Function overload already declared");
+                end:;
+                }
+            }
+
+            f.Add(function);
+        }
+
         /// <summary>
         /// recognize the type of the AST node and depending on the type call methods
         /// to convert it to the corresponding low-level code
@@ -761,7 +848,10 @@ namespace Mug.Models.Generator
             switch (member)
             {
                 case FunctionNode function:
-                    DeclareSymbol(BuildFunctionTmpSymbol(function.Base, function.Name, function.Generics.Count, function.ParameterList.Parameters, function.Type), false, function, function.Position, function.Modifier == TokenKind.KeyPub);
+                    if (function.Generics.Count > 0)
+                        DeclareGenericFunctionSymbol(function);
+                    else
+                        DeclareSymbol(BuildFunctionTmpSymbol(function.Base, function.Name/*, function.Generics.Count*/, function.ParameterList.Parameters, function.Type), false, function, function.Position, function.Modifier == TokenKind.KeyPub);
                     break;
                 case FunctionPrototypeNode prototype:
                     EmitFunctionPrototype(prototype);

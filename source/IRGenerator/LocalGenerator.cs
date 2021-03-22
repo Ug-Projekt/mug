@@ -305,7 +305,7 @@ namespace Mug.Models.Generator
             {
                 EvaluateExpression(member.Base);
 
-                name = $"{_emitter.PeekType()}.{member.Member.Value}";
+                name = member.Member.Value;
                 position = member.Member.Position;
                 hasbase = true;
             }
@@ -315,7 +315,7 @@ namespace Mug.Models.Generator
                 return;
             }
 
-            _emitter.Load(_generator.EvaluateFunction(name, parameters, genericsInput, position));
+            _emitter.Load(_generator.EvaluateFunction($"{new string ('.', Convert.ToInt32(hasbase))}{name}", hasbase ? new MugValueType?(_emitter.PeekType()) : null, parameters, genericsInput, position));
         }
 
         /// <summary>

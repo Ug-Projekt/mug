@@ -159,5 +159,16 @@ namespace Mug.TypeSystem
         {
             return Kind == TypeKind.DefinedType || Kind == TypeKind.GenericDefinedType || Kind == TypeKind.Array || Kind == TypeKind.Pointer;
         }
+
+        public override bool Equals(object obj)
+        {
+            if (obj is not MugType type || type.Kind != Kind)
+                return false;
+
+            if (BaseType is not null && type.BaseType is not null)
+                return BaseType.Equals(type.BaseType);
+
+            return true;
+        }
     }
 }

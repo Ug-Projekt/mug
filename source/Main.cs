@@ -10,11 +10,10 @@ try
 
     var test = @"
 
-func square<T>() {  }
+func (self: i32) add() { }
 
 func main() {
-  square<i32>();
-  square<str>();
+  add();
 }
 
 ";

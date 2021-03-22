@@ -265,7 +265,7 @@ namespace Mug.Models.Generator.Emitter
 
         public void CallOperator(string op, Range position, bool expectedNonVoid, params MugValueType[] types)
         {
-            var function = _generator.EvaluateFunction(op, types, Array.Empty<MugValueType>(), position);
+            var function = _generator.EvaluateFunction(op, null, types, Array.Empty<MugValueType>(), position);
 
             if (!function.IsFunction())
                 _generator.Error(position, "Unable to call this member");
@@ -281,7 +281,7 @@ namespace Mug.Models.Generator.Emitter
 
         public void CallAsOperator(Range position, MugValueType type, MugValueType returntype)
         {
-            var function = _generator.EvaluateFunction($"as({type}): {returntype}", Array.Empty<MugValueType>(), Array.Empty<MugValueType>(), position, true);
+            var function = _generator.EvaluateFunction($"as({type}): {returntype}", null, Array.Empty<MugValueType>(), Array.Empty<MugValueType>(), position, true);
 
             if (!function.IsFunction())
                 _generator.Error(position, "Unable to call this member");
