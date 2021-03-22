@@ -10,33 +10,11 @@ try
 
     var test = @"
 
-pub type Vec<T> { raw: [T], len: i32, cap: i32 }
+func x(x: unknown) { }
 
-pub func Vec<T>(): Vec<T> { return Vec<T>(1000); }
-
-pub func Vec<T>(capacity: i32): Vec<T> {
-  return new Vec<T> {
-    raw: new [T] { },
-    len: 0,
-    cap: capacity
-  };
-}
-
-pub func (self: *Vec<T>) push<T>(element: T) {
-  (*self).raw[(*self).len] = element;
-  (*self).len++;
-}
-
-pub func (self: *Vec<T>) pop<T>(): T {
-  self.len--;
-  return (*self).raw[(*self).len];
-}
-
-func main(): i32 {
-var vec = Vec<i32>();
-(&vec).push<i32>(1);
-(&vec).pop<i32>();
-return vec.len;
+func main() {
+  var x = 1;
+  x(&x as unknown);
 }
 
 ";

@@ -13,6 +13,7 @@
         Struct,
         Enum,
         Array,
-        Function
+        Function,
+        Unknown
     }
 }

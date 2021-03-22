@@ -252,6 +252,15 @@ namespace Mug.Models.Generator
                 value.Type = castType;
                 _emitter.Load(value);
             }
+            else if (castType.TypeKind == MugValueTypeKind.Unknown || expressionType.TypeKind == MugValueTypeKind.Unknown)
+            {
+                var value = _emitter.Pop();
+
+                if (!value.Type.IsPointer() && value.Type.TypeKind != MugValueTypeKind.Unknown)
+                    Error(position, "Expected pointer when in cast expression something is unknown");
+
+                _emitter.Load(MugValue.From(_emitter.Builder.BuildBitCast(value.LLVMValue, castType.LLVMType), castType));
+            }
             else if (expressionType.MatchAnyTypeOfIntType() &&
                 castType.MatchAnyTypeOfIntType()) // LLVM has different instructions for each type convertion
                 _emitter.CastInt(castType);

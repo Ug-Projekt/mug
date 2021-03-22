@@ -106,6 +106,7 @@ namespace Mug.MugValueSystem
         public static MugValueType Void => From(LLVMTypeRef.Void, MugValueTypeKind.Void);
         public static MugValueType Char => From(LLVMTypeRef.Int8, MugValueTypeKind.Char);
         public static MugValueType String => From(LLVMTypeRef.CreatePointer(LLVMTypeRef.Int8, 0), MugValueTypeKind.String);
+        public static MugValueType Unknown => From(LLVMTypeRef.CreatePointer(LLVMTypeRef.Int8, 0), MugValueTypeKind.Unknown);
         public static MugValueType Function(MugValueType[] paramTypes, MugValueType retType)
         {
             return new MugValueType() { TypeKind = MugValueTypeKind.Function, BaseType = (paramTypes, retType) };
@@ -123,6 +124,7 @@ namespace Mug.MugValueSystem
                 MugValueTypeKind.Void => "?",
                 MugValueTypeKind.Char => "chr",
                 MugValueTypeKind.String => "str",
+                MugValueTypeKind.Unknown => "unknown",
                 MugValueTypeKind.Struct => ((StructureInfo)BaseType).Name,
                 MugValueTypeKind.Pointer => $"*{BaseType}",
                 MugValueTypeKind.Enum => (((LLVMTypeRef, EnumStatement))BaseType).Item2.Name,

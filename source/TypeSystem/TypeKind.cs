@@ -16,6 +16,7 @@
         Array,
         DefinedType,
         GenericDefinedType,
-        Void
+        Void,
+        Unknown
     }
 }
