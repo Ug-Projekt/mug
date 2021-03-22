@@ -45,5 +45,15 @@ namespace Mug.TypeSystem
 
             throw new();
         }
+
+        public int Size(int sizeofpointer)
+        {
+            var result = 0;
+
+            for (int i = 0; i < FieldTypes.Length; i++)
+                result += FieldTypes[i].Size(sizeofpointer);
+
+            return result;
+        }
     }
 }

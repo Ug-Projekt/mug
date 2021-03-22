@@ -9,17 +9,17 @@ try
 #if DEBUG
 
     var test = @"
+type P { ok: i32 }
 
-func x(x: unknown) { }
-
-func main() {
-  var x = 1;
-  x(&x as unknown);
+func main(): i32 {
+  const p = new P { ok: 0 };
+  p.ok = 1;
+  return p.ok;
 }
 
 ";
 
-    var unit = new CompilationUnit("test", test);
+    var unit = new CompilationUnit("test", test, true);
 
     // Console.WriteLine(unit.GenerateAST().Dump());
     unit.Generate(true, true);

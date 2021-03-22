@@ -1,4 +1,5 @@
-﻿using LLVMSharp.Interop;
+﻿using LLVMSharp;
+using LLVMSharp.Interop;
 using Mug.Compilation;
 using Mug.Models.Generator.Emitter;
 using Mug.Models.Lexer;
@@ -344,12 +345,12 @@ namespace Mug.Models.Generator
         private void EmitCallStatement(CallStatement c, bool expectedNonVoid)
         {
             // an array is prepared for the parameter types of function to call
-            var parameters = new MugValueType[c.Parameters.Lenght];
+            var parameters = new MugValueType[c.Parameters.Length];
 
             /* the array is cycled with the expressions of the respective parameters and each expression
              * is evaluated and assigned its type to the array of parameter types
              */
-            for (int i = 0; i < c.Parameters.Lenght; i++)
+            for (int i = 0; i < c.Parameters.Length; i++)
             {
                 EvaluateExpression(c.Parameters.Nodes[i]);
                 parameters[i] = _emitter.PeekType();
@@ -360,6 +361,12 @@ namespace Mug.Models.Generator
              * of the function id and in brackets the list of parameter types separated by ', '
              */
 
+            if (IsBuiltInFunction(c.Name, c.Generics, parameters, out var comptimeExecute))
+            {
+                comptimeExecute(c.Generics, parameters);
+                return;
+            }
+            
             EvaluateFunctionCallName(c.Name, parameters, _generator.MugTypesToMugValueTypes(c.Generics), out bool hasbase);
 
             var function = _emitter.Pop();
@@ -376,7 +383,33 @@ namespace Mug.Models.Generator
                     functionType,
                     c.Position);
 
-            _emitter.Call(function.LLVMValue, c.Parameters.Lenght, function.Type.GetFunction().Item2, hasbase);
+            _emitter.Call(function.LLVMValue, c.Parameters.Length, function.Type.GetFunction().Item2, hasbase);
+        }
+
+        private void CompTime_sizeof(List<MugType> generics, MugValueType[] parameters)
+        {
+            var size = generics[0].ToMugValueType(_generator).Size(
+                (int)LLVMTargetDataRef.FromStringRepresentation(_generator.Module.DataLayout)
+                    .StoreSizeOfType(LLVMTypeRef.CreatePointer(LLVMTypeRef.Int32, 0))
+                );
+
+            _emitter.Load(MugValue.From(LLVMValueRef.CreateConstInt(LLVMTypeRef.Int32, (uint)size), MugValueType.Int32));
+        }
+
+        private bool IsBuiltInFunction(INode name, List<MugType> generics, MugValueType[] parameters, out Action<List<MugType>, MugValueType[]> comptimeExecute)
+        {
+            comptimeExecute = null;
+
+            if (name is not Token id)
+                return false;
+
+            switch (id.Value)
+            {
+                case "size":
+                    comptimeExecute = CompTime_sizeof;
+                    return generics.Count == 1 && parameters.Length == 0;
+                default: return false;
+            }
         }
 
         private void EmitExprPrefixOperator(PrefixOperator p)

@@ -378,7 +378,7 @@ namespace Mug.Models.Generator
 
             for (int i = 0; i < overloads.Count; i++)
             {
-                var types = new MugValueType[overloads[i].ParameterList.Lenght];
+                var types = new MugValueType[overloads[i].ParameterList.Length];
 
                 var oldGenericParamters = _genericParameters;
                 _genericParameters = new();
@@ -388,7 +388,7 @@ namespace Mug.Models.Generator
 
                 var overloadBasetype = overloads[i].Base?.Type.ToMugValueType(this);
 
-                for (int j = 0; j < overloads[i].ParameterList.Lenght; j++)
+                for (int j = 0; j < overloads[i].ParameterList.Length; j++)
                     types[j] = overloads[i].ParameterList.Parameters[j].Type.ToMugValueType(this);
 
                 _genericParameters = oldGenericParamters;
@@ -460,7 +460,7 @@ namespace Mug.Models.Generator
 
             var baseoffset = Convert.ToInt32(function.Base.HasValue);
 
-            var paramTypes = new MugValueType[function.ParameterList.Lenght + baseoffset];
+            var paramTypes = new MugValueType[function.ParameterList.Length + baseoffset];
             var retType = function.Type.ToMugValueType(this);
             var types = ParameterTypesToMugTypes(function.ParameterList.Parameters);
 
@@ -815,20 +815,20 @@ namespace Mug.Models.Generator
 
             _genericFunctions.TryAdd(symbol, new());
 
-            var types = new MugType[function.ParameterList.Lenght];
+            var types = new MugType[function.ParameterList.Length];
 
-            for (int i = 0; i < function.ParameterList.Lenght; i++)
+            for (int i = 0; i < function.ParameterList.Length; i++)
                 types[i] = function.ParameterList.Parameters[i].Type;
 
             var f = _genericFunctions[symbol];
 
             for (int i = 0; i < f.Count; i++)
             {
-                if (f[i].Name == function.Name && f[i].ParameterList.Lenght == function.ParameterList.Lenght)
+                if (f[i].Name == function.Name && f[i].ParameterList.Length == function.ParameterList.Length)
                 {
-                    var ftypes = new MugType[f[i].ParameterList.Lenght];
+                    var ftypes = new MugType[f[i].ParameterList.Length];
 
-                    for (int j = 0; j < f[i].ParameterList.Lenght; j++)
+                    for (int j = 0; j < f[i].ParameterList.Length; j++)
                         ftypes[j] = f[i].ParameterList.Parameters[j].Type;
 
                     for (int j = 0; j < types.Length; j++)

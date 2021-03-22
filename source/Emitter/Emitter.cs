@@ -97,16 +97,8 @@ namespace Mug.Models.Generator.Emitter
         public MugValue GetMemoryAllocation(string name, Range position)
         {
             if (!Memory.TryGetValue(name, out var variable))
-            {
-                var symbol = _generator.GetSymbol(name, position).Value;
-                if (symbol is MugValue value)
-                    variable = value;
-                else
-                {
-                    _generator.Error(position, "Bad symbol in expression");
-                    throw new();
-                }
-            }
+                // variable = _generator.EvaluateFunction(name, );
+                throw new();
 
             return variable;
         }

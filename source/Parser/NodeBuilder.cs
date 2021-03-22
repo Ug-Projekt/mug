@@ -15,7 +15,7 @@ namespace Mug.Models.Parser
             }
         }
         public Range Position { get; set; }
-        public int Lenght
+        public int Length
         {
             get
             {

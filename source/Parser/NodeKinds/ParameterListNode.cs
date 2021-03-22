@@ -25,7 +25,7 @@ namespace Mug.Models.Parser.NodeKinds
     {
         public string NodeKind => "ParameterList";
         public Range Position { get; set; }
-        public int Lenght
+        public int Length
         {
             get
             {
