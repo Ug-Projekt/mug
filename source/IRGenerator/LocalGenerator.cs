@@ -480,6 +480,11 @@ namespace Mug.Models.Generator
                 _emitter.CallOperator("[]", a.Position, true, indexed, index);
         }
 
+        private LLVMValueRef CreateHeapArray(LLVMTypeRef baseElementType, LLVMValueRef size)
+        {
+            return _emitter.Builder.BuildArrayMalloc(baseElementType, size);
+        }
+
         private void EmitExprAllocateArray(ArrayAllocationNode aa)
         {
             var arraytype = MugValueType.Array(aa.Type.ToMugValueType(_generator));
@@ -493,9 +498,7 @@ namespace Mug.Models.Generator
 
             var array = MugValue.From(_emitter.Builder.BuildAlloca(arraytype.LLVMType), arraytype);
 
-            var allocation = _emitter.Builder.BuildArrayMalloc(
-                    arraytype.ArrayBaseElementType.LLVMType,
-                    _emitter.Pop().LLVMValue);
+            var allocation = CreateHeapArray(arraytype.ArrayBaseElementType.LLVMType, _emitter.Pop().LLVMValue);
 
             _emitter.Builder.BuildStore(allocation, array.LLVMValue);
 
@@ -527,8 +530,7 @@ namespace Mug.Models.Generator
 
             var structure = ta.Name.ToMugValueType(_generator);
 
-            var tmp = _emitter.Builder.BuildAlloca(
-                structure.LLVMType);
+            var tmp = _emitter.Builder.BuildAlloca(structure.LLVMType);
 
             if (structure.IsEnum())
                 Error(ta.Position, "Unable to allocate an enum");
@@ -559,6 +561,16 @@ namespace Mug.Models.Generator
                     fieldType, field.Body.Position, $"expected {fieldType}, but got {_emitter.PeekType()}", _emitter.PeekType());
 
                 _emitter.StoreField(tmp, structureInfo.GetFieldIndexFromName(field.Name));
+            }
+
+            for (int i = 0; i < structureInfo.FieldNames.Length; i++)
+            {
+                if (fields.Contains(structureInfo.FieldNames[i]))
+                    continue;
+
+                _emitter.Load(GetDefaultValueOf(structureInfo.FieldTypes[i], structureInfo.FieldPositions[i]));
+
+                _emitter.StoreField(tmp, i);
             }
 
             _emitter.Load(MugValue.From(_emitter.Builder.BuildLoad(tmp), structure));
@@ -864,44 +876,40 @@ namespace Mug.Models.Generator
                 EmitWhileStatement(i);
         }
 
-        private List<FieldAssignmentNode> GetDefaultValueOfFields(string name, Range position)
+        private MugValue GetDefaultValueOfDefinedType(MugValueType type, Range position)
         {
-            Error(position, "Default fields assignment currently disabled");
-            throw new();
+            if (type.IsEnum())
+            {
+                var enumerated = type.GetEnum();
+                var first = ConstToMugConst(enumerated.Body.First().Value, position, true, enumerated.BaseType.ToMugValueType(_generator));
+                return MugValue.EnumMember(first.Type, first.LLVMValue);
+            }
+
+            var structure = type.GetStructure();
+
+            var tmp = _emitter.Builder.BuildAlloca(structure.LLVMValue);
+
+            for (int i = 0; i < structure.FieldNames.Length; i++)
+            {
+                _emitter.Load(GetDefaultValueOf(structure.FieldTypes[i], structure.FieldPositions[i]));
+
+                _emitter.StoreField(tmp, i);
+            }
+
+            return MugValue.From(_emitter.Builder.BuildLoad(tmp), type);
         }
 
-        private INode GetDefaultValueOf(MugType type, Range position)
+        private MugValue GetDefaultValueOf(MugValueType type, Range position)
         {
-            return type.Kind switch
+            return type.TypeKind switch
             {
-                TypeKind.Char => new Token(TokenKind.ConstantChar, "\0", position),
-                TypeKind.Int32 => new Token(TokenKind.ConstantDigit, "0", position),
-                TypeKind.UInt8 or TypeKind.UInt32 or TypeKind.UInt64 or TypeKind.Int64 => new CastExpressionNode()
-                {
-                    Expression = new Token(TokenKind.ConstantChar, "\0", position),
-                    Type = type,
-                    Position = position
-                },
-                TypeKind.Bool => new Token(TokenKind.ConstantBoolean, "false", position),
-                TypeKind.String => new Token(TokenKind.ConstantString, "", position),
-                TypeKind.Array => new ArrayAllocationNode()
-                {
-                    Type = type.BaseType is TypeKind kind ? new MugType(position, kind) : (MugType)type.BaseType,
-                    Size = new Token(TokenKind.ConstantDigit, "0", position),
-                    Position = position
-                },
-                TypeKind.DefinedType => new TypeAllocationNode()
-                {
-                    Name = type,
-                    Body = GetDefaultValueOfFields(type.BaseType.ToString(), position),
-                    Position = position
-                },
-                TypeKind.Pointer => _generator.Error<INode>(position, "Pointers must be initialized"),
-                TypeKind.GenericDefinedType => new TypeAllocationNode()
-                {
-                    Name = type,
-                    Position = position
-                }
+                MugValueTypeKind.Char or MugValueTypeKind.Int32 or
+                MugValueTypeKind.Int64 or MugValueTypeKind.Bool => MugValue.From(LLVMValueRef.CreateConstInt(type.LLVMType, 0), type, true),
+                MugValueTypeKind.String => MugValue.From(CreateConstString(""), type, true),
+                MugValueTypeKind.Array => MugValue.From(
+                    CreateHeapArray(type.ArrayBaseElementType.LLVMType, LLVMValueRef.CreateConstInt(LLVMTypeRef.Int32, 0)), type, true),
+                MugValueTypeKind.Enum or MugValueTypeKind.Struct => GetDefaultValueOfDefinedType(type, position),
+                MugValueTypeKind.Unknown or MugValueTypeKind.Pointer => _generator.Error<MugValue>(position, "Pointers must be initialized"),
             };
         }
 
@@ -947,11 +955,10 @@ namespace Mug.Models.Generator
                 if (variable.Type.IsAutomatic())
                     Error(variable.Position, "Type specification needed");
 
-                variable.Body = GetDefaultValueOf(variable.Type, variable.Position);
+                _emitter.Load(GetDefaultValueOf(variable.Type.ToMugValueType(_generator), variable.Position));
             }
-
-            // the expression in the variable’s body is evaluated
-            EvaluateExpression(variable.Body);
+            else // the expression in the variable’s body is evaluated
+                EvaluateExpression(variable.Body);
 
             /*
              * if in the statement of variable the type is specified explicitly,
@@ -962,7 +969,7 @@ namespace Mug.Models.Generator
             else // if the type is not specified, it will come directly allocate a variable with the same type as the expression result
                 _emitter.DeclareVariable(variable.Name, _emitter.PeekType(), variable.Position);
 
-            _emitter.StoreVariable(variable.Name, variable.Position, variable.Body.Position);
+            _emitter.StoreVariable(variable.Name, variable.Position, variable.Body is not null ? variable.Body.Position : new());
         }
 
         private string PostfixOperatorToString(TokenKind kind)

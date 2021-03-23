@@ -1304,11 +1304,11 @@ namespace Mug.Models.Parser
             // enum body
             Expect("", TokenKind.OpenBrace);
 
-            statement.AddMember(ExpectMemberDefinition());
+            statement.Body.Add(ExpectMemberDefinition());
 
             // trailing commas are not allowed
             while (MatchAdvance(TokenKind.Comma))
-                statement.AddMember(ExpectMemberDefinition());
+                statement.Body.Add(ExpectMemberDefinition());
 
             Expect("", TokenKind.CloseBrace); // expected close body
 

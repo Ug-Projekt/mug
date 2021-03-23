@@ -753,7 +753,7 @@ namespace Mug.Models.Generator
             var expectedValue = GetValueTokenKindFromType(basetype.TypeKind, enumstatement.Position);
             var members = new List<string>();
 
-            for (int i = 0; i < enumstatement.Body.Length; i++)
+            for (int i = 0; i < enumstatement.Body.Count; i++)
             {
                 var member = enumstatement.Body[i];
 

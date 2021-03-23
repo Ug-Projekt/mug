@@ -10,6 +10,8 @@ try
 
     var test = @"
 
+type Lexer { src: str, idx: i32, len: i32 }
+
 func main() {
 }
 
