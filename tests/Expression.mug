@@ -1,5 +1,0 @@
-func main() {
-   # Parser does not crash, but generates a partially wrong ast :(
-   # ^^^^^^ Fixed :); See the Expression.mast
-   const expression: i32 = 1*( -(2*9 + 3)*(2/(2 + 1)+4) + 10)*8;
-}
