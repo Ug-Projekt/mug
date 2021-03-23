@@ -1,0 +1,21 @@
+pub func _msize(pointer: unknown): i64;
+pub func malloc(size: i64): unknown;
+pub func free(pointer: unknown);
+
+pub func alloc<T>(value: T): *T {
+  const allocation = malloc(size<T>() as i64) as *T;
+  *allocation = value;
+  return allocation;
+}
+
+pub func raw_alloc(size: i32): unknown {
+  return malloc(size as i64);
+}
+
+pub func (self: unknown) size(): i32 {
+  return _msize(self) as i32;
+}
+
+pub func (self: *T) free<T>() {
+  free(self as unknown);
+}
