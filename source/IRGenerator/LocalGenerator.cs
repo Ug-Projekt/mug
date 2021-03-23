@@ -154,11 +154,15 @@ namespace Mug.Models.Generator
                 if (_emitter.OneOfTwoIsOnlyTheEnumType())
                     Error(position, "Cannot apply boolean operator on this expression");
 
-                EmitOperator(
-                    kind,
-                    /*,
-                    st.GetEnum().BaseType.ToMugValueType(position, _generator),*/
-                    position);
+                var second = _emitter.Pop();
+                var first = _emitter.Pop();
+
+                var enumBaseType = st.GetEnum().BaseType.ToMugValueType(_generator);
+
+                _emitter.Load(MugValue.From(first.LLVMValue, enumBaseType));
+                _emitter.Load(MugValue.From(second.LLVMValue, enumBaseType));
+
+                EmitBooleanOperator(literal, llvmpredicate, kind, position);
             }
             else if (ft.MatchSameIntType(st))
                 _emitter.CompareInt(llvmpredicate);

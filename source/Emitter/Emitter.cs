@@ -97,8 +97,11 @@ namespace Mug.Models.Generator.Emitter
         public MugValue GetMemoryAllocation(string name, Range position)
         {
             if (!Memory.TryGetValue(name, out var variable))
+            {
+                _generator.Error(position, "Undeclared member");
                 // variable = _generator.EvaluateFunction(name, );
                 throw new();
+            }
 
             return variable;
         }

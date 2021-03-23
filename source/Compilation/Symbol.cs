@@ -6,7 +6,7 @@ namespace Mug.Compilation
 {
     public class Symbol
     {
-        public bool IsPublic { get; }
+        public bool IsPublic { get; set; }
         public string Name { get; }
         public object Value { get; set; }
         public Range Position { get; }

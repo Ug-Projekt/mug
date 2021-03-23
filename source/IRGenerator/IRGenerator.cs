@@ -598,7 +598,7 @@ namespace Mug.Models.Generator
             var function = Module.GetNamedFunction(prototype.Pragmas.GetPragma("extern"));
 
             var type = prototype.Type.ToMugValueType(this);
-
+            
             // if the function is not declared yet
             if (function.Handle == IntPtr.Zero)
                 // declares it
@@ -655,7 +655,24 @@ namespace Mug.Models.Generator
                 var symbol = unit.IRGenerator.Map[i];
 
                 if (symbol.IsPublic)
+                {
+                    symbol.IsPublic = false;
                     DeclareSymbol(symbol);
+                }
+            }
+
+            for (int i = 0; i < unit.IRGenerator._genericFunctions.Count; i++)
+            {
+                var symbol = unit.IRGenerator._genericFunctions.Values.ElementAt(i);
+
+                for (int j = 0; j < symbol.Count; j++)
+                {
+                    if (symbol[j].Modifier == TokenKind.KeyPub)
+                    {
+                        symbol[j].Modifier = TokenKind.KeyPriv;
+                        DeclareGenericFunctionSymbol(symbol[j]);
+                    }
+                }
             }
         }
 

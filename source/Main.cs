@@ -9,12 +9,8 @@ try
 #if DEBUG
 
     var test = @"
-type P { ok: i32 }
 
-func main(): i32 {
-  const p = new P { ok: 0 };
-  p.ok = 1;
-  return p.ok;
+func main() {
 }
 
 ";
