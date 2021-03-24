@@ -1,6 +1,6 @@
 import io;
 import string;
-import "memory.mug";
+import memory;
 
 func strlen(text: str): i64;
 
@@ -92,8 +92,7 @@ func Lexer(text: str): *Lexer {
     alloc<Lexer>(
       new Lexer {
         src: text,
-        len: strlen(text) as i32,
-        idx: 0
+        len: strlen(text) as i32
       }
     );
 }

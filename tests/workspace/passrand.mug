@@ -1,0 +1,17 @@
+import io;
+import "c_rand.bc";
+
+# @[extern("c_int_rand"), header("c_rand.h")]
+func rand(): i32;
+
+# @[extern("c_void_init_rand"), header("c_rand.h")]
+func init_rand();
+
+func generate(char_count: u8) {
+}
+
+func main(): i32 {
+	init_rand();
+	return rand();
+	# generate(16 as u8);
+}

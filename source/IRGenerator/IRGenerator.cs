@@ -26,6 +26,7 @@ namespace Mug.Models.Generator
 
         internal readonly List<string> IllegalTypes = new();
         internal List<(string, MugValueType)> _genericParameters = new();
+        internal List<string> _paths = new();
 
         private readonly Dictionary<string, List<FunctionNode>> _genericFunctions = new();
         private readonly bool _isMainModule = false;
@@ -564,10 +565,10 @@ namespace Mug.Models.Generator
 
                 using (var marshalledFilename = new MarshaledString(filename))
                     if (LLVM.CreateMemoryBufferWithContentsOfFile(marshalledFilename, &memoryBuffer, &message) != 0)
-                        CompilationErrors.Throw("Unable to open file: `", filename, "`");
+                        CompilationErrors.Throw("Unable to open file: `", filename, "`:\n ", new string(message));
 
                 if (LLVM.ParseBitcode(memoryBuffer, &module, &message) != 0)
-                    CompilationErrors.Throw("Unable to parse file: `", filename, "`");
+                    CompilationErrors.Throw("Unable to parse file: `", filename, "`:\n", new string(message));
 
                 if (LLVM.LinkModules2(Module, module) != 0)
                     CompilationErrors.Throw("Unable to link file: `", filename, "`, with the main module");
@@ -634,18 +635,13 @@ namespace Mug.Models.Generator
 
         private bool AlreadyIncluded(string path)
         {
-            // backtick to prevent symbol declaration via backtick sequence identifier
-            return IsDeclared($"@import: {path}", out _);
+            return _paths.Contains(path);
         }
 
         private void EmitIncludeGuard(string path)
         {
             // pragma once
-            var symbol = $"@import: {path}";
-            if (IsDeclared(symbol, out _))
-                return;
-
-            Map.Add(new Symbol(symbol, true));
+            _paths.Add(path);
         }
 
         private void MergeSymbols(ref CompilationUnit unit)
@@ -708,29 +704,33 @@ namespace Mug.Models.Generator
                     return;
 
                 EmitIncludeGuard(fullpath);
+                var extensionPosition = (import.Member.Position.Start.Value + path.Value.Length - filekind.Length + 2)..(import.Member.Position.End.Value - 1);
 
-                if (filekind == ".bc") // llvm bitcode file
-                {
-                    ReadModule(fullpath);
-                    return;
-                }
-                else if (filekind == ".mug") // dirof(file.mug)
-                {
-                    unit = new CompilationUnit(fullpath, false, false);
+                switch (filekind) {
+                    case ".bc": // llvm bitcode file
+                        ReadModule(fullpath);
+                        return;
+                    case ".mug": // dirof(file.mug)
+                        unit = new CompilationUnit(fullpath, false, false);
 
-                    if (unit.FailedOpeningPath)
-                        Error(import.Member.Position, "Unable to open source file");
+                        if (unit.FailedOpeningPath)
+                            Error(import.Member.Position, "Unable to open source file");
+
+                        break;
+                    case ".c":
+                        IncludeCHeader(fullpath);
+                        return;
+                    case ".h":
+                        Error(extensionPosition, "LLVM Bitcode reader cannot parse a llvm bitcode module generated from an header, please change extension to `.c`");
+                        throw new();
+                    default:
+                        Error(extensionPosition, "Unrecognized file kind");
+                        throw new();
                 }
-                else if (filekind == ".c") // c code
-                {
-                    IncludeCHeader(fullpath);
-                    return;
-                }
-                else
-                    Error((import.Member.Position.Start.Value+path.Value.Length-filekind.Length+2)..(import.Member.Position.End.Value-1), "Unrecognized file kind");
             }
 
             // pass the current module to generate the llvm code together by the irgenerator
+            unit.IRGenerator._paths = _paths;
             unit.IRGenerator.Module = Module;
             unit.Generate();
             MergeSymbols(ref unit);

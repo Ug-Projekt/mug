@@ -9,8 +9,7 @@ try
 #if DEBUG
 
     var test = @"
-
-type Lexer { src: str, idx: i32, len: i32 }
+import ""C:/Users/carpal/Desktop/mug/tests/workspace/c_rand.h"";
 
 func main() {
 }
@@ -31,7 +30,7 @@ func main() {
 
     options.SetArguments(args[1..]);
 
-    options.SetCompilationAction(args[0]);
+    options.InterpretAction(args[0]);
 
 #endif
 }

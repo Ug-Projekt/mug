@@ -401,7 +401,7 @@ HELP: uses the next argument as output file name. The extension is not required
                 PrintUsageAndHelp();
         }
 
-        public void SetCompilationAction(string actionid)
+        public void InterpretAction(string actionid)
         {
             switch (actionid)
             {
