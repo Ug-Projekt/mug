@@ -580,6 +580,16 @@ namespace Mug.Models.Generator
             if (prototype.Generics.Count > 0)
                 Error(prototype.Position, "Function prototypes cannot have generic parameters");
 
+            var code = prototype.Pragmas.GetPragma("code");
+            if (code != "")
+            {
+                File.WriteAllText("tmp.c", code);
+
+                IncludeCHeader("tmp.c");
+
+                File.Delete("tmp.c");
+            }
+
             var header = prototype.Pragmas.GetPragma("header");
             if (header != "")
             {
@@ -745,6 +755,7 @@ namespace Mug.Models.Generator
                 MugValueTypeKind.Int8 or MugValueTypeKind.Int32 or MugValueTypeKind.Int64 => TokenKind.ConstantDigit,
                 MugValueTypeKind.Bool => TokenKind.ConstantBoolean,
                 MugValueTypeKind.Char => TokenKind.ConstantChar,
+                _ => Error<TokenKind>(position, "Invalid enum base type")
             };
         }
 

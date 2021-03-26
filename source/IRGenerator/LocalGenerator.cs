@@ -25,6 +25,7 @@ namespace Mug.Models.Generator
         private readonly LLVMValueRef _llvmfunction;
         private LLVMBasicBlockRef _oldcondition;
         private LLVMBasicBlockRef CycleExitBlock { get; set; }
+        private LLVMBasicBlockRef CycleCompareBlock { get; set; }
 
         internal LocalGenerator(IRGenerator errorHandler, ref LLVMValueRef llvmfunction, ref FunctionNode function, ref MugEmitter emitter)
         {
@@ -219,6 +220,12 @@ namespace Mug.Models.Generator
             }
         }
 
+        private bool IsABitcast(MugValueType expressionType, MugValueType castType)
+        {
+            return expressionType.TypeKind == MugValueTypeKind.String && castType.Equals(MugValueType.Array(MugValueType.Char)) ||
+                 castType.TypeKind == MugValueTypeKind.String && expressionType.Equals(MugValueType.Array(MugValueType.Char));
+        }
+
         /// <summary>
         /// the function manages the 'as' operator
         /// </summary>
@@ -251,7 +258,7 @@ namespace Mug.Models.Generator
 
                 _emitter.CastEnumMemberToBaseType(castType);
             }
-            else if (expressionType.TypeKind == MugValueTypeKind.String && castType.Equals(MugValueType.Array(MugValueType.Char)))
+            else if (IsABitcast(expressionType, castType))
             {
                 var value = _emitter.Pop();
                 value.Type = castType;
@@ -304,7 +311,10 @@ namespace Mug.Models.Generator
                     if (p.Prefix == TokenKind.Star)
                         _emitter.Load(_emitter.LoadFromPointer(_emitter.Pop(), p.Position));
                     else if (p.Prefix == TokenKind.BooleanAND)
-                        _emitter.LoadReference(p.Expression, p.Position);
+                    {
+                        EvaluateMemberAccess(p.Expression, load);
+                        _emitter.LoadReference(_emitter.Pop(), p.Position);
+                    }
                     else
                         Error(p.Position, "In member access, the base must be a non-expression");
 
@@ -420,7 +430,7 @@ namespace Mug.Models.Generator
         {
             if (p.Prefix == TokenKind.BooleanAND) // &x reference
             {
-                _emitter.LoadReference(p.Expression, p.Position);
+                _emitter.LoadReference(EvaluateLeftValue(p.Expression, false), p.Position);
                 return;
             }
 
@@ -753,7 +763,7 @@ namespace Mug.Models.Generator
 
             /*if (isCycle)
                 _emitter.CycleExitBlock = cycleExitBlock;*/
-
+            
             // generating the low-level code
             Generate(body);
             
@@ -836,7 +846,7 @@ namespace Mug.Models.Generator
             // save the old emitter
             var oldemitter = _emitter;
 
-            _emitter = new(_generator, oldemitter.Memory, endcycle, true);
+            _emitter = new(_generator, oldemitter.Memory, cycle, true);
             // locating the builder in the compare block
             _emitter.Builder.PositionAtEnd(compare);
 
@@ -847,8 +857,10 @@ namespace Mug.Models.Generator
             _emitter.CompareJump(cycle, endcycle);
 
             var oldCycleExitBlock = CycleExitBlock;
+            var oldCycleCompareBlock = CycleCompareBlock;
 
             CycleExitBlock = endcycle;
+            CycleCompareBlock = compare;
 
             // define if and else bodies
             DefineConditionBody(cycle, compare, i.Body, oldemitter);
@@ -866,6 +878,8 @@ namespace Mug.Models.Generator
             _emitter.Builder.PositionAtEnd(endcycle);
 
             CycleExitBlock = oldCycleExitBlock;
+            CycleCompareBlock = oldCycleCompareBlock;
+            _oldcondition = saveOldCondition;
         }
 
         private void EmitConditionalStatement(ConditionalStatement i)
@@ -903,7 +917,7 @@ namespace Mug.Models.Generator
         {
             return type.TypeKind switch
             {
-                MugValueTypeKind.Char or MugValueTypeKind.Int32 or
+                MugValueTypeKind.Char or MugValueTypeKind.Int8 or MugValueTypeKind.Int32 or
                 MugValueTypeKind.Int64 or MugValueTypeKind.Bool => MugValue.From(LLVMValueRef.CreateConstInt(type.LLVMType, 0), type, true),
                 MugValueTypeKind.String => MugValue.From(CreateConstString(""), type, true),
                 MugValueTypeKind.Array => MugValue.From(
@@ -1101,7 +1115,7 @@ namespace Mug.Models.Generator
             if (management.Management.Kind == TokenKind.KeyBreak)
                 _emitter.Jump(CycleExitBlock);
             else
-                _emitter.Exit();
+                _emitter.Jump(CycleCompareBlock);
         }
 
         private void EmitCompTimeWhen(CompTimeWhenStatement when)

@@ -459,20 +459,12 @@ namespace Mug.Models.Generator.Emitter
 
         public void ExpectIndexerType(Range position)
         {
-            if (PeekType().TypeKind != MugValueTypeKind.Int32)
+            if (!PeekType().MatchIntType())
                 _generator.Error(position, "`", PeekType().ToString(), "` is not an indexer type");
         }
 
-        public void LoadReference(INode expression, Range position)
+        public void LoadReference(MugValue allocation, Range position)
         {
-            if (expression is not Token t || t.Kind != TokenKind.Identifier)
-            {
-                _generator.Error(position, "Unable to take the address of a constant value");
-                throw new();
-            }
-
-            var allocation = GetMemoryAllocation(t.Value, t.Position);
-
             if (allocation.IsConst)
                 _generator.Error(position, "Unable to take the address of a constant value");
 

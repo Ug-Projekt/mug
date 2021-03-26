@@ -40,8 +40,8 @@ pub func (self: *Stack<T>) pop<T>(): T {
   return (*self).raw[(*self).len];
 }
 
-func realloc(allocation: unknown, size: i64): unknown;
-func exit(code: i32);
+pub func realloc(allocation: unknown, size: i64): unknown;
+pub func exit(code: i32);
 
 pub func panic(error: str) {
   println(error);

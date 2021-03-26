@@ -1,0 +1,132 @@
+import io;
+import string;
+import "stack.mug";
+import memory;
+
+func strlen(text: str): i64;
+
+type CommandLine { command: str, args: [str], args_count: i32, echo_on: u1 }
+
+func trap(error: str) {
+	println("Error: " + error);
+	# exit(1);
+}
+
+func (self: CommandLine) echo() {
+	if !self.echo_on { return; }
+	var i: i32;
+	
+	while i < self.args_count {
+		print(self.args[i]);
+		print(' ');
+		i++;
+	}
+	
+	print('\n');
+}
+
+# func c_ls(dir: str);
+
+func (self: CommandLine) ls() {
+	var dir = ".";
+
+	if self.args_count > 0 { dir = self.args[0]; }
+	
+	# c_ls(dir);
+}
+
+@[code("
+#include <stdlib.h>
+
+void clear() {
+	#ifdef _WIN32
+	system(\"cls\");
+	#elif __linux__
+	system(\"clear\");
+	#endif
+}
+")]
+func clear();
+
+func (this: *CommandLine) interpret_command() {
+	const command = (*this).command;
+	
+	if command == "cls" {
+		clear();
+	} elif command == "echo_off" {
+		(*this).echo_on = false;
+	} elif command == "echo_on" {
+		(*this).echo_on = true;
+	} elif command == "echo" {
+		(*this).echo();
+	} elif command == "ls" {
+		(*this).ls();
+	} else {
+		trap("Invalid command `" + command + "`");
+	}
+}
+
+func (self: str) split(char: chr): Stack<str> {
+	const len = strlen(self) as i32;
+
+	var i: i32;
+	var result = Stack<str>(10);
+	var builder: str;
+	var builder_len: i32;
+
+	while i < len {
+		const cur = self[i];
+
+		if cur == char {
+			if builder_len > 0 {
+				(&result).push<str>(builder);
+				builder = "";
+				builder_len = 0;
+			}
+		} else {
+			builder += cur;
+			builder_len++;
+		}
+
+		i++;
+	}
+
+	if builder_len > 0 { (&result).push<str>(builder); }
+
+	return result;
+}
+
+func get_command_and_args(
+	splitted: Stack<str>,
+	command: *str,
+	args: *[str],
+	args_count: *i32) {
+
+		*args_count = splitted.len - 1;
+		*args = new [str, *args_count] { };
+		var i: i32;
+
+		while i < *args_count {
+			(*args)[*args_count - i - 1] = (&splitted).pop<str>();
+			i++;
+		}
+
+		*command = (&splitted).pop<str>();
+}
+
+func main() {
+	var cmd = new CommandLine { echo_on: true };
+
+	while true {
+		var prompt: str;
+		if cmd.echo_on { prompt = "$> "; }
+
+		var splitted = readln(prompt).split(' ');
+
+		if splitted.len == 0 { continue; }
+		
+		get_command_and_args(splitted, &(cmd.command), &(cmd.args), &(cmd.args_count));
+	
+		(&cmd).interpret_command();
+	}
+}

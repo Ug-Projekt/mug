@@ -20,7 +20,7 @@ namespace MugTests
         private const string COMMENTS01 = "# This is a comment";
         private const string COMMENTS02 = "#[ This is a  multi-line comment ]#";
 
-        private const string SINGLE_TOKENS = "( ) [ ] { } < > = ! & | + - * / , ; : . ?";
+        private const string SINGLE_TOKENS = "( ) [ ] { } < > = ! & | + - * / , ; : .  ";
         private const string DOUBLE_TOKENS = "== != ++ += -- -= *= /= <= >= ..";
         private const string FULL_TOKENS = "return continue break while pub use import new for type as in to if elif else func var const str chr u1    i32 i64 u8 u32 u64 unknown when declare";
         private const string RANDOM_TOKENS = "return == ( ) += continue pub ! *= ..";
@@ -432,7 +432,6 @@ namespace MugTests
                 new Token(TokenKind.Semicolon, ";", 34..35),
                 new Token(TokenKind.Colon, ":", 36..37),
                 new Token(TokenKind.Dot, ".", 38..39),
-                new Token(TokenKind.KeyTVoid, "?", 40..41),
                 new Token(TokenKind.EOF, "<EOF>", 41..42)
             };
 

@@ -9,9 +9,15 @@ try
 #if DEBUG
 
     var test = @"
-import ""C:/Users/carpal/Desktop/mug/tests/workspace/c_rand.h"";
 
 func main() {
+  while true {
+    var i = 0;
+    
+    if i == 0 { continue; }
+
+    var j = 0;
+  }
 }
 
 ";
