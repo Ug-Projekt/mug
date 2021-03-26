@@ -13,7 +13,8 @@ namespace Mug.Models.Parser
             ["dynamiclib"] = Token.NewInfo(TokenKind.ConstantString, ""),
             ["export"] = Token.NewInfo(TokenKind.ConstantString, ""),
             ["extern"] = Token.NewInfo(TokenKind.ConstantString, ""),
-            ["code"] = Token.NewInfo(TokenKind.ConstantString, "")
+            ["code"] = Token.NewInfo(TokenKind.ConstantString, ""),
+            ["clang_args"] = Token.NewInfo(TokenKind.ConstantString, "")
         };
 
         public string GetPragma(string pragma)
@@ -46,11 +47,6 @@ namespace Mug.Models.Parser
                 error(new[] { "Unknown pragma" });
             }
 
-            _table[pragma] = value;
-        }
-
-        public void SetPragma(string pragma, Token value)
-        {
             _table[pragma] = value;
         }
     }

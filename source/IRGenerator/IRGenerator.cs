@@ -585,7 +585,7 @@ namespace Mug.Models.Generator
             {
                 File.WriteAllText("tmp.c", code);
 
-                IncludeCHeader("tmp.c");
+                IncludeCHeader("tmp.c", prototype.Pragmas.GetPragma("clang_args"));
 
                 File.Delete("tmp.c");
             }
@@ -598,7 +598,7 @@ namespace Mug.Models.Generator
                 if (!AlreadyIncluded(path))
                 {
                     EmitIncludeGuard(path);
-                    IncludeCHeader(path);
+                    IncludeCHeader(path, prototype.Pragmas.GetPragma("clang_args"));
                 }
             }
 
@@ -626,21 +626,23 @@ namespace Mug.Models.Generator
                 prototype.Position, prototype.Modifier == TokenKind.KeyPub);
         }
 
-        private void IncludeCHeader(string path)
+        private string TempPath(string path)
+        {
+            return Path.Combine(Path.GetTempPath(), path);
+        }
+
+        private void IncludeCHeader(string path, string clangArgs)
         {
             var bc = Path.ChangeExtension(path, "bc");
 
             // compiling c code to llvm bit code
-            CompilationUnit.CallClang($"-emit-llvm -c {path} -o {bc}", 3);
+            CompilationUnit.CallClang($"-emit-llvm -c {path} -o {bc} {clangArgs}", 3);
 
             // targetting bitcode file
             path = Path.ChangeExtension(path, "bc");
 
             // loading bitcode file
             ReadModule(path);
-
-            // delete bitcode file
-            File.Delete(path);
         }
 
         private bool AlreadyIncluded(string path)
@@ -728,7 +730,7 @@ namespace Mug.Models.Generator
 
                         break;
                     case ".c":
-                        IncludeCHeader(fullpath);
+                        IncludeCHeader(fullpath, "");
                         return;
                     case ".h":
                         Error(extensionPosition, "LLVM Bitcode reader cannot parse a llvm bitcode module generated from an header, please change extension to `.c`");
