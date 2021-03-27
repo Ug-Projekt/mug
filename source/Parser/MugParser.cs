@@ -345,11 +345,12 @@ namespace Mug.Models.Parser
         private bool MatchMember(out INode name)
         {
             name = null;
-            
-            if (!MatchValue())
+
+            if (MatchValue())
+                name = Back;
+            else if (!MatchInParExpression(out name))
                 return false;
 
-            name = Back;
 
             CollectPossibleArrayAccessNode(ref name);
 
@@ -398,25 +399,15 @@ namespace Mug.Models.Parser
             return new List<MugType>();
         }
 
-        private bool MatchCallStatement(out INode e, bool isImperativeStatement, INode previousMember = null)
+        private bool MatchCallStatement(out INode e, INode previousMember = null)
         {
             e = null;
             INode name = null;
-            var prefixes = new List<Token>();
-
-            if (isImperativeStatement)
-                while (MatchPrefixOperator(out var prefix))
-                    prefixes.Add(prefix);
 
             if (previousMember is null)
             {
                 if (!MatchTerm(out _leftvalue, false))
                     ParseError("Expressions not allowed as imperative statement");
-
-                for (int i = prefixes.Count-1; i >= 0; i--)
-                {
-                    _leftvalue = new PrefixOperator() { Prefix = prefixes[i].Kind, Expression = _leftvalue, Position = prefixes[i].Position };
-                }
             }
             else
                 name = previousMember;
@@ -477,14 +468,6 @@ namespace Mug.Models.Parser
                 }
             }
 
-            if (isImperativeStatement)
-            {
-                Expect("", TokenKind.Semicolon);
-
-                if (prefixes.Count > 0)
-                    ParseError(prefixes[0].Position, "Not allowed when imperative statement");
-            }
-
             return true;
         }
 
@@ -495,7 +478,9 @@ namespace Mug.Models.Parser
                 MatchAdvance(TokenKind.Plus, out prefix)       ||
                 MatchAdvance(TokenKind.Negation, out prefix)   ||
                 MatchAdvance(TokenKind.BooleanAND, out prefix) ||
-                MatchAdvance(TokenKind.Star, out prefix);
+                MatchAdvance(TokenKind.Star, out prefix)       ||
+                MatchAdvance(TokenKind.OperatorIncrement, out prefix) ||
+                MatchAdvance(TokenKind.OperatorDecrement, out prefix);
         }
 
         private bool MatchTerm(out INode e, bool allowCallStatement = true)
@@ -514,36 +499,43 @@ namespace Mug.Models.Parser
             // base.member
             // base.member()
             // base()
+            // base.method().other_method()
 
-            if (!MatchInParExpression(out e))
+            /*if (MatchInParExpression(out e))
             {
-                if (!MatchMember(out e))
-                {
-                    _currentIndex--;
-                    return false;
-                }
-
-                if (allowCallStatement && MatchCallStatement(out var call, false, e))
-                    e = call;
+                while (MatchAdvance(TokenKind.Dot))
+                    e = new MemberNode() { Base = e, Member = Expect("Expected member after `.`", TokenKind.Identifier), Position = e.Position.Start.Value..Back.Position.End.Value };
+            }
+            else if (!MatchMember(out e))
+            {
+                _currentIndex--;
+                return false;
             }
 
             CollectPossibleArrayAccessNode(ref e);
 
-            while (MatchAdvance(TokenKind.Dot))
+            if (allowCallStatement && MatchCallStatement(out e, false, e))
             {
-                var name = Expect("Expected member after `.`", TokenKind.Identifier);
+                *//*(call as CallStatement).Name = e;
+                e = call;*//*
+                Console.WriteLine(e.Dump());
+            }*/
 
-                if (allowCallStatement && MatchCallStatement(out var call, false, name))
-                {
-                    // (call as CallStatement).Parameters.Insert(0, e);
-                    (call as CallStatement).Name = new MemberNode() { Base = e, Member = name };
-                    e = call;
-                }
-                else
-                    e = new MemberNode() { Base = e, Member = name, Position = e.Position.Start..name.Position.End };
+            if (!MatchMember(out e))
+            {
+                Console.WriteLine(Current);
+                return false;
             }
 
             CollectPossibleArrayAccessNode(ref e);
+
+            if (allowCallStatement && MatchCallStatement(out var call, e))
+                e = call;
+
+            CollectPossibleArrayAccessNode(ref e);
+
+            if (MatchAdvance(TokenKind.OperatorIncrement) || MatchAdvance(TokenKind.OperatorDecrement))
+                e = new PostfixOperator() { Expression = e, Position = Back.Position, Postfix = Back.Kind };
 
             return true;
         }
@@ -728,6 +720,14 @@ namespace Mug.Models.Parser
 
             if (MatchFactor(out INode e))
             {
+                if (MatchAdvance(TokenKind.Equal, out var eq))
+                {
+                    if (!end.Contains(TokenKind.Semicolon))
+                        end = end.Append(TokenKind.Semicolon).ToArray();
+
+                    return new AssignmentStatement() { Name = e, Operator = eq.Kind, Position = eq.Position, Body = ExpectExpression(true, end) };
+                }
+
                 if (MatchAdvance(TokenKind.Plus) ||
                     MatchAdvance(TokenKind.Minus))
                 {
@@ -957,17 +957,18 @@ namespace Mug.Models.Parser
 
         private INode ExpectStatement()
         {
-            if (!VariableDefinition(out var statement)    && // var x = value;
-                !ReturnDeclaration(out statement)         && // return value;
-                !ConstantDefinition(out statement)        && // const x = value;
-                !ConstantDefinition(out statement)        && // const x = value;
-                !ConditionDefinition(out statement)       &&
+            if (!VariableDefinition(out var statement) && // var x = value;
+                !ReturnDeclaration(out statement) && // return value;
+                !ConstantDefinition(out statement) && // const x = value;
+                !ConstantDefinition(out statement) && // const x = value;
+                !ConditionDefinition(out statement) &&
                 !MatchWhenStatement(out statement, false) && // when comptimecondition {}
-                !ForLoopDefinition(out statement)         && // for x: type to, in value {}
-                !LoopManagerDefintion(out statement)      && // continue, break
-                !MatchCallStatement(out statement, true)  && // f();
+                !ForLoopDefinition(out statement) && // for x: type to, in value {}
+                !LoopManagerDefintion(out statement))        // continue, break
+                statement = ExpectExpression(true, TokenKind.Semicolon);
+                /*MatchCallStatement(out statement, true) // f();
                 !ValueAssignment(out statement)) // x = value;
-                ParseError("Invalid token here");
+                ParseError("Invalid token here");*/
 
             return statement;
         }

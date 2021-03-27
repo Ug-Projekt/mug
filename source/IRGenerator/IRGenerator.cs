@@ -581,24 +581,33 @@ namespace Mug.Models.Generator
                 Error(prototype.Position, "Function prototypes cannot have generic parameters");
 
             var code = prototype.Pragmas.GetPragma("code");
+            var header = prototype.Pragmas.GetPragma("header");
+            var clangArgs = prototype.Pragmas.GetPragma("clang_args");
+            var ext = prototype.Pragmas.GetPragma("ext");
+
             if (code != "")
             {
-                File.WriteAllText("tmp.c", code);
+                if (header != "")
+                    Error(prototype.Position, "Pragam `code` is in conflict with `header`");
 
-                IncludeCHeader("tmp.c", prototype.Pragmas.GetPragma("clang_args"));
+                var path = Path.ChangeExtension(Path.GetTempFileName(), ext);
 
-                File.Delete("tmp.c");
+                File.WriteAllText(path, code);
+
+                IncludeCHeader(path, clangArgs);
             }
 
-            var header = prototype.Pragmas.GetPragma("header");
             if (header != "")
             {
+                if (ext != "")
+                    Error(prototype.Position, "Pragam `header` is in conflict with `ext`");
+
                 var path = Path.GetFullPath(header, Path.GetDirectoryName(LocalPath));
 
                 if (!AlreadyIncluded(path))
                 {
                     EmitIncludeGuard(path);
-                    IncludeCHeader(path, prototype.Pragmas.GetPragma("clang_args"));
+                    IncludeCHeader(path, clangArgs);
                 }
             }
 
@@ -626,23 +635,18 @@ namespace Mug.Models.Generator
                 prototype.Position, prototype.Modifier == TokenKind.KeyPub);
         }
 
-        private string TempPath(string path)
-        {
-            return Path.Combine(Path.GetTempPath(), path);
-        }
-
         private void IncludeCHeader(string path, string clangArgs)
         {
-            var bc = Path.ChangeExtension(path, "bc");
+            var bc = Path.GetTempFileName();
 
             // compiling c code to llvm bit code
             CompilationUnit.CallClang($"-emit-llvm -c {path} -o {bc} {clangArgs}", 3);
 
             // targetting bitcode file
-            path = Path.ChangeExtension(path, "bc");
+            // path = Path.ChangeExtension(path, "bc");
 
             // loading bitcode file
-            ReadModule(path);
+            ReadModule(bc);
         }
 
         private bool AlreadyIncluded(string path)
@@ -729,6 +733,7 @@ namespace Mug.Models.Generator
                             Error(import.Member.Position, "Unable to open source file");
 
                         break;
+                    case ".cpp":
                     case ".c":
                         IncludeCHeader(fullpath, "");
                         return;

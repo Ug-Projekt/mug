@@ -8,13 +8,14 @@ namespace Mug.Models.Parser
     {
         private readonly Dictionary<string, Token> _table = new()
         {
-            ["inline"] = Token.NewInfo(TokenKind.ConstantBoolean, "false"),
-            ["header"] = Token.NewInfo(TokenKind.ConstantString, ""),
-            ["dynamiclib"] = Token.NewInfo(TokenKind.ConstantString, ""),
-            ["export"] = Token.NewInfo(TokenKind.ConstantString, ""),
-            ["extern"] = Token.NewInfo(TokenKind.ConstantString, ""),
-            ["code"] = Token.NewInfo(TokenKind.ConstantString, ""),
-            ["clang_args"] = Token.NewInfo(TokenKind.ConstantString, "")
+            ["inline"    ] = Token.NewInfo(TokenKind.ConstantBoolean, "false"),
+            ["header"    ] = Token.NewInfo(TokenKind.ConstantString, ""      ),
+            ["dynamiclib"] = Token.NewInfo(TokenKind.ConstantString, ""      ),
+            ["export"    ] = Token.NewInfo(TokenKind.ConstantString, ""      ),
+            ["extern"    ] = Token.NewInfo(TokenKind.ConstantString, ""      ),
+            ["code"      ] = Token.NewInfo(TokenKind.ConstantString, ""      ),
+            ["clang_args"] = Token.NewInfo(TokenKind.ConstantString, ""      ),
+            ["ext"       ] = Token.NewInfo(TokenKind.ConstantString, ""      )
         };
 
         public string GetPragma(string pragma)

@@ -11,21 +11,15 @@ try
     var test = @"
 
 func main() {
-  while true {
-    var i = 0;
-    
-    if i == 0 { continue; }
-
-    var j = 0;
-  }
 }
 
 ";
 
     var unit = new CompilationUnit("test", test, true);
 
-    // Console.WriteLine(unit.GenerateAST().Dump());
-    unit.Generate(true, true);
+    Console.WriteLine(
+    unit.GenerateAST().Dump());
+    // unit.Generate(true, true);
 
 #else
 

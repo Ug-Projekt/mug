@@ -7,9 +7,29 @@ func strlen(text: str): i64;
 
 type CommandLine { command: str, args: [str], args_count: i32, echo_on: u1 }
 
-func trap(error: str) {
+type Result<T> { raw: T, err: u1 }
+
+func Ok<T>(value: T): Result<T> {
+	return new Result<T> { err: false, raw: value };
+}
+
+func No<T>(): Result<T> {
+	return new Result<T> { err: true };
+}
+
+func (self: Result<T>) unwrap<T>(): T {
+	if self.err { trap("unwrapped err", true); }
+
+	return self.raw;
+}
+
+func (self: Result<T>) is_err<T>(): u1 {
+	return self.err;
+}
+
+func trap(error: str, exit: u1) {
 	println("Error: " + error);
-	# exit(1);
+	if exit { exit(1); }
 }
 
 func (self: CommandLine) echo() {
@@ -39,19 +59,52 @@ func (self: CommandLine) ls() {
 @[code("
 #include <stdlib.h>
 
-void clear() {
+void $void_clear_screen_noargs() {
 	#ifdef _WIN32
 	system(\"cls\");
 	#elif __linux__
 	system(\"clear\");
 	#endif
 }
-")]
+"), extern("$void_clear_screen_noargs")]
 func clear();
 
+@[header("readfile.cpp"), extern("$char_readfile_const_char")]
+func c_read_file(path: str): str;
+
+@[code("
+int topointer(const char* s) {
+	return (int)((void*)s);
+}
+")]
+func topointer(string: str): i32;
+
+func read_file(path: str): Result<str> {
+	const result = c_read_file(path);
+
+	if topointer(result) == 0 { return No<str>(); }
+
+	return Ok<str>(result);
+}
+
+func (self: CommandLine) print() {
+	var i: i32;
+
+	while i < self.args_count {
+		if i > 0 { println("\n\n"); }
+
+		const filename = self.args[i];
+		const text = read_file(filename);
+		if text.is_err<str>() { println("Not a file"); }
+		else { println(text.unwrap<str>()); }
+		i++;
+	}
+}
+
 func (this: *CommandLine) interpret_command() {
-	const command = (*this).command;
-	
+	const self = (*this);
+	const command = self.command;
+
 	if command == "cls" {
 		clear();
 	} elif command == "echo_off" {
@@ -59,13 +112,15 @@ func (this: *CommandLine) interpret_command() {
 	} elif command == "echo_on" {
 		(*this).echo_on = true;
 	} elif command == "echo" {
-		(*this).echo();
+		self.echo();
 	} elif command == "ls" {
-		(*this).ls();
+		self.ls();
 	} elif command == "exit" {
 		exit(0);
+	} elif command == "print" {
+		self.print();
 	} else {
-		trap("Invalid command `" + command + "`");
+		trap("Invalid command `" + command + "`", false);
 	}
 }
 
