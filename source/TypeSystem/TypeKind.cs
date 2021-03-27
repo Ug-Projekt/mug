@@ -17,6 +17,7 @@
         DefinedType,
         GenericDefinedType,
         Void,
-        Unknown
+        Unknown,
+        EnumError
     }
 }

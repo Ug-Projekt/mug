@@ -1,6 +1,7 @@
 ﻿using LLVMSharp.Interop;
 using Mug.Compilation;
 using Mug.Models.Generator;
+using Mug.Models.Lexer;
 using Mug.Models.Parser.NodeKinds;
 using Mug.Models.Parser.NodeKinds.Statements;
 using Mug.TypeSystem;
@@ -29,10 +30,16 @@ namespace Mug.MugValueSystem
                 if (TypeKind == MugValueTypeKind.Array)
                     return LLVMTypeRef.CreatePointer(((MugValueType)BaseType).LLVMType, 0);
 
+                if (TypeKind == MugValueTypeKind.EnumErrorDefined)
+                    return GetEnumErrorDefined().LLVMValue;
+
+                if (TypeKind == MugValueTypeKind.EnumError)
+                    return LLVMTypeRef.Int8;
+
                 return (LLVMTypeRef)BaseType;
             }
         }
-        
+
         public MugValueType PointerBaseElementType
         {
             get
@@ -135,6 +142,15 @@ namespace Mug.MugValueSystem
             return new MugValueType() { TypeKind = MugValueTypeKind.Function, BaseType = (paramTypes, retType) };
         }
 
+        public static MugValueType EnumError(EnumErrorStatement enumerror)
+        {
+            return new MugValueType() { TypeKind = MugValueTypeKind.EnumError, BaseType = enumerror };
+        }
+
+        public static MugValueType EnumErrorDefined(EnumErrorInfo enumerrorInfo)
+        {
+            return new MugValueType() { BaseType = enumerrorInfo, TypeKind = MugValueTypeKind.EnumErrorDefined };
+        }
 
         public override string ToString()
         {
@@ -144,7 +160,7 @@ namespace Mug.MugValueSystem
                 MugValueTypeKind.Int8 => "u8",
                 MugValueTypeKind.Int32 => "i32",
                 MugValueTypeKind.Int64 => "i64",
-                MugValueTypeKind.Void => "?",
+                MugValueTypeKind.Void => "void",
                 MugValueTypeKind.Char => "chr",
                 MugValueTypeKind.String => "str",
                 MugValueTypeKind.Unknown => "unknown",
@@ -153,6 +169,8 @@ namespace Mug.MugValueSystem
                 MugValueTypeKind.Enum => GetEnum().Name,
                 MugValueTypeKind.Array => $"[{BaseType}]",
                 MugValueTypeKind.Function => $"func({string.Join(", ", GetFunction().Item1)}): {GetFunction().Item2}",
+                MugValueTypeKind.EnumError => $"{GetEnumError().Name}",
+                MugValueTypeKind.EnumErrorDefined => $"{GetEnumErrorDefined().Name}"
             };
         }
 
@@ -198,6 +216,16 @@ namespace Mug.MugValueSystem
             return (StructureInfo)BaseType;
         }
 
+        public EnumErrorStatement GetEnumError()
+        {
+            return (EnumErrorStatement)BaseType;
+        }
+
+        public EnumErrorInfo GetEnumErrorDefined()
+        {
+            return (EnumErrorInfo)BaseType;
+        }
+
         public (MugValueType[], MugValueType) GetFunction()
         {
             return ((MugValueType[], MugValueType))BaseType;
@@ -221,6 +249,16 @@ namespace Mug.MugValueSystem
         public bool IsEnum()
         {
             return BaseType is (MugValueType, EnumStatement);
+        }
+
+        public bool IsEnumErrorDefined()
+        {
+            return BaseType is EnumErrorInfo;
+        }
+
+        public bool IsEnumError()
+        {
+            return BaseType is EnumErrorStatement;
         }
     }
 }

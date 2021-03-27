@@ -1,4 +1,5 @@
-﻿using Mug.Compilation;
+﻿using LLVMSharp.Interop;
+using Mug.Compilation;
 using Mug.Models.Generator;
 using Mug.Models.Lexer;
 using Mug.Models.Parser;
@@ -101,7 +102,8 @@ namespace Mug.TypeSystem
                 TypeKind.Unknown => "unknown",
                 TypeKind.Pointer => $"*{BaseType}",
                 TypeKind.String => "str",
-                TypeKind.Void => "?",
+                TypeKind.Void => "void",
+                TypeKind.EnumError => $"{GetEnumError().Item1}!{GetEnumError().Item2}",
             };
         }
 
@@ -115,7 +117,7 @@ namespace Mug.TypeSystem
                 Kind == TypeKind.UInt64;
         }
 
-        private MugValueType EvaluateStruct(string name, List<MugType> genericsInput, Range position, IRGenerator generator)
+        private MugValueType EvaluateStruct(string name, List<MugType> genericsInput, Range position, IRGenerator generator, bool isError)
         {
             if (generator.IsIllegalType(name))
                 generator.Error(position, "Illegal recursion");
@@ -132,13 +134,23 @@ namespace Mug.TypeSystem
             for (int i = 0; i < genericsInput.Count; i++)
                 generics.Add(genericsInput[i].ToMugValueType(generator));
 
-            return generator.EvaluateStruct(name, generics, position).Type;
+            var result = generator.EvaluateStruct(name, generics, position).Type;
+
+            if (result.TypeKind == MugValueTypeKind.EnumError && !isError)
+                generator.Error(position, "Invalid use of enum error");
+
+            return result;
+        }
+
+        public MugValueType EvaluateEnumError(MugType error, MugType type, IRGenerator generator)
+        {
+            return generator.EvaluateEnumError(error, type);
         }
 
         /// <summary>
         /// the function converts a Mugtype to the corresponding mugvaluetype
         /// </summary>
-        public MugValueType ToMugValueType(IRGenerator generator) => Kind switch
+        public MugValueType ToMugValueType(IRGenerator generator, bool isError = false) => Kind switch
         {
             TypeKind.Int32 => MugValueType.Int32,
             TypeKind.UInt8 => MugValueType.Int8,
@@ -147,13 +159,26 @@ namespace Mug.TypeSystem
             TypeKind.Void => MugValueType.Void,
             TypeKind.Char => MugValueType.Char,
             TypeKind.String => MugValueType.String,
-            TypeKind.DefinedType => EvaluateStruct(BaseType.ToString(), new(), Position, generator),
-            TypeKind.GenericDefinedType => EvaluateStruct(GetGenericStructure().Item1.ToString(), GetGenericStructure().Item2, Position, generator),
+            TypeKind.DefinedType => EvaluateStruct(BaseType.ToString(), new(), Position, generator, isError),
+            TypeKind.EnumError => EvaluateEnumError(GetEnumError().Item1, GetEnumError().Item2, generator),
+            TypeKind.GenericDefinedType => EvaluateStruct(GetGenericStructure().Item1.ToString(), GetGenericStructure().Item2, Position, generator, isError),
             TypeKind.Pointer => MugValueType.Pointer(((MugType)BaseType).ToMugValueType(generator)),
             TypeKind.Array => MugValueType.Array(((MugType)BaseType).ToMugValueType(generator)),
             TypeKind.Unknown => MugValueType.Unknown,
             _ => generator.NotSupportedType<MugValueType>(Kind.ToString(), Position)
         };
+
+        /*private MugValueType EvaluateEnumError(IRGenerator generator)
+        {
+            var cast = GetEnumError();
+
+            return MugValueType.EnumError(cast.Item1.ToMugValueType(generator), cast.Item2.ToMugValueType(generator));
+        }*/
+
+        private (MugType, MugType) GetEnumError()
+        {
+            return ((MugType, MugType))BaseType;
+        }
 
         public bool IsAllocableTypeNew()
         {

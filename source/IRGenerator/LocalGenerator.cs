@@ -356,7 +356,7 @@ namespace Mug.Models.Generator
         /// <summary>
         /// the function converts a Callstatement node to the corresponding low-level code
         /// </summary>
-        private void EmitCallStatement(CallStatement c, bool expectedNonVoid)
+        private void EmitCallStatement(CallStatement c, bool expectedNonVoid, bool isInCatch = false)
         {
             // an array is prepared for the parameter types of function to call
             var parameters = new MugValueType[c.Parameters.Length];
@@ -389,15 +389,21 @@ namespace Mug.Models.Generator
                 _generator.Error(c.Position, "Unable to call this member");
 
             // function type: <ret_type> <param_types>
-            var functionType = function.Type.GetFunction().Item2.LLVMType;
+            var functionType = function.Type.GetFunction().Item2;
 
             if (expectedNonVoid)
                 _generator.ExpectNonVoidType(
                     // (<ret_type> <param_types>).GetElementType() -> <ret_type>
-                    functionType,
+                    functionType.LLVMType,
                     c.Position);
 
-            _emitter.Call(function.LLVMValue, c.Parameters.Length, function.Type.GetFunction().Item2, hasbase);
+            _emitter.Call(function.LLVMValue, c.Parameters.Length, functionType, hasbase);
+
+            if (!isInCatch && functionType.TypeKind == MugValueTypeKind.EnumErrorDefined)
+                Error(c.Position, "Uncatched enum error");
+
+            if (isInCatch && functionType.TypeKind != MugValueTypeKind.EnumErrorDefined)
+                Error(c.Position, "Catched a non enum error");
         }
 
         private void CompTime_sizeof(List<MugType> generics, MugValueType[] parameters)
@@ -664,6 +670,9 @@ namespace Mug.Models.Generator
                 case MemberNode m:
                     EmitExprMemberAccess(m);
                     break;
+                case CatchExpressionNode ce:
+                    EmitCatchStatement(ce, false);
+                    break;
                 default:
                     Error(expression.Position, "Expression not supported yet");
                     break;
@@ -927,21 +936,27 @@ namespace Mug.Models.Generator
             };
         }
 
+        private readonly LLVMValueRef Negative1 = LLVMValueRef.CreateConstNeg(LLVMValueRef.CreateConstInt(LLVMTypeRef.Int8, 1));
+
         private void EmitReturnStatement(ReturnStatement @return)
         {
+            var type = _function.Type.ToMugValueType(_generator);
+
             /*
              * if the expression in the return statement is null, condition verified by calling Returnstatement.Isvoid(),
              * check that the type of function in which it is found returns void.
              */
             if (@return.IsVoid())
             {
-                _generator.ExpectSameTypes(
-                    _function.Type.ToMugValueType(_generator),
-                    @return.Position,
-                    "Expected non-void expression",
-                    MugValueType.Void);
-
-                _emitter.RetVoid();
+                if (type.IsEnumErrorDefined())
+                {
+                    _emitter.Load(MugValue.From(Negative1, type));
+                    _emitter.Ret();
+                }
+                else if (type.TypeKind == MugValueTypeKind.Void)
+                    _emitter.RetVoid();
+                else
+                    Error(@return.Position, "Expected non-void expression");
             }
             else
             {
@@ -951,12 +966,71 @@ namespace Mug.Models.Generator
                  */
                 EvaluateExpression(@return.Body);
 
-                var type = _function.Type.ToMugValueType(_generator);
-
                 _emitter.ForceConstantIntSizeTo(type);
 
-                _generator.ExpectSameTypes(type, @return.Body.Position, $"Expected {type} type, got {_emitter.PeekType()} type", _emitter.PeekType());
-                _emitter.Ret();
+                var exprType = _emitter.PeekType();
+                var errorMessage = $"Expected {type} type, got {exprType} type";
+
+                if (type.IsEnumErrorDefined())
+                {
+                    var enumerrorType = type.GetEnumErrorDefined();
+                    LLVMValueRef value;
+                    LLVMValueRef error;
+
+                    if (exprType.Equals(enumerrorType.ErrorType))
+                    {
+                        value = enumerrorType.SuccessType.TypeKind == MugValueTypeKind.Void ? new() : GetDefaultValueOf(enumerrorType.SuccessType, @return.Body.Position).LLVMValue;
+                        error = _emitter.Pop().LLVMValue;
+                    }
+                    else
+                    {
+                        _emitter.ForceConstantIntSizeTo(enumerrorType.SuccessType);
+                        exprType = _emitter.PeekType();
+
+                        if (exprType.Equals(enumerrorType.SuccessType))
+                        {
+                            value = enumerrorType.SuccessType.TypeKind == MugValueTypeKind.Void ? new() : _emitter.Pop().LLVMValue;
+                            error = Negative1;
+                        }
+                        else
+                        {
+                            Error(@return.Body.Position, errorMessage);
+                            throw new();
+                        }
+                    }
+
+                    if (enumerrorType.SuccessType.TypeKind != MugValueTypeKind.Void) {
+                        var tmp = _emitter.Builder.BuildAlloca(type.LLVMType);
+
+                        _emitter.Builder.BuildStore(
+                            value,
+                            _emitter.Builder.BuildGEP(tmp, new[]
+                            {
+                                LLVMValueRef.CreateConstInt(LLVMTypeRef.Int32, 0),
+                                LLVMValueRef.CreateConstInt(LLVMTypeRef.Int32, 1)
+                            }));
+
+                        _emitter.Builder.BuildStore(
+                            error,
+                            _emitter.Builder.BuildGEP(tmp, new[]
+                            {
+                                LLVMValueRef.CreateConstInt(LLVMTypeRef.Int32, 0),
+                                LLVMValueRef.CreateConstInt(LLVMTypeRef.Int32, 0)
+                            }));
+
+                        _emitter.Load(MugValue.From(_emitter.Builder.BuildLoad(tmp), type));
+                    }
+                    else
+                        _emitter.Load(MugValue.From(error, type));
+
+                    _emitter.Ret();
+                }
+                else
+                {
+                    _generator.ExpectSameTypes(type, @return.Body.Position, errorMessage, exprType);
+
+                    _emitter.Ret();
+                }
             }
         }
 
@@ -1124,6 +1198,31 @@ namespace Mug.Models.Generator
                 Generate((BlockNode)when.Body);
         }
 
+        private void EmitCatchStatement(CatchExpressionNode catchstatement, bool isImperativeStatement)
+        {
+            if (catchstatement.Expression is not CallStatement call)
+            {
+                Error(catchstatement.Expression.Position, "Unable to catch this expression");
+                throw new();
+            }
+
+            EmitCallStatement(call, true, true);
+            var retType = _emitter.Pop();
+            var enumerror = retType.Type.GetEnumErrorDefined();
+            MugValue result = new();
+
+            if (catchstatement.OutError is not null)
+            {
+                /*if (isImperativeStatement && */
+                Console.WriteLine(enumerror.LLVMValue);
+
+                _emitter.DeclareConstant(catchstatement.OutError?.Value, catchstatement.OutError.Value.Position);
+            }
+
+            if (!isImperativeStatement)
+                _emitter.Load(result);
+        }
+
         /// <summary>
         /// 
         /// </summary>
@@ -1154,6 +1253,9 @@ namespace Mug.Models.Generator
                     break;
                 case CompTimeWhenStatement comptimewhen:
                     EmitCompTimeWhen(comptimewhen);
+                    break;
+                case CatchExpressionNode catchstatement:
+                    EmitCatchStatement(catchstatement, true);
                     break;
                 /*case ForLoopStatement loop:
                     break;*/

@@ -191,6 +191,34 @@ namespace Mug.Models.Generator
             IllegalTypes.Add(illegalType);
         }
 
+        internal MugValueType EvaluateEnumError(MugType error, MugType type)
+        {
+            var name = $"{error}!{type}";
+
+            if (IsDeclared(name, out var symbol))
+                return symbol.GetValue<MugValueType>();
+
+            var typeEval = type.ToMugValueType(this);
+
+            var errorType = error.ToMugValueType(this, true);
+
+            if (errorType.TypeKind != MugValueTypeKind.EnumError)
+                Error(error.Position, "Left type of enum error result must be an enum error");
+
+            var defined = MugValueType.EnumErrorDefined(
+                new EnumErrorInfo()
+                {
+                    LLVMValue = type.Kind == TypeKind.Void ? LLVMTypeRef.Int8 : LLVMTypeRef.CreateStruct(new[] { LLVMTypeRef.Int8, typeEval.LLVMType }, false),
+                    Name = name,
+                    ErrorType = errorType,
+                    SuccessType = typeEval
+                });
+
+            DeclareSymbol(name, true, defined, error.Position, false);
+
+            return defined;
+        }
+
         internal MugValue EvaluateStruct(string name, List<MugValueType> genericsInput, Range position)
         {
             var symbolname = $"{name}{(genericsInput.Count != 0 ? $"<{string.Join(", ", genericsInput)}>" : "")}";
@@ -463,6 +491,7 @@ namespace Mug.Models.Generator
 
             var paramTypes = new MugValueType[function.ParameterList.Length + baseoffset];
             var retType = function.Type.ToMugValueType(this);
+
             var types = ParameterTypesToMugTypes(function.ParameterList.Parameters);
 
             if (function.Base.HasValue)
@@ -878,6 +907,21 @@ namespace Mug.Models.Generator
             f.Add(function);
         }
 
+        private EnumErrorStatement CheckEnumError(EnumErrorStatement enumerror)
+        {
+            var members = new List<string>();
+
+            for (int i = 0; i < enumerror.Body.Count; i++)
+            {
+                if (members.Contains(enumerror.Body[i].Value))
+                    Error(enumerror.Body[i].Position, "Already declared member");
+
+                members.Add(enumerror.Body[i].Value);
+            }
+
+            return enumerror;
+        }
+
         /// <summary>
         /// recognize the type of the AST node and depending on the type call methods
         /// to convert it to the corresponding low-level code
@@ -909,6 +953,9 @@ namespace Mug.Models.Generator
                     break;
                 case DeclareDirective declare:
                     DeclareCompilerSymbol(declare.Symbol.Value, true, declare.Position);
+                    break;
+                case EnumErrorStatement enumerror:
+                    DeclareSymbol(enumerror.Name, true, MugValue.EnumError(CheckEnumError(enumerror)), enumerror.Position, enumerror.Modifier == TokenKind.KeyPub);
                     break;
                 default:
                     Error(member.Position, "Declaration not supported yet");

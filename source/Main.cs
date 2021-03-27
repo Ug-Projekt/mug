@@ -10,16 +10,24 @@ try
 
     var test = @"
 
+error GetErr { IndexOutOfRange }
+
+func get(): GetErr!u1 {
+  return true;
+}
+
 func main() {
+  if (get() catch e {}) {
+  }
 }
 
 ";
 
     var unit = new CompilationUnit("test", test, true);
 
-    Console.WriteLine(
-    unit.GenerateAST().Dump());
-    // unit.Generate(true, true);
+    // Console.WriteLine(
+    // unit.GenerateAST().Dump());
+    unit.Generate(true, true);
 
 #else
 

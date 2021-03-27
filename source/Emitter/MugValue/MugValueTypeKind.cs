@@ -14,6 +14,8 @@
         Enum,
         Array,
         Function,
-        Unknown
+        Unknown,
+        EnumError,
+        EnumErrorDefined
     }
 }

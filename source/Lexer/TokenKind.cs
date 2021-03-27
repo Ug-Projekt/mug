@@ -28,7 +28,7 @@ namespace Mug.Models.Lexer
         ClosePar,
         [Description(";")]
         Semicolon,
-        [Description("?")]
+        [Description("void")]
         KeyTVoid,
         [Description(":")]
         Colon,
@@ -148,8 +148,13 @@ namespace Mug.Models.Lexer
         KeyPriv,
         [Description("enum")]
         KeyEnum,
+        [Description("when")]
         KeyWhen,
+        [Description("declare")]
         KeyDeclare,
-        KeyDeclared
+        [Description("catch")]
+        KeyCatch,
+        [Description("error")]
+        KeyError
     }
 }

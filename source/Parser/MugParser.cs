@@ -137,7 +137,7 @@ namespace Mug.Models.Parser
             return expect;
         }
 
-        private MugType ExpectType()
+        private MugType ExpectType(bool allowEnumError = false)
         {
             if (MatchAdvance(TokenKind.OpenBracket, out var token))
             {
@@ -172,6 +172,9 @@ namespace Mug.Models.Parser
 
                 find = new MugType(find.Position.Start..Back.Position.End, TypeKind.GenericDefinedType, (find, genericTypes));
             }
+
+            if (allowEnumError && MatchAdvance(TokenKind.Negation))
+                find = new MugType(Back.Position, TypeKind.EnumError, (find, ExpectType()));
 
             return find;
         }
@@ -752,9 +755,17 @@ namespace Mug.Models.Parser
                 ParseError("Expected expression, found `", Current.Value.ToString(), "`");
             }
 
-           if (MatchAdvance(TokenKind.KeyAs, out var asToken))
+            if (MatchAdvance(TokenKind.KeyAs, out var asToken))
                 e = new CastExpressionNode() { Expression = e, Type = ExpectType(), Position = asToken.Position };
-           if (MatchBooleanOperator(out var boolOP))
+
+            if (MatchAdvance(TokenKind.KeyCatch))
+            {
+                var match = MatchAdvance(TokenKind.Identifier, out var error);
+
+                e = new CatchExpressionNode() { Expression = e, OutError = match ? new Token?(error) : null, Position = Back.Position, Body = ExpectBlock() };
+            }
+
+            if (MatchBooleanOperator(out var boolOP))
                 return CollectBooleanExpression(ref e, boolOP, isFirst, end);
 
             ExpectMultiple($"Invalid token in the current context, maybe missing one of `{TokenKindsToString(end)}`", end);
@@ -1065,7 +1076,7 @@ namespace Mug.Models.Parser
             MugType type;
 
             if (MatchAdvance(TokenKind.Colon))
-                type = ExpectType();
+                type = ExpectType(true);
             else
                 type = new MugType(name.Position, TypeKind.Void);
 
@@ -1344,6 +1355,28 @@ namespace Mug.Models.Parser
                 _modifier = Back.Kind;
         }
 
+        private bool EnumErrorDefinition(out INode statement)
+        {
+            statement = null;
+
+            if (!MatchAdvance(TokenKind.KeyError))
+                return false;
+
+            var name = Expect("", TokenKind.Identifier);
+
+            statement = new EnumErrorStatement() { Modifier = GetModifier(), Name = name.Value, Position = name.Position };
+
+            Expect("", TokenKind.OpenBrace);
+
+            do
+                (statement as EnumErrorStatement).Body.Add(Expect("", TokenKind.Identifier));
+            while (MatchAdvance(TokenKind.Comma));
+
+            Expect("", TokenKind.CloseBrace);
+
+            return true;
+        }
+
         /// <summary>
         /// expects at least one member
         /// </summary>
@@ -1369,15 +1402,18 @@ namespace Mug.Models.Parser
                             if (_pragmas is not null)
                                 ParseError("Invalid pragmas for this member");
 
-                            if (_modifier != TokenKind.Bad)
-                                ParseError("Invalid modifier for this member");
+                            if (!EnumErrorDefinition(out statement))
+                            {
+                                if (_modifier != TokenKind.Bad)
+                                    ParseError("Invalid modifier for this member");
 
-                            // var id = constant;
-                            if (!VariableDefinition(out statement))
-                                // import "", import path, use x as y
-                                if (!DirectiveDefinition(out statement))
-                                    // if there is not global statement
-                                    ParseError("Invalid token here");
+                                // var id = constant;
+                                if (!VariableDefinition(out statement))
+                                    // import "", import path, use x as y
+                                    if (!DirectiveDefinition(out statement))
+                                        // if there is not global statement
+                                        ParseError("Invalid token here");
+                            }
                         }
                     }
 

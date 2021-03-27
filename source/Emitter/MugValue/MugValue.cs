@@ -1,5 +1,6 @@
 ﻿using LLVMSharp.Interop;
 using Mug.Models.Lexer;
+using Mug.Models.Parser.NodeKinds.Statements;
 using System;
 
 namespace Mug.MugValueSystem
@@ -30,6 +31,11 @@ namespace Mug.MugValueSystem
             return From(value, enumerated);
         }
 
+        public static MugValue EnumError(EnumErrorStatement enumerror)
+        {
+            return From(new LLVMValueRef(), MugValueType.EnumError(enumerror));
+        }
+
         public bool IsAllocaInstruction()
         {
             return LLVMValue.IsAAllocaInst.Handle != IntPtr.Zero;
@@ -48,6 +54,6 @@ namespace Mug.MugValueSystem
         public bool IsConstant()
         {
             return LLVMValue.IsAConstantInt.Handle != IntPtr.Zero;
-        }
+        }   
     }
 }

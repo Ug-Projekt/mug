@@ -22,7 +22,7 @@ namespace MugTests
 
         private const string SINGLE_TOKENS = "( ) [ ] { } < > = ! & | + - * / , ; : .  ";
         private const string DOUBLE_TOKENS = "== != ++ += -- -= *= /= <= >= ..";
-        private const string FULL_TOKENS = "return continue break while pub use import new for type as in to if elif else func var const str chr u1    i32 i64 u8 u32 u64 unknown when declare";
+        private const string FULL_TOKENS = "return continue break while pub use import new for type as in to if elif else func var const str chr u1    i32 i64 u8 u32 u64 unknown when declare void";
         private const string RANDOM_TOKENS = "return == ( ) += continue pub ! *= ..";
 
 
@@ -505,7 +505,8 @@ namespace MugTests
                 new Token(TokenKind.KeyTunknown, "unknown", 126..133),
                 new Token(TokenKind.KeyWhen, "when", 134..138),
                 new Token(TokenKind.KeyDeclare, "declare", 139..146),
-                new Token(TokenKind.EOF, "<EOF>", 146..147)
+                new Token(TokenKind.KeyTVoid, "void", 147..151),
+                new Token(TokenKind.EOF, "<EOF>", 151..152)
             };
 
             AreListEqual(expected, tokens);

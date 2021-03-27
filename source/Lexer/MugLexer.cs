@@ -80,14 +80,16 @@ namespace Mug.Models.Lexer
             "chr" => AddKeyword(TokenKind.KeyTchr, s),
             "i32" => AddKeyword(TokenKind.KeyTi32, s),
             "i64" => AddKeyword(TokenKind.KeyTi64, s),
+            "void" => AddKeyword(TokenKind.KeyTVoid, s),
             "u1" => AddKeyword(TokenKind.KeyTbool, s),
             "u8" => AddKeyword(TokenKind.KeyTu8, s),
             "u32" => AddKeyword(TokenKind.KeyTu32, s),
             "u64" => AddKeyword(TokenKind.KeyTu64, s),
-            // "ptr" => AddKeyword(TokenKind.KeyTPtr, s), temponely replaced by * for pointers
             "unknown" => AddKeyword(TokenKind.KeyTunknown, s),
             "when" => AddKeyword(TokenKind.KeyWhen, s),
             "declare" => AddKeyword(TokenKind.KeyDeclare, s),
+            "catch" => AddKeyword(TokenKind.KeyCatch, s),
+            "error" => AddKeyword(TokenKind.KeyError, s),
             _ => false
         };
 
@@ -135,7 +137,6 @@ namespace Mug.Models.Lexer
             ';' => TokenKind.Semicolon,
             ':' => TokenKind.Colon,
             '.' => TokenKind.Dot,
-            '?' => TokenKind.KeyTVoid,
             _ => InExpressionError<TokenKind>("Invalid char")
         };
 

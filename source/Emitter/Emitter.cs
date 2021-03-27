@@ -396,11 +396,25 @@ namespace Mug.Models.Generator.Emitter
             var enumerated = _generator.GetSymbol(enumname, position).GetValue<MugValue>();
 
             if (!enumerated.Type.IsEnum())
-                _generator.Error(position, "Not an enum");
+            {
+                if (enumerated.Type.IsEnumError())
+                {
+                    var enumerror = enumerated.Type.GetEnumError();
+                    var index = enumerror.Body.FindIndex(member => member.Value == membername);
+
+                    if (index == -1)
+                        _generator.Error(position, "`", enumname, "` does not contain a definition for `", membername, "`");
+
+                    Load(MugValue.EnumMember(enumerated.Type, LLVMValueRef.CreateConstInt(LLVMTypeRef.Int8, (uint)index)));
+                    return;
+                }
+                else
+                    _generator.Error(position, "Not an enum");
+            }
 
             var type = enumerated.Type.GetEnum();
 
-            Load(type.GetMemberValueFromName(enumerated.Type, type.BaseType.ToMugValueType(localgenerator._generator), membername, position, localgenerator));
+            Load(type.GetMemberValueFromName(enumerated.Type, type.BaseType.ToMugValueType(_generator), membername, position, localgenerator));
         }
 
         public void LoadField(MugValue instance, MugValueType fieldType, int index, bool load)
