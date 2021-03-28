@@ -10,7 +10,14 @@ try
 
     var test = @"
 
+error MyErr { Error }
+
+func (self: i32) y() { }
+
+func x(): i32 { return 0; }
+
 func main() {
+  return x().y();
 }
 
 ";

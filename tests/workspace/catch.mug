@@ -14,9 +14,7 @@ func (self: str) parse_i32(): ParseErr!i32 {
 	var prefixop = '\0';
 
 	while true {
-		const cur = self[i];
-
-    i += 1;
+		const cur = self[i++];
 
     if cur == '\0' { break; }
 
@@ -48,8 +46,6 @@ func (self: str) parse_i32(): ParseErr!i32 {
 
 func main(): i32 {
   println("This program is returning to eax the input as int");
-  return readln("input: ").parse_i32() catch e {
-    println("Cannot parse, eax contains the error identifer");
-    e as i32;
-  };
+  
+  return readln("input: ").parse_i32();
 }

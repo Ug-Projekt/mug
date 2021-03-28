@@ -361,7 +361,7 @@ namespace Mug.Models.Parser
             {
                 var id = Expect("expected member after `.`", TokenKind.Identifier);
 
-                name = new MemberNode() { Base = name, Member = id, Position = (name.Position.Start)..(id.Position.End) };
+                name = new MemberNode() { Base = name, Member = id, Position = name.Position.Start.Value..id.Position.End.Value };
 
                 CollectPossibleArrayAccessNode(ref name);
             }
@@ -443,7 +443,7 @@ namespace Mug.Models.Parser
             }
 
             CollectParameters(ref parameters);
-
+            
             e = new CallStatement() { Generics = generics, Name = name, Parameters = parameters, Position = previousMember is null ? name.Position : previousMember.Position };
 
             while (MatchAdvance(TokenKind.Dot))
@@ -460,7 +460,7 @@ namespace Mug.Models.Parser
 
                     // parameters.Insert(0, e);
 
-                    e = new CallStatement() { Generics = generics, Name = new MemberNode() { Base = e, Member = (Token)name, Position = e.Position.Start..name.Position.End }, Parameters = parameters };
+                    e = new CallStatement() { Generics = generics, Position = name.Position, Name = new MemberNode() { Base = e, Member = (Token)name, Position = e.Position.Start..name.Position.End }, Parameters = parameters };
                 }
                 else
                 {
@@ -525,10 +525,7 @@ namespace Mug.Models.Parser
             }*/
 
             if (!MatchMember(out e))
-            {
-                Console.WriteLine(Current);
                 return false;
-            }
 
             CollectPossibleArrayAccessNode(ref e);
 
