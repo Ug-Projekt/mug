@@ -226,8 +226,10 @@ namespace Mug.Models.Generator
 
         private bool IsABitcast(MugValueType expressionType, MugValueType castType)
         {
-            return expressionType.TypeKind == MugValueTypeKind.String && castType.Equals(MugValueType.Array(MugValueType.Char)) ||
-                 castType.TypeKind == MugValueTypeKind.String && expressionType.Equals(MugValueType.Array(MugValueType.Char));
+            return (expressionType.TypeKind == MugValueTypeKind.String && castType.Equals(MugValueType.Array(MugValueType.Char))) ||
+                 (castType.TypeKind == MugValueTypeKind.String && expressionType.Equals(MugValueType.Array(MugValueType.Char)))   ||
+                 (castType.TypeKind == MugValueTypeKind.Reference && expressionType.Equals(MugValueType.Pointer(castType.PointerBaseElementType))) ||
+                 (expressionType.TypeKind == MugValueTypeKind.Reference && castType.Equals(MugValueType.Pointer(expressionType.PointerBaseElementType)));
         }
 
         /// <summary>
@@ -238,6 +240,9 @@ namespace Mug.Models.Generator
             // the expression type to cast
             var expressionType = _emitter.PeekType();
             var castType = type.ToMugValueType(_generator);
+
+            if (castType.RawEquals(expressionType))
+                Error(position, "Useless cast");
 
             if (castType.IsEnum())
             {
@@ -342,7 +347,7 @@ namespace Mug.Models.Generator
             }
             else if (leftexpression is MemberNode member) // (expr).function()
             {
-                EvaluateExpression(member.Base);
+                EvaluateExpression(member.Base, false);
 
                 name = member.Member.Value;
                 position = member.Member.Position;
@@ -414,8 +419,7 @@ namespace Mug.Models.Generator
         {
             var size = generics[0].ToMugValueType(_generator).Size(
                 (int)LLVMTargetDataRef.FromStringRepresentation(_generator.Module.DataLayout)
-                    .StoreSizeOfType(LLVMTypeRef.CreatePointer(LLVMTypeRef.Int32, 0))
-                );
+                    .StoreSizeOfType(LLVMTypeRef.CreatePointer(LLVMTypeRef.Int32, 0)));
 
             _emitter.Load(MugValue.From(LLVMValueRef.CreateConstInt(LLVMTypeRef.Int32, (uint)size), MugValueType.Int32));
         }
@@ -638,7 +642,7 @@ namespace Mug.Models.Generator
         /// <summary>
         /// the function evaluates an expression, looking at the given node type
         /// </summary>
-        private void EvaluateExpression(INode expression)
+        private void EvaluateExpression(INode expression, bool loadreference = true)
         {
             switch (expression)
             {
@@ -647,7 +651,15 @@ namespace Mug.Models.Generator
                     break;
                 case Token t:
                     if (t.Kind == TokenKind.Identifier) // reference value
+                    {
                         _emitter.LoadFromMemory(t.Value, t.Position);
+
+                        if (loadreference && _emitter.PeekType().TypeKind == MugValueTypeKind.Reference)
+                        {
+                            var value = _emitter.Pop();
+                            _emitter.Load(MugValue.From(_emitter.Builder.BuildLoad(value.LLVMValue), value.Type.PointerBaseElementType));
+                        }
+                    }
                     else // constant value
                         _emitter.Load(ConstToMugConst(t, t.Position));
                     break;
@@ -946,13 +958,18 @@ namespace Mug.Models.Generator
         {
             return type.TypeKind switch
             {
-                MugValueTypeKind.Char or MugValueTypeKind.Int8 or MugValueTypeKind.Int32 or
-                MugValueTypeKind.Int64 or MugValueTypeKind.Bool => MugValue.From(LLVMValueRef.CreateConstInt(type.LLVMType, 0), type, true),
+                MugValueTypeKind.Char or
+                MugValueTypeKind.Int8 or
+                MugValueTypeKind.Int32 or
+                MugValueTypeKind.Int64 or
+                MugValueTypeKind.Bool => MugValue.From(LLVMValueRef.CreateConstInt(type.LLVMType, 0), type, true),
                 MugValueTypeKind.String => MugValue.From(CreateConstString(""), type, true),
-                MugValueTypeKind.Array => MugValue.From(
-                    CreateHeapArray(type.ArrayBaseElementType.LLVMType, LLVMValueRef.CreateConstInt(LLVMTypeRef.Int32, 0)), type, true),
-                MugValueTypeKind.Enum or MugValueTypeKind.Struct => GetDefaultValueOfDefinedType(type, position),
-                MugValueTypeKind.Unknown or MugValueTypeKind.Pointer => _generator.Error<MugValue>(position, "Pointers must be initialized"),
+                MugValueTypeKind.Array => MugValue.From(CreateHeapArray(type.ArrayBaseElementType.LLVMType, LLVMValueRef.CreateConstInt(LLVMTypeRef.Int32, 0)), type, true),
+                MugValueTypeKind.Enum or
+                MugValueTypeKind.Struct => GetDefaultValueOfDefinedType(type, position),
+                MugValueTypeKind.Unknown or
+                MugValueTypeKind.Reference or
+                MugValueTypeKind.Pointer => _generator.Error<MugValue>(position, "Pointers must be initialized"),
             };
         }
 
@@ -961,7 +978,6 @@ namespace Mug.Models.Generator
         private void EmitReturnStatement(ReturnStatement @return)
         {
             var type = _function.Type.ToMugValueType(_generator);
-
             /*
              * if the expression in the return statement is null, condition verified by calling Returnstatement.Isvoid(),
              * check that the type of function in which it is found returns void.
@@ -1011,7 +1027,7 @@ namespace Mug.Models.Generator
                         }
                         else
                         {
-                            Error(@return.Body.Position, errorMessage);
+                            Error(@return.Position, errorMessage);
                             throw new();
                         }
                     }
@@ -1045,7 +1061,7 @@ namespace Mug.Models.Generator
                 }
                 else
                 {
-                    _generator.ExpectSameTypes(type, @return.Body.Position, errorMessage, exprType);
+                    _generator.ExpectSameTypes(type, @return.Position, errorMessage, exprType);
 
                     _emitter.Ret();
                 }
@@ -1113,7 +1129,7 @@ namespace Mug.Models.Generator
                 if (token.Kind != TokenKind.Identifier)
                     Error(token.Position, "Invalid value in left expression");
 
-                return _emitter.GetMemoryAllocation(token.Value, token.Position);
+                return _emitter.GetMemoryAllocation(token.Value, token.Position, true);
             }
             else if (leftexpression is ArraySelectElemNode indexing)
             {
@@ -1151,7 +1167,14 @@ namespace Mug.Models.Generator
             if (ptr.IsConst)
                 Error(assignment.Position, "Unable to change a constant value");
 
+            if (ptr.Type.TypeKind == MugValueTypeKind.Reference)
+                ptr = MugValue.From(_emitter.Builder.BuildLoad(ptr.LLVMValue), ptr.Type.PointerBaseElementType);
+
             EvaluateExpression(assignment.Body);
+
+            _emitter.ForceConstantIntSizeTo(ptr.Type);
+
+            _generator.ExpectSameTypes(_emitter.PeekType(), assignment.Position, $"Expected {ptr.Type}, got {_emitter.PeekType()}", ptr.Type);
 
             if (assignment.Operator == TokenKind.Equal)
                 _emitter.StoreInsidePointer(ptr);

@@ -137,9 +137,11 @@ namespace Mug.Models.Parser
             return expect;
         }
 
-        private MugType ExpectType(bool allowEnumError = false)
+        private MugType ExpectType(bool allowEnumError = false, bool allowReference = true)
         {
-            if (MatchAdvance(TokenKind.OpenBracket, out var token))
+            if (allowReference && MatchAdvance(TokenKind.BooleanAND, out var token))
+                return new MugType(token.Position, TypeKind.Reference, ExpectType(false, false));
+            if (MatchAdvance(TokenKind.OpenBracket, out token))
             {
                 var type = ExpectType();
                 Expect("An array type definition must end by `]`", TokenKind.CloseBracket);

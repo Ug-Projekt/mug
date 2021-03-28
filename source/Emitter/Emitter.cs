@@ -99,7 +99,7 @@ namespace Mug.Models.Generator.Emitter
                 MugValue.From(Builder.BuildIntCast(Pop().LLVMValue, type.LLVMType), type));
         }
 
-        public MugValue GetMemoryAllocation(string name, Range position)
+        public MugValue GetMemoryAllocation(string name, Range position, bool loadreference = false)
         {
             if (!Memory.TryGetValue(name, out var variable))
             {
@@ -107,6 +107,9 @@ namespace Mug.Models.Generator.Emitter
                 // variable = _generator.EvaluateFunction(name, );
                 throw new();
             }
+
+            if (loadreference && variable.Type.TypeKind == MugValueTypeKind.Reference)
+                variable = MugValue.From(Builder.BuildLoad(variable.LLVMValue), variable.Type.PointerBaseElementType);
 
             return variable;
         }
@@ -252,7 +255,7 @@ namespace Mug.Models.Generator.Emitter
                 _generator.RequireStandardSymbol(GCPointerDecrementStandardSymbol, GCMugLibSymbol).LLVMValue,
                 new[] { Pop().LLVMValue });*/
         }
-
+        
         public void LoadFromMemory(string name, Range position)
         {
             var variable = GetMemoryAllocation(name, position);
@@ -447,7 +450,7 @@ namespace Mug.Models.Generator.Emitter
 
         public void LoadFieldName(string name, Range position)
         {
-            var instance = GetMemoryAllocation(name, position);
+            var instance = GetMemoryAllocation(name, position, true);
 
             if (!instance.IsAllocaInstruction())
             {
@@ -493,7 +496,7 @@ namespace Mug.Models.Generator.Emitter
             if (allocation.IsConst)
                 _generator.Error(position, "Unable to take the address of a constant value");
 
-            Load(MugValue.From(allocation.LLVMValue, MugValueType.Pointer(allocation.Type)));
+            Load(MugValue.From(allocation.LLVMValue, MugValueType.Reference(allocation.Type)));
         }
 
         public MugValue LoadFromPointer(MugValue value, Range position)

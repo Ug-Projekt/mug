@@ -18,25 +18,17 @@ namespace Mug.MugValueSystem
         {
             get
             {
-                if (TypeKind == MugValueTypeKind.Pointer)
-                    return LLVMTypeRef.CreatePointer(((MugValueType)BaseType).LLVMType, 0);
-
-                if (TypeKind == MugValueTypeKind.Struct)
-                    return GetStructure().LLVMValue;
-
-                if (TypeKind == MugValueTypeKind.Enum)
-                    return GetEnumInfo().Item1.LLVMType;
-
-                if (TypeKind == MugValueTypeKind.Array)
-                    return LLVMTypeRef.CreatePointer(((MugValueType)BaseType).LLVMType, 0);
-
-                if (TypeKind == MugValueTypeKind.EnumErrorDefined)
-                    return GetEnumErrorDefined().LLVMValue;
-
-                if (TypeKind == MugValueTypeKind.EnumError)
-                    return LLVMTypeRef.Int8;
-
-                return (LLVMTypeRef)BaseType;
+                return TypeKind switch
+                {
+                    MugValueTypeKind.Pointer or
+                    MugValueTypeKind.Reference => LLVMTypeRef.CreatePointer(((MugValueType)BaseType).LLVMType, 0),
+                    MugValueTypeKind.Struct => GetStructure().LLVMValue,
+                    MugValueTypeKind.Enum => GetEnumInfo().Item1.LLVMType,
+                    MugValueTypeKind.Array => LLVMTypeRef.CreatePointer(((MugValueType)BaseType).LLVMType, 0),
+                    MugValueTypeKind.EnumErrorDefined => GetEnumErrorDefined().LLVMValue,
+                    MugValueTypeKind.EnumError => LLVMTypeRef.Int8,
+                    _ => (LLVMTypeRef)BaseType,
+                };
             }
         }
 
@@ -75,7 +67,8 @@ namespace Mug.MugValueSystem
                 MugValueTypeKind.String => sizeofpointer,
                 MugValueTypeKind.Unknown => sizeofpointer,
                 MugValueTypeKind.Struct => GetStructure().Size(sizeofpointer),
-                MugValueTypeKind.Pointer => sizeofpointer,
+                MugValueTypeKind.Pointer or
+                MugValueTypeKind.Reference => sizeofpointer,
                 MugValueTypeKind.Enum => GetEnumInfo().Item1.Size(sizeofpointer),
                 MugValueTypeKind.Array => sizeofpointer,
                 MugValueTypeKind.Function => sizeofpointer
@@ -152,6 +145,11 @@ namespace Mug.MugValueSystem
             return new MugValueType() { BaseType = enumerrorInfo, TypeKind = MugValueTypeKind.EnumErrorDefined };
         }
 
+        public static MugValueType Reference(MugValueType type)
+        {
+            return new MugValueType() { TypeKind = MugValueTypeKind.Reference, BaseType = type };
+        }
+
         public override string ToString()
         {
             return TypeKind switch
@@ -166,6 +164,7 @@ namespace Mug.MugValueSystem
                 MugValueTypeKind.Unknown => "unknown",
                 MugValueTypeKind.Struct => GetStructure().Name,
                 MugValueTypeKind.Pointer => $"*{BaseType}",
+                MugValueTypeKind.Reference => $"&{BaseType}",
                 MugValueTypeKind.Enum => GetEnum().Name,
                 MugValueTypeKind.Array => $"[{BaseType}]",
                 MugValueTypeKind.Function => $"func({string.Join(", ", GetFunction().Item1)}): {GetFunction().Item2}",
@@ -259,6 +258,23 @@ namespace Mug.MugValueSystem
         public bool IsEnumError()
         {
             return BaseType is EnumErrorStatement;
+        }
+
+        public bool RawEquals(MugValueType type)
+        {
+            return base.Equals(type);
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (obj is not MugValueType type)
+                return false;
+
+            if ((TypeKind == MugValueTypeKind.Reference && type.TypeKind == MugValueTypeKind.Pointer) ||
+                (TypeKind == MugValueTypeKind.Pointer && type.TypeKind == MugValueTypeKind.Reference))
+                return BaseType.Equals(type.BaseType);
+
+            return base.Equals(type);
         }
     }
 }

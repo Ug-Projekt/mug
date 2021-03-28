@@ -10,14 +10,17 @@ try
 
     var test = @"
 
-error MyErr { Error }
+type Person { name: str, age: u8 }
 
-func x(): MyErr!i32 {
-  return MyErr.Error;
+func (self: &Person) change(a: &i32) {
+  a = 0;
 }
 
 func main() {
-  x() catch {};
+  var x = new Person {};
+  var y = &x;
+  var z = 0;
+  y.change(&z);
 }
 
 ";

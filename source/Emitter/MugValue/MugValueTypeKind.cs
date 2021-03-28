@@ -16,6 +16,7 @@
         Function,
         Unknown,
         EnumError,
-        EnumErrorDefined
+        EnumErrorDefined,
+        Reference
     }
 }

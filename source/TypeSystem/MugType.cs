@@ -102,6 +102,7 @@ namespace Mug.TypeSystem
                 TypeKind.Unknown => "unknown",
                 TypeKind.Pointer => $"*{BaseType}",
                 TypeKind.String => "str",
+                TypeKind.Reference => $"&{BaseType}",
                 TypeKind.Void => "void",
                 TypeKind.EnumError => $"{GetEnumError().Item1}!{GetEnumError().Item2}",
             };
@@ -162,6 +163,7 @@ namespace Mug.TypeSystem
             TypeKind.Pointer => MugValueType.Pointer(((MugType)BaseType).ToMugValueType(generator)),
             TypeKind.Array => MugValueType.Array(((MugType)BaseType).ToMugValueType(generator)),
             TypeKind.Unknown => MugValueType.Unknown,
+            TypeKind.Reference => MugValueType.Reference(((MugType)BaseType).ToMugValueType(generator)),
             _ => generator.NotSupportedType<MugValueType>(Kind.ToString(), Position)
         };
 
