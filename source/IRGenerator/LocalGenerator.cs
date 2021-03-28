@@ -1244,12 +1244,6 @@ namespace Mug.Models.Generator
                 _emitter.Load(LoadField(ref tmp, enumerror, 0));
             }
 
-            if (catchstatement.OutError is not null)
-            {
-                _emitter.Duplicate();
-                _emitter.DeclareConstant(catchstatement.OutError.Value.Value, catchstatement.OutError.Value.Position);
-            }
-
             var catchbodyErr = _llvmfunction.AppendBasicBlock("");
             var catchbodyOk = resultIsVoid || isImperativeStatement ? new() : _llvmfunction.AppendBasicBlock("");
             var catchend = _llvmfunction.AppendBasicBlock("");
@@ -1278,14 +1272,18 @@ namespace Mug.Models.Generator
 
             CycleExitBlock = catchend;
 
+            if (catchstatement.OutError is not null)
+            {
+                _emitter.Load(resultIsVoid ? value : LoadField(ref tmp, enumerror, 0));
+                _emitter.DeclareConstant(catchstatement.OutError.Value.Value, catchstatement.OutError.Value.Position);
+            }
+
             Generate(catchstatement.Body);
 
             _emitter.Exit();
 
             _emitter = new MugEmitter(_generator, catchend, oldemitter.IsInsideSubBlock);
             _emitter.Builder.PositionAtEnd(catchend);
-
-            _emitter.UndeclareIFExists(catchstatement.OutError?.Value);
 
             if (!isImperativeStatement)
             {

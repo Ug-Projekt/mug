@@ -12,14 +12,14 @@ try
 
 error GetErr { IndexOutOfRange }
 
-func get(): GetErr!void {
+func get(): GetErr!i32 {
   return GetErr.IndexOutOfRange;
 }
 
 func f() { }
 
 func main() {
-  var x = get() catch e { break; };
+  get() catch e { var x = e; };
 }
 
 ";

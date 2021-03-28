@@ -1,6 +1,53 @@
 import io;
 
-error MyErr { MyErrKind }
+error ParseErr { InvalidNumber, DoublePrefix }
 
-func main() {
+func (self: chr) is_digit(): u1 {
+  if (self as u8) >= ('0' as u8) { if (self as u8) <= ('9' as u8) { return true; } }
+
+  return false;
+}
+
+func (self: str) parse_i32(): ParseErr!i32 {
+  var res = 0;
+  var i = 0;
+	var prefixop = '\0';
+
+	while true {
+		const cur = self[i];
+
+    if cur == '\0' { break; }
+
+    var isprefix = false;
+
+    if cur == '+' { isprefix = true; }
+		if cur == '-' { isprefix = true; }
+    
+    if isprefix {
+			if prefixop != '\0' {
+				return ParseErr.DoublePrefix;
+      }
+
+			prefixop = cur;
+			continue;
+		}
+
+		if !cur.is_digit() {
+			return ParseErr.InvalidNumber;
+    }
+
+		res = res * 10 + (cur as i32) - ('0' as i32);
+	}
+
+	if prefixop == '-' { res = -res; }
+
+  return res;
+}
+
+func main(): i32 {
+  println("This program is returning to eax the input as int");
+  return readln("input: ").parse_i32() catch e {
+    println("Cannot parse, eax contains the error identifer");
+    e as i32;
+  };
 }
