@@ -47,5 +47,5 @@ func (self: str) parse_i32(): ParseErr!i32 {
 func main(): i32 {
   println("This program is returning to eax the input as int");
   
-  return readln("input: ").parse_i32();
+  return readln("input: ").parse_i32() catch e {  };
 }

@@ -994,14 +994,11 @@ namespace Mug.Models.Generator
                 if (type.IsEnumErrorDefined())
                 {
                     var enumerrorType = type.GetEnumErrorDefined();
-                    LLVMValueRef value;
+                    LLVMValueRef? value = null;
                     LLVMValueRef error;
 
                     if (exprType.Equals(enumerrorType.ErrorType))
-                    {
-                        value = enumerrorType.SuccessType.TypeKind == MugValueTypeKind.Void ? new() : GetDefaultValueOf(enumerrorType.SuccessType, @return.Body.Position).LLVMValue;
                         error = _emitter.Pop().LLVMValue;
-                    }
                     else
                     {
                         _emitter.ForceConstantIntSizeTo(enumerrorType.SuccessType);
@@ -1022,13 +1019,14 @@ namespace Mug.Models.Generator
                     if (enumerrorType.SuccessType.TypeKind != MugValueTypeKind.Void) {
                         var tmp = _emitter.Builder.BuildAlloca(type.LLVMType);
 
-                        _emitter.Builder.BuildStore(
-                            value,
-                            _emitter.Builder.BuildGEP(tmp, new[]
-                            {
-                                LLVMValueRef.CreateConstInt(LLVMTypeRef.Int32, 0),
-                                LLVMValueRef.CreateConstInt(LLVMTypeRef.Int32, 1)
-                            }));
+                        if (value.HasValue)
+                            _emitter.Builder.BuildStore(
+                                value.Value,
+                                _emitter.Builder.BuildGEP(tmp, new[]
+                                {
+                                    LLVMValueRef.CreateConstInt(LLVMTypeRef.Int32, 0),
+                                    LLVMValueRef.CreateConstInt(LLVMTypeRef.Int32, 1)
+                                }));
 
                         _emitter.Builder.BuildStore(
                             error,

@@ -12,12 +12,12 @@ try
 
 error MyErr { Error }
 
-func (self: i32) y() { }
-
-func x(): i32 { return 0; }
+func x(): MyErr!i32 {
+  return MyErr.Error;
+}
 
 func main() {
-  return x().y();
+  x() catch {};
 }
 
 ";
