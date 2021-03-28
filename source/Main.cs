@@ -10,16 +10,7 @@ try
 
     var test = @"
 
-error GetErr { IndexOutOfRange }
-
-func get(): GetErr!i32 {
-  return GetErr.IndexOutOfRange;
-}
-
-func f() { }
-
 func main() {
-  get() catch e { var x = e; };
 }
 
 ";

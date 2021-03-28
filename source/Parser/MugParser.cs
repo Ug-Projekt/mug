@@ -723,7 +723,11 @@ namespace Mug.Models.Parser
 
             if (MatchFactor(out INode e))
             {
-                if (MatchAdvance(TokenKind.Equal, out var eq))
+                if (MatchAdvance(TokenKind.Equal, out var eq) ||
+                    MatchAdvance(TokenKind.AddAssignment, out eq) ||
+                    MatchAdvance(TokenKind.SubAssignment, out eq) ||
+                    MatchAdvance(TokenKind.MulAssignment, out eq) ||
+                    MatchAdvance(TokenKind.DivAssignment, out eq))
                 {
                     if (!end.Contains(TokenKind.Semicolon))
                         end = end.Append(TokenKind.Semicolon).ToArray();

@@ -458,6 +458,14 @@ namespace Mug.Models.Generator
             }
             else if (p.Prefix == TokenKind.Star)
                 _emitter.Load(_emitter.LoadFromPointer(_emitter.Pop(), p.Position));
+            else if (p.Prefix == TokenKind.OperatorIncrement || p.Prefix == TokenKind.OperatorDecrement)
+            {
+                var left = EvaluateLeftValue(p.Expression);
+
+                EmitPostfixOperator(left, p.Prefix, p.Position, false);
+
+                _emitter.Load(MugValue.From(_emitter.Builder.BuildLoad(left.LLVMValue), left.Type));
+            }
         }
 
         private void EmitExpr(ExpressionNode e)
@@ -645,6 +653,14 @@ namespace Mug.Models.Generator
                     break;
                 case PrefixOperator p:
                     EmitExprPrefixOperator(p);
+                    break;
+                case PostfixOperator pp:
+                    var left = EvaluateLeftValue(pp.Expression);
+                    var load = _emitter.Builder.BuildLoad(left.LLVMValue);
+
+                    EmitPostfixOperator(left, pp.Postfix, pp.Position, false);
+
+                    _emitter.Load(MugValue.From(load, left.Type));
                     break;
                 case CallStatement c:
                     // call statement inside expression, true as second parameter because an expression cannot be void
@@ -1074,7 +1090,7 @@ namespace Mug.Models.Generator
             };
         }
 
-        private void EmitPostfixOperator(MugValue variabile, TokenKind kind, Range position)
+        private void EmitPostfixOperator(MugValue variabile, TokenKind kind, Range position, bool isStatement)
         {
             _emitter.Load(variabile);
 
@@ -1086,7 +1102,7 @@ namespace Mug.Models.Generator
                     _emitter.MakePostfixIntOperation(_emitter.Builder.BuildSub);
             }
             else
-                _emitter.CallOperator(PostfixOperatorToString(kind), position, false, _emitter.PeekType());
+                _emitter.CallOperator(PostfixOperatorToString(kind), position, !isStatement, _emitter.PeekType());
         }
 
         /// <summary>
@@ -1137,30 +1153,25 @@ namespace Mug.Models.Generator
             if (ptr.IsConst)
                 Error(assignment.Position, "Unable to change a constant value");
 
-            if (assignment.Operator == TokenKind.OperatorIncrement || assignment.Operator == TokenKind.OperatorDecrement)    
-                EmitPostfixOperator(ptr, assignment.Operator, assignment.Position);
+            EvaluateExpression(assignment.Body);
+
+            if (assignment.Operator == TokenKind.Equal)
+                _emitter.StoreInsidePointer(ptr);
             else
             {
-                EvaluateExpression(assignment.Body);
+                _emitter.Load(MugValue.From(_emitter.Builder.BuildLoad(ptr.LLVMValue), ptr.Type));
+                _emitter.Swap();
 
-                if (assignment.Operator == TokenKind.Equal)
-                    _emitter.StoreInsidePointer(ptr);
-                else
+                switch (assignment.Operator)
                 {
-                    _emitter.Load(MugValue.From(_emitter.Builder.BuildLoad(ptr.LLVMValue), ptr.Type));
-                    _emitter.Swap();
-
-                    switch (assignment.Operator)
-                    {
-                        case TokenKind.AddAssignment: EmitSum(assignment.Position); break;
-                        case TokenKind.SubAssignment: EmitSub(assignment.Position); break;
-                        case TokenKind.MulAssignment: EmitMul(assignment.Position); break;
-                        case TokenKind.DivAssignment: EmitDiv(assignment.Position); break;
-                        default: throw new();
-                    }
-
-                    _emitter.OperateInsidePointer(ptr);
+                    case TokenKind.AddAssignment: EmitSum(assignment.Position); break;
+                    case TokenKind.SubAssignment: EmitSub(assignment.Position); break;
+                    case TokenKind.MulAssignment: EmitMul(assignment.Position); break;
+                    case TokenKind.DivAssignment: EmitDiv(assignment.Position); break;
+                    default: throw new();
                 }
+
+                _emitter.OperateInsidePointer(ptr);
             }
         }
 
@@ -1330,6 +1341,21 @@ namespace Mug.Models.Generator
                     break;
                 case CatchExpressionNode catchstatement:
                     EmitCatchStatement(catchstatement, true);
+                    break;
+                case PostfixOperator postfix:
+                    var left = EvaluateLeftValue(postfix.Expression);
+
+                    EmitPostfixOperator(left, postfix.Postfix, postfix.Position, true);
+                    break;
+                case PrefixOperator prefix:
+                    if (prefix.Prefix == TokenKind.OperatorIncrement || prefix.Prefix == TokenKind.OperatorDecrement)
+                    {
+                        left = EvaluateLeftValue(prefix.Expression);
+
+                        EmitPostfixOperator(left, prefix.Prefix, prefix.Position, true);
+                    }
+                    else
+                        goto default;
                     break;
                 default:
                     EvaluateExpression(statement);
