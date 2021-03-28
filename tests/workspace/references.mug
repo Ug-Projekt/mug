@@ -1,0 +1,9 @@
+func change(x: &i32) {
+	x = ++x;
+}
+
+func main(): i32 {
+	var x = 11;
+	change(&x);
+	return x;
+}

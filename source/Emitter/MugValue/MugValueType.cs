@@ -276,5 +276,10 @@ namespace Mug.MugValueSystem
 
             return base.Equals(type);
         }
+
+        public bool IsStructure()
+        {
+            return BaseType is StructureInfo;
+        }
     }
 }

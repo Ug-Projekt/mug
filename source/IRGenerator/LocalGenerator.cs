@@ -302,8 +302,8 @@ namespace Mug.Models.Generator
                     var structure = _emitter.PeekType().GetStructure();
                     _emitter.LoadField(
                         _emitter.Pop(),
-                        structure.GetFieldTypeFromName(m.Member.Value),
-                        structure.GetFieldIndexFromName(m.Member.Value), load);
+                        structure.GetFieldTypeFromName(m.Member.Value, _generator, m.Member.Position),
+                        structure.GetFieldIndexFromName(m.Member.Value, _generator, m.Member.Position), load);
                     break;
                 case Token t:
                     if (load)
@@ -585,14 +585,14 @@ namespace Mug.Models.Generator
                 if (!structureInfo.ContainsFieldWithName(field.Name))
                     Error(field.Position, "Undeclared field");
 
-                var fieldType = structureInfo.GetFieldTypeFromName(field.Name);
+                var fieldType = structureInfo.GetFieldTypeFromName(field.Name, _generator, field.Position);
 
                 _emitter.ForceConstantIntSizeTo(fieldType);
 
                 _generator.ExpectSameTypes(
                     fieldType, field.Body.Position, $"expected {fieldType}, but got {_emitter.PeekType()}", _emitter.PeekType());
 
-                _emitter.StoreField(tmp, structureInfo.GetFieldIndexFromName(field.Name));
+                _emitter.StoreField(tmp, structureInfo.GetFieldIndexFromName(field.Name, _generator, field.Position));
             }
 
             for (int i = 0; i < structureInfo.FieldNames.Length; i++)
@@ -628,12 +628,12 @@ namespace Mug.Models.Generator
                 _emitter.LoadFieldName();
             }
 
-            if (_emitter.PeekType().IsPointer())
-                Error(m.Position, "Unable to access to a pointer");
+            if (!_emitter.PeekType().IsStructure())
+                Error(m.Base.Position, "Accessed inaccessible type");
 
             var structure = _emitter.PeekType().GetStructure();
-            var type = structure.GetFieldTypeFromName(m.Member.Value);
-            var index = structure.GetFieldIndexFromName(m.Member.Value);
+            var type = structure.GetFieldTypeFromName(m.Member.Value, _generator, m.Member.Position);
+            var index = structure.GetFieldIndexFromName(m.Member.Value, _generator, m.Member.Position);
             var instance = _emitter.Pop();
 
             _emitter.LoadField(instance, type, index, buildload);

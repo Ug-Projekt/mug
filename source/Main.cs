@@ -12,15 +12,9 @@ try
 
 type Person { name: str, age: u8 }
 
-func (self: &Person) change(a: &i32) {
-  a = 0;
-}
-
 func main() {
-  var x = new Person {};
-  var y = &x;
-  var z = 0;
-  y.change(&z);
+  var x = """";
+  var y = x.name;
 }
 
 ";

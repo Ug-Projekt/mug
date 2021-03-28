@@ -1432,13 +1432,11 @@ namespace Mug.Models.Parser
         /// </summary>
         public NamespaceNode Parse()
         {
-            var firstToken = Lexer.TokenCollection[_currentIndex];
+            // to avoid bugs
+            if (Match(TokenKind.EOF))
+                return Module;
 
             Module.Name = new Token(TokenKind.Identifier, Lexer.ModuleName, 0..(Lexer.Source.Length - 1));
-
-            // to avoid bugs
-            if (firstToken.Kind == TokenKind.EOF)
-                return Module;
 
             // search for members
             Module.Members = ExpectNamespaceMembers();
