@@ -88,6 +88,11 @@ namespace Mug.Models.Generator.Emitter
                 MugValue.From(Builder.BuildSDiv(Pop().LLVMValue, second.LLVMValue), second.Type));
         }
 
+        public void Duplicate()
+        {
+            Load(Peek());
+        }
+
         public void CastInt(MugValueType type)
         {
             Load(
@@ -225,6 +230,12 @@ namespace Mug.Models.Generator.Emitter
         public bool IsDeclared(string name)
         {
             return Memory.ContainsKey(name);
+        }
+
+        public void UndeclareIFExists(string value)
+        {
+            if (value is not null && IsDeclared(value))
+                Memory.Remove(value);
         }
 
         private void EmitGCIncrementReferenceCounter(LLVMValueRef pointer)
@@ -497,14 +508,6 @@ namespace Mug.Models.Generator.Emitter
         {
             Builder.BuildStore(Pop().LLVMValue, ptr.LLVMValue);
         }
-
-        /*public void LoadUnknownAllocation(MugValue allocation)
-        {
-            if (allocation.IsAllocaInstruction() || allocation.IsGEP())
-                Load(MugValue.From(Builder.BuildLoad(allocation.LLVMValue), allocation.Type));
-            else
-                throw new("unable to recognize unknonwn allocation");
-        }*/
 
         public void StoreElementArray(LLVMValueRef arrayload, int i)
         {

@@ -1,0 +1,6 @@
+import io;
+
+error MyErr { MyErrKind }
+
+func main() {
+}

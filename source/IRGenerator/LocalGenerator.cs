@@ -165,6 +165,10 @@ namespace Mug.Models.Generator
 
                 EmitBooleanOperator(literal, llvmpredicate, kind, position);
             }
+            else if ((kind == OperatorKind.CompareEQ || kind == OperatorKind.CompareNEQ) &&
+                ft.TypeKind == MugValueTypeKind.EnumError &&
+                st.TypeKind == MugValueTypeKind.EnumError)
+                _emitter.CompareInt(llvmpredicate);
             else if (ft.MatchSameIntType(st))
                 _emitter.CompareInt(llvmpredicate);
             else if (ft.TypeKind == MugValueTypeKind.Char &&
@@ -948,7 +952,7 @@ namespace Mug.Models.Generator
              */
             if (@return.IsVoid())
             {
-                if (type.IsEnumErrorDefined())
+                if (type.IsEnumErrorDefined() && type.GetEnumErrorDefined().SuccessType.TypeKind == MugValueTypeKind.Void)
                 {
                     _emitter.Load(MugValue.From(Negative1, type));
                     _emitter.Ret();
@@ -1184,10 +1188,12 @@ namespace Mug.Models.Generator
         {
             // is not inside a cycle
             if (CycleExitBlock.Handle == IntPtr.Zero)
-                Error(management.Position, "Loop management statements only allowed inside cycle's bodies");
+                Error(management.Position, "`break` only allowed inside cycles' and catches' block");
 
             if (management.Management.Kind == TokenKind.KeyBreak)
                 _emitter.Jump(CycleExitBlock);
+            else if (CycleCompareBlock.Handle == IntPtr.Zero)
+                Error(management.Position, "`continue` only allowed inside cycles' block");
             else
                 _emitter.Jump(CycleCompareBlock);
         }
@@ -1198,6 +1204,19 @@ namespace Mug.Models.Generator
                 Generate((BlockNode)when.Body);
         }
 
+        private MugValue LoadField(ref LLVMValueRef tmp, EnumErrorInfo enumerror, uint index)
+        {
+            var gep = _emitter.Builder.BuildGEP(tmp, new[]
+            {
+                    LLVMValueRef.CreateConstInt(LLVMTypeRef.Int32, 0),
+                    LLVMValueRef.CreateConstInt(LLVMTypeRef.Int32, index)
+            });
+
+            return MugValue.From(_emitter.Builder.BuildLoad(gep), enumerror.ErrorType);
+        }
+
+        private MugValue _buffer = new();
+
         private void EmitCatchStatement(CatchExpressionNode catchstatement, bool isImperativeStatement)
         {
             if (catchstatement.Expression is not CallStatement call)
@@ -1207,20 +1226,77 @@ namespace Mug.Models.Generator
             }
 
             EmitCallStatement(call, true, true);
-            var retType = _emitter.Pop();
-            var enumerror = retType.Type.GetEnumErrorDefined();
-            MugValue result = new();
+            var value = _emitter.Pop();
+            var enumerror = value.Type.GetEnumErrorDefined();
+            var tmp = _emitter.Builder.BuildAlloca(enumerror.LLVMValue);
+            var resultIsVoid = enumerror.SuccessType.TypeKind == MugValueTypeKind.Void;
+            var oldBuffer = _buffer;
+            var oldCycleExitBlock = CycleExitBlock;
+
+            _emitter.Builder.BuildStore(value.LLVMValue, tmp);
+            _buffer = resultIsVoid ? MugValue.From(new(), MugValueType.Void) : MugValue.From(_emitter.Builder.BuildAlloca(enumerror.SuccessType.LLVMType, ""), enumerror.SuccessType);
+
+            if (resultIsVoid)
+                _emitter.Load(MugValue.From(value.LLVMValue, enumerror.ErrorType));
+            else
+            {
+                _emitter.Builder.BuildStore(GetDefaultValueOf(enumerror.SuccessType, call.Position).LLVMValue, _buffer.LLVMValue);
+                _emitter.Load(LoadField(ref tmp, enumerror, 0));
+            }
 
             if (catchstatement.OutError is not null)
             {
-                /*if (isImperativeStatement && */
-                Console.WriteLine(enumerror.LLVMValue);
-
-                _emitter.DeclareConstant(catchstatement.OutError?.Value, catchstatement.OutError.Value.Position);
+                _emitter.Duplicate();
+                _emitter.DeclareConstant(catchstatement.OutError.Value.Value, catchstatement.OutError.Value.Position);
             }
 
+            var catchbodyErr = _llvmfunction.AppendBasicBlock("");
+            var catchbodyOk = resultIsVoid || isImperativeStatement ? new() : _llvmfunction.AppendBasicBlock("");
+            var catchend = _llvmfunction.AppendBasicBlock("");
+
+            _emitter.Builder.BuildCondBr(
+                _emitter.Builder.BuildICmp(LLVMIntPredicate.LLVMIntNE, _emitter.Pop().LLVMValue, Negative1),
+                catchbodyErr,
+                resultIsVoid || isImperativeStatement ? catchend : catchbodyOk);
+
+            var oldemitter = _emitter;
+
+            if (!resultIsVoid && !isImperativeStatement)
+            {
+                _emitter = new MugEmitter(_generator, _emitter.Memory, catchend, true);
+                _emitter.Builder.PositionAtEnd(catchbodyOk);
+
+                _emitter.Builder.BuildStore(LoadField(ref tmp, enumerror, 1).LLVMValue, _buffer.LLVMValue);
+                _emitter.Exit();
+
+                _emitter = new MugEmitter(_generator, catchend, oldemitter.IsInsideSubBlock);
+            }
+
+            oldemitter = _emitter;
+            _emitter = new MugEmitter(_generator, _emitter.Memory, catchend, true);
+            _emitter.Builder.PositionAtEnd(catchbodyErr);
+
+            CycleExitBlock = catchend;
+
+            Generate(catchstatement.Body);
+
+            _emitter.Exit();
+
+            _emitter = new MugEmitter(_generator, catchend, oldemitter.IsInsideSubBlock);
+            _emitter.Builder.PositionAtEnd(catchend);
+
+            _emitter.UndeclareIFExists(catchstatement.OutError?.Value);
+
             if (!isImperativeStatement)
-                _emitter.Load(result);
+            {
+                if (resultIsVoid)
+                    Error(catchstatement.Expression.Position, "Unable to evaluate void in expression");
+
+                _emitter.Load(MugValue.From(_emitter.Builder.BuildLoad(_buffer.LLVMValue), _buffer.Type));
+            }
+
+            _buffer = oldBuffer;
+            CycleExitBlock = oldCycleExitBlock;
         }
 
         /// <summary>
@@ -1257,10 +1333,13 @@ namespace Mug.Models.Generator
                 case CatchExpressionNode catchstatement:
                     EmitCatchStatement(catchstatement, true);
                     break;
-                /*case ForLoopStatement loop:
-                    break;*/
                 default:
-                    Error(statement.Position, "Statement not supported yet");
+                    EvaluateExpression(statement);
+
+                    if (!_buffer.Type.Equals(_emitter.PeekType()))
+                        Error(statement.Position, "Expected ", _buffer.Type.ToString(), ", got ", _emitter.PeekType().ToString());
+
+                    _emitter.Builder.BuildStore(_emitter.Pop().LLVMValue, _buffer.LLVMValue);
                     break;
             }
         }

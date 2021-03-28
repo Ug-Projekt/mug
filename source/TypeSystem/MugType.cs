@@ -117,7 +117,7 @@ namespace Mug.TypeSystem
                 Kind == TypeKind.UInt64;
         }
 
-        private MugValueType EvaluateStruct(string name, List<MugType> genericsInput, Range position, IRGenerator generator, bool isError)
+        private MugValueType EvaluateStruct(string name, List<MugType> genericsInput, Range position, IRGenerator generator)
         {
             if (generator.IsIllegalType(name))
                 generator.Error(position, "Illegal recursion");
@@ -136,9 +136,6 @@ namespace Mug.TypeSystem
 
             var result = generator.EvaluateStruct(name, generics, position).Type;
 
-            if (result.TypeKind == MugValueTypeKind.EnumError && !isError)
-                generator.Error(position, "Invalid use of enum error");
-
             return result;
         }
 
@@ -150,7 +147,7 @@ namespace Mug.TypeSystem
         /// <summary>
         /// the function converts a Mugtype to the corresponding mugvaluetype
         /// </summary>
-        public MugValueType ToMugValueType(IRGenerator generator, bool isError = false) => Kind switch
+        public MugValueType ToMugValueType(IRGenerator generator) => Kind switch
         {
             TypeKind.Int32 => MugValueType.Int32,
             TypeKind.UInt8 => MugValueType.Int8,
@@ -159,9 +156,9 @@ namespace Mug.TypeSystem
             TypeKind.Void => MugValueType.Void,
             TypeKind.Char => MugValueType.Char,
             TypeKind.String => MugValueType.String,
-            TypeKind.DefinedType => EvaluateStruct(BaseType.ToString(), new(), Position, generator, isError),
+            TypeKind.DefinedType => EvaluateStruct(BaseType.ToString(), new(), Position, generator),
             TypeKind.EnumError => EvaluateEnumError(GetEnumError().Item1, GetEnumError().Item2, generator),
-            TypeKind.GenericDefinedType => EvaluateStruct(GetGenericStructure().Item1.ToString(), GetGenericStructure().Item2, Position, generator, isError),
+            TypeKind.GenericDefinedType => EvaluateStruct(GetGenericStructure().Item1.ToString(), GetGenericStructure().Item2, Position, generator),
             TypeKind.Pointer => MugValueType.Pointer(((MugType)BaseType).ToMugValueType(generator)),
             TypeKind.Array => MugValueType.Array(((MugType)BaseType).ToMugValueType(generator)),
             TypeKind.Unknown => MugValueType.Unknown,

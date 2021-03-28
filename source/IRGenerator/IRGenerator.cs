@@ -200,7 +200,7 @@ namespace Mug.Models.Generator
 
             var typeEval = type.ToMugValueType(this);
 
-            var errorType = error.ToMugValueType(this, true);
+            var errorType = error.ToMugValueType(this);
 
             if (errorType.TypeKind != MugValueTypeKind.EnumError)
                 Error(error.Position, "Left type of enum error result must be an enum error");
