@@ -25,26 +25,26 @@ pub func (self: Stack<T>) new_capacity<T>(): i32 {
   return self.cap*2;
 }
 
-pub func (self: *Stack<T>) push<T>(element: T) {
+pub func (self: &Stack<T>) push<T>(element: T) {
 
-  if (*self).len >= (*self).cap { self.realloc<T>((*self).new_capacity<T>()); }
+  if self.len >= self.cap { self.realloc<T>(self.new_capacity<T>()); }
 
-  (*self).raw[(*self).len] = element;
-  (*self).len++;
+  self.raw[self.len] = element;
+  self.len++;
 }
 
-pub func (self: *Stack<T>) pop<T>(): T {
-  if (*self).len == 0 { panic("called pop over empty stack"); }
+pub func (self: &Stack<T>) pop<T>(): T {
+  if self.len == 0 { panic("called pop over empty stack"); }
 
-  (*self).len--;
-  return (*self).raw[(*self).len];
+  self.len--;
+  return (*self).raw[self.len];
 }
 
 pub func realloc(allocation: unknown, size: i64): unknown;
 pub func exit(code: i32);
 
-pub func panic(error: str) {
-  println(error);
+pub func panic(err: str) {
+  println(err);
   exit(1);
 }
 

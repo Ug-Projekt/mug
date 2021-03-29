@@ -727,8 +727,14 @@ namespace Mug.Models.Generator
             {
                 var baseparameter = _function.Base.Value;
                 var type = baseparameter.Type.ToMugValueType(_generator);
-                _emitter.Load(MugValue.From(_llvmfunction.GetParam(0), type, true));
-                _emitter.DeclareConstant(baseparameter.Name, baseparameter.Position);
+
+                /*if (type.TypeKind == MugValueTypeKind.Reference)
+                    _emitter.DeclareBaseReference(baseparameter.Name, _llvmfunction.GetParam(0), type);
+                else
+                {*/
+                    _emitter.Load(MugValue.From(_llvmfunction.GetParam(0), type, true));
+                    _emitter.DeclareConstant(baseparameter.Name, baseparameter.Position);
+                /*}*/
             }
 
             var offset = _function.Base.HasValue ? (uint)1 : 0;
@@ -1174,10 +1180,11 @@ namespace Mug.Models.Generator
 
             _emitter.ForceConstantIntSizeTo(ptr.Type);
 
-            _generator.ExpectSameTypes(_emitter.PeekType(), assignment.Position, $"Expected {ptr.Type}, got {_emitter.PeekType()}", ptr.Type);
-
             if (assignment.Operator == TokenKind.Equal)
+            {
+                _generator.ExpectSameTypes(_emitter.PeekType(), assignment.Position, $"Expected {ptr.Type}, got {_emitter.PeekType()}", ptr.Type);
                 _emitter.StoreInsidePointer(ptr);
+            }
             else
             {
                 _emitter.Load(MugValue.From(_emitter.Builder.BuildLoad(ptr.LLVMValue), ptr.Type));
@@ -1286,6 +1293,7 @@ namespace Mug.Models.Generator
                 resultIsVoid || isImperativeStatement ? catchend : catchbodyOk);
 
             var oldemitter = _emitter;
+            var oldMemory = _emitter.Memory;
 
             if (!resultIsVoid && !isImperativeStatement)
             {
@@ -1314,7 +1322,7 @@ namespace Mug.Models.Generator
 
             _emitter.Exit();
 
-            _emitter = new MugEmitter(_generator, catchend, oldemitter.IsInsideSubBlock);
+            _emitter = new MugEmitter(_generator, oldMemory, catchend, oldemitter.IsInsideSubBlock);
             _emitter.Builder.PositionAtEnd(catchend);
 
             if (!isImperativeStatement)

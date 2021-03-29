@@ -604,6 +604,19 @@ namespace Mug.Models.Generator
             }
         }
 
+        private static int _tempFileCounter = 0;
+
+        internal static string TempFile(string extension)
+        {
+            var dir = Path.Combine(Path.GetTempPath(), "mug");
+            var file = Path.ChangeExtension(Path.Combine(dir, "tmp" + _tempFileCounter++), extension);
+
+            if (!Directory.Exists(dir))
+                Directory.CreateDirectory(dir);
+
+            return file;
+        }
+
         private void EmitFunctionPrototype(FunctionPrototypeNode prototype)
         {
             if (prototype.Generics.Count > 0)
@@ -619,7 +632,10 @@ namespace Mug.Models.Generator
                 if (header != "")
                     Error(prototype.Position, "Pragam `code` is in conflict with `header`");
 
-                var path = Path.ChangeExtension(Path.GetTempFileName(), ext);
+                if (ext == "")
+                    ext = ".c";
+
+                var path = TempFile(ext);
 
                 File.WriteAllText(path, code);
 
@@ -666,7 +682,7 @@ namespace Mug.Models.Generator
 
         private void IncludeCHeader(string path, string clangArgs)
         {
-            var bc = Path.GetTempFileName();
+            var bc = TempFile("bc");
 
             // compiling c code to llvm bit code
             CompilationUnit.CallClang($"-emit-llvm -c {path} -o {bc} {clangArgs}", 3);

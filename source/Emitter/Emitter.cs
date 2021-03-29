@@ -450,22 +450,25 @@ namespace Mug.Models.Generator.Emitter
 
         public void LoadFieldName(string name, Range position)
         {
-            var instance = GetMemoryAllocation(name, position, true);
-
+            var instance = GetMemoryAllocation(name, position);
+            
             if (!instance.IsAllocaInstruction())
             {
                 var tmp = Builder.BuildAlloca(instance.Type.LLVMType);
                 Builder.BuildStore(instance.LLVMValue, tmp);
                 instance.LLVMValue = tmp;
             }
-
+            
+            if (instance.Type.TypeKind == MugValueTypeKind.Reference)
+                instance = MugValue.From(Builder.BuildLoad(instance.LLVMValue), instance.Type.PointerBaseElementType);
+            
             Load(instance);
         }
 
         public void LoadFieldName()
         {
             var value = Pop();
-
+            
             if (value.LLVMValue.IsALoadInst.Handle != IntPtr.Zero)
                 Load(MugValue.From(value.LLVMValue.GetOperand(0), value.Type));
             else if (value.LLVMValue.IsACallInst.Handle != IntPtr.Zero)
@@ -555,6 +558,13 @@ namespace Mug.Models.Generator.Emitter
             var first = Pop();
             Load(second);
             Load(first);
+        }
+
+        public void DeclareBaseReference(string name, LLVMValueRef value, MugValueType type)
+        {
+            var tmp = Builder.BuildAlloca(type.LLVMType);
+            Builder.BuildStore(value, tmp);
+            SetMemory(name, MugValue.From(tmp, type, true));
         }
     }
 }

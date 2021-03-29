@@ -12,9 +12,14 @@ try
 
 type Person { name: str, age: u8 }
 
-func main() {
-  var x = """";
-  var y = x.name;
+func change(self: &Person) {
+  self.age = 0;
+}
+
+func main(): i32 {
+  var x = new Person {  };
+  change(&x);
+  return x.age as i32;
 }
 
 ";
@@ -44,7 +49,15 @@ catch (CompilationException e)
     if (e.Lexer is not null)
     {
         CompilationErrors.WriteModule(e.Lexer.ModuleName, e.LineAt);
-        CompilationErrors.WriteSourceLine(e.Bad, e.LineAt, e.Lexer.Source, e.Message);
+
+        try
+        {
+            CompilationErrors.WriteSourceLine(e.Bad, e.LineAt, e.Lexer.Source, e.Message);
+        }
+        catch
+        {
+            CompilationErrors.WriteFail(e.Message);
+        }
     }
     else
         CompilationErrors.WriteFail(e.Message);
