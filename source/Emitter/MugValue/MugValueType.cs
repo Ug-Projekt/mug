@@ -62,6 +62,7 @@ namespace Mug.MugValueSystem
                 MugValueTypeKind.Int8 => 1,
                 MugValueTypeKind.Int32 => 4,
                 MugValueTypeKind.Int64 => 8,
+                MugValueTypeKind.Float32 => 4,
                 MugValueTypeKind.Void => 0,
                 MugValueTypeKind.Char => 1,
                 MugValueTypeKind.String => sizeofpointer,
@@ -129,6 +130,7 @@ namespace Mug.MugValueSystem
         public static MugValueType Char => From(LLVMTypeRef.Int8, MugValueTypeKind.Char);
         public static MugValueType String => From(LLVMTypeRef.CreatePointer(LLVMTypeRef.Int8, 0), MugValueTypeKind.String);
         public static MugValueType Unknown => From(LLVMTypeRef.CreatePointer(LLVMTypeRef.Int8, 0), MugValueTypeKind.Unknown);
+        public static MugValueType Float32 => From(LLVMTypeRef.Float, MugValueTypeKind.Float32);
 
         public static MugValueType Function(MugValueType[] paramTypes, MugValueType retType)
         {
@@ -158,6 +160,7 @@ namespace Mug.MugValueSystem
                 MugValueTypeKind.Int8 => "u8",
                 MugValueTypeKind.Int32 => "i32",
                 MugValueTypeKind.Int64 => "i64",
+                MugValueTypeKind.Float32 => "f32",
                 MugValueTypeKind.Void => "void",
                 MugValueTypeKind.Char => "chr",
                 MugValueTypeKind.String => "str",
@@ -176,6 +179,11 @@ namespace Mug.MugValueSystem
         public bool MatchSameIntType(MugValueType st)
         {
             return MatchIntType() && st.MatchIntType() && TypeKind == st.TypeKind;
+        }
+
+        internal bool MatchSameFloatType(MugValueType st)
+        {
+            return MatchFloatType() && st.MatchFloatType() && TypeKind == st.TypeKind;
         }
 
         public bool MatchAnyTypeOfIntType()
@@ -280,6 +288,11 @@ namespace Mug.MugValueSystem
         public bool IsStructure()
         {
             return BaseType is StructureInfo;
+        }
+
+        public bool MatchFloatType()
+        {
+            return TypeKind == MugValueTypeKind.Float32;
         }
     }
 }

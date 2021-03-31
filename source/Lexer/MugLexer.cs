@@ -35,6 +35,14 @@ namespace Mug.Models.Lexer
             }
         }
 
+        private char Current
+        {
+            get
+            {
+                return Source[CurrentIndex];
+            }
+        }
+
         public MugLexer(string moduleName, string source)
         {
             ModuleName = moduleName;
@@ -80,6 +88,7 @@ namespace Mug.Models.Lexer
             "chr" => AddKeyword(TokenKind.KeyTchr, s),
             "i32" => AddKeyword(TokenKind.KeyTi32, s),
             "i64" => AddKeyword(TokenKind.KeyTi64, s),
+            "f32" => AddKeyword(TokenKind.KeyTf32, s),
             "void" => AddKeyword(TokenKind.KeyTVoid, s),
             "u1" => AddKeyword(TokenKind.KeyTbool, s),
             "u8" => AddKeyword(TokenKind.KeyTu8, s),
@@ -141,10 +150,6 @@ namespace Mug.Models.Lexer
 
         private void AddToken(TokenKind kind, string value)
         {
-            // identifiers must follow rules
-            if (kind == TokenKind.Identifier)
-                CheckValidIdentifier(value);
-
             if (value is not null)
                 TokenCollection.Add(new(kind, value, (CurrentIndex - value.ToString().Length)..CurrentIndex));
             else // chatching null reference exception
@@ -156,7 +161,6 @@ namespace Mug.Models.Lexer
         /// </summary>
         private void AddSingle(TokenKind kind, string value)
         {
-            InsertCurrentSymbol();
             TokenCollection.Add(new(kind, value, CurrentIndex..(CurrentIndex + 1)));
         }
 
@@ -176,7 +180,7 @@ namespace Mug.Models.Lexer
         /// <summary>
         /// inserts current symbol in the tokens stream and clears it if it's not empty
         /// </summary>
-        private void InsertCurrentSymbol()
+        /*private void InsertCurrentSymbol()
         {
             if (!string.IsNullOrWhiteSpace(CurrentSymbol.ToString()))
             {
@@ -184,7 +188,7 @@ namespace Mug.Models.Lexer
                 ProcessSymbol(CurrentSymbol.ToString());
                 CurrentSymbol.Clear();
             }
-        }
+        }*/
 
         private bool IsDigit(string s)
         {
@@ -195,9 +199,6 @@ namespace Mug.Models.Lexer
         {
             if (string.IsNullOrWhiteSpace(s))
                 return false;
-
-            if (s[0] == '.')
-                s = '0' + s;
 
             return double.TryParse(s, out _);
         }
@@ -227,7 +228,7 @@ namespace Mug.Models.Lexer
         /// <summary>
         /// adds a new token with the recognized kind (based on the symbol format)
         /// </summary>
-        private void ProcessSymbol(string value)
+        /*private void ProcessSymbol(string value)
         {
             if (IsDigit(value))
                 AddToken(TokenKind.ConstantDigit, value);
@@ -243,22 +244,14 @@ namespace Mug.Models.Lexer
 
                 AddToken(TokenKind.Identifier, value);
             }
-        }
-
-        /// <summary>
-        /// checks if next char is a digit
-        /// </summary>
-        private bool NextIsDigit()
-        {
-            return HasNext() && char.IsDigit(GetNext());
-        }
+        }*/
 
         /// <summary>
         /// matches '#'
         /// </summary>
         private bool MatchInlineComment()
         {
-            return Source[CurrentIndex] == '#';
+            return HasNext() && Source[CurrentIndex] == '/' && GetNext() == '/';
         }
 
         /// <summary>
@@ -274,7 +267,7 @@ namespace Mug.Models.Lexer
         /// </summary>
         private bool MatchStartMultiLineComment()
         {
-            return HasNext() && Source[CurrentIndex] == '#' && GetNext() == '[';
+            return HasNext() && Source[CurrentIndex] == '/' && GetNext() == '*';
         }
 
         /// <summary>
@@ -282,7 +275,7 @@ namespace Mug.Models.Lexer
         /// </summary>
         private bool MatchEndMultiLineComment()
         {
-            return HasNext() && Source[CurrentIndex] == ']' && GetNext() == '#';
+            return HasNext() && Source[CurrentIndex] == '*' && GetNext() == '/';
         }
 
         /// <summary>
@@ -292,7 +285,7 @@ namespace Mug.Models.Lexer
         {
             if (MatchStartMultiLineComment())
             {
-                // eats first two chars '#['
+                // eats first two chars '//'
                 CurrentIndex += 2;
 
                 while (!MatchEndMultiLineComment() && CurrentIndex != Source.Length)
@@ -444,7 +437,7 @@ namespace Mug.Models.Lexer
         /// </summary>
         private bool IsValidIdentifierChar(char current)
         {
-            return char.IsLetterOrDigit(current) || current == '_';
+            return char.IsLetter(current) || current == '_';
         }
 
         /// <summary>
@@ -460,7 +453,6 @@ namespace Mug.Models.Lexer
         /// </summary>
         private void ProcessSpecial(char current)
         {
-            InsertCurrentSymbol();
             if (!HasNext())
             {
                 AddSingle(GetSingle(current), current.ToString());
@@ -494,6 +486,62 @@ namespace Mug.Models.Lexer
             }
         }
 
+        private void CollectIdentifer()
+        {
+            do
+                CurrentSymbol.Append(Source[CurrentIndex++]);
+            while (CurrentIndex < Source.Length && (IsValidIdentifierChar(Current) || char.IsDigit(Current)));
+            
+            var value = CurrentSymbol.ToString();
+            CurrentSymbol.Clear();
+
+            if (!CheckAndSetKeyword(value))
+            {
+                if (IsBoolean(value))
+                    AddToken(TokenKind.ConstantBoolean, value);
+                else
+                    AddToken(TokenKind.Identifier, value);
+            }
+            
+            CurrentIndex--;
+        }
+
+        private void CollectDigit()
+        {
+            var pos = CurrentIndex;
+            var isfloat = false;
+            do
+            {
+                if (Current == '.')
+                {
+                    if (isfloat)
+                        this.Throw(CurrentIndex, "Invalid dot here");
+
+                    isfloat = true;
+                    CurrentSymbol.Append(',');
+                }
+                else if (Current != '_')
+                    CurrentSymbol.Append(Current);
+
+                CurrentIndex++;
+            }
+            while (CurrentIndex < Source.Length && (char.IsDigit(Current) || Current == '.' || Current == '_'));
+
+            if (Current == 'f')
+            {
+                CurrentIndex++;
+                isfloat = true;
+            }
+
+            if (CurrentIndex < Source.Length && IsValidIdentifierChar(Current))
+                this.Throw(CurrentIndex, "Invalid identifer's char here");
+
+            TokenCollection.Add(new(isfloat ? TokenKind.ConstantFloatDigit : TokenKind.ConstantDigit, CurrentSymbol.ToString(), pos..CurrentIndex));
+            CurrentSymbol.Clear();
+
+            CurrentIndex--;
+        }
+
         /// <summary>
         /// recognize the kind of the char
         /// </summary>
@@ -510,9 +558,12 @@ namespace Mug.Models.Lexer
             char current = Source[CurrentIndex];
 
             if (IsEscapedChar(current)) // skipping it and add the symbol if it's not empty
-                InsertCurrentSymbol();
-            else if (IsValidIdentifierChar(current)) // adding a char to the current symbol
-                CurrentSymbol.Append(current);
+                return;
+
+            if (IsValidIdentifierChar(current)) // identifiers
+                CollectIdentifer();
+            else if (char.IsDigit(current)) // digits
+                CollectDigit();
             else
                 ProcessSpecial(current); // if current is not a valid id char, a control or a string quote
         }
@@ -531,8 +582,6 @@ namespace Mug.Models.Lexer
                 ProcessCurrentChar();
                 CurrentIndex++;
             }
-
-
 
             // end of file token
             AddSingle(TokenKind.EOF, "<EOF>");

@@ -86,6 +86,10 @@ namespace Mug.Models.Generator
                     llvmvalue = LLVMValueRef.CreateConstInt(LLVMTypeRef.Int8, _generator.StringCharToIntChar(constant.Value));
                     type = MugValueType.Char;
                     break;
+                case TokenKind.ConstantFloatDigit:
+                    llvmvalue = LLVMValueRef.CreateConstUIToFP(LLVMValueRef.CreateConstInt(LLVMTypeRef.Int32, (uint)float.Parse(constant.Value)), LLVMTypeRef.Float);
+                    type = MugValueType.Float32;
+                    break;
                 default:
                     _generator.NotSupportedType<LLVMValueRef>(constant.Kind.ToString(), position);
                     break;
@@ -96,55 +100,76 @@ namespace Mug.Models.Generator
 
         private void EmitSum(Range position)
         {
-            _emitter.ForceCoupleConstantIntSize();
+            _emitter.CoerceCoupleConstantSize();
 
             var types = _emitter.GetCoupleTypes();
 
             if (types.Item1.MatchSameIntType(types.Item2))
                 _emitter.AddInt();
+            else if (types.Item1.MatchSameFloatType(types.Item2))
+                _emitter.AddFloat();
             else
                 _emitter.CallOperator("+", position, true, types.Item1, types.Item2);
         }
 
         private void EmitSub(Range position)
         {
-            _emitter.ForceCoupleConstantIntSize();
+            _emitter.CoerceCoupleConstantSize();
 
             var types = _emitter.GetCoupleTypes();
 
             if (types.Item1.MatchSameIntType(types.Item2))
                 _emitter.SubInt();
+            else if (types.Item1.MatchSameFloatType(types.Item2))
+                _emitter.SubFloat();
             else
                 _emitter.CallOperator("-", position, true, types.Item1, types.Item2);
         }
 
         private void EmitMul(Range position)
         {
-            _emitter.ForceCoupleConstantIntSize();
+            _emitter.CoerceCoupleConstantSize();
 
             var types = _emitter.GetCoupleTypes();
 
             if (types.Item1.MatchSameIntType(types.Item2))
                 _emitter.MulInt();
+            else if (types.Item1.MatchSameFloatType(types.Item2))
+                _emitter.MulFloat();
             else
                 _emitter.CallOperator("*", position, true, types.Item1, types.Item2);
         }
 
         private void EmitDiv(Range position)
         {
-            _emitter.ForceCoupleConstantIntSize();
+            _emitter.CoerceCoupleConstantSize();
 
             var types = _emitter.GetCoupleTypes();
 
             if (types.Item1.MatchSameIntType(types.Item2))
                 _emitter.DivInt();
+            else if (types.Item1.MatchSameFloatType(types.Item2))
+                _emitter.DivFloat();
             else
                 _emitter.CallOperator("/", position, true, types.Item1, types.Item2);
         }
 
+        private LLVMRealPredicate ToFloatComparePredicate(LLVMIntPredicate intpredicate)
+        {
+            return intpredicate switch
+            {
+                LLVMIntPredicate.LLVMIntEQ => LLVMRealPredicate.LLVMRealOEQ,
+                LLVMIntPredicate.LLVMIntNE => LLVMRealPredicate.LLVMRealONE,
+                LLVMIntPredicate.LLVMIntSGE => LLVMRealPredicate.LLVMRealOGE,
+                LLVMIntPredicate.LLVMIntSGT => LLVMRealPredicate.LLVMRealOGT,
+                LLVMIntPredicate.LLVMIntSLE => LLVMRealPredicate.LLVMRealOLE,
+                LLVMIntPredicate.LLVMIntSLT => LLVMRealPredicate.LLVMRealOLT
+            };
+        }
+
         private void EmitBooleanOperator(string literal, LLVMIntPredicate llvmpredicate, OperatorKind kind, Range position)
         {
-            _emitter.ForceCoupleConstantIntSize();
+            _emitter.CoerceCoupleConstantSize();
 
             var types = _emitter.GetCoupleTypes();
             var ft = types.Item1;
@@ -171,6 +196,8 @@ namespace Mug.Models.Generator
                 _emitter.CompareInt(llvmpredicate);
             else if (ft.MatchSameIntType(st))
                 _emitter.CompareInt(llvmpredicate);
+            else if (ft.MatchSameFloatType(st))
+                _emitter.CompareFloat(ToFloatComparePredicate(llvmpredicate));
             else if (ft.TypeKind == MugValueTypeKind.Char &&
                 st.TypeKind == MugValueTypeKind.Char &&
                 (kind == OperatorKind.CompareEQ || kind == OperatorKind.CompareNEQ))
@@ -249,7 +276,7 @@ namespace Mug.Models.Generator
                 var enumerated = castType.GetEnum();
                 var enumBaseType = enumerated.BaseType.ToMugValueType(_generator);
 
-                _emitter.ForceConstantIntSizeTo(enumBaseType);
+                _emitter.CoerceConstantSizeTo(enumBaseType);
 
                 if (_emitter.PeekType().TypeKind != enumBaseType.TypeKind)
                     Error(position, "The base type of enum `", enumerated.Name, "` is incompatible with type `", expressionType.ToString(), "`");
@@ -260,7 +287,7 @@ namespace Mug.Models.Generator
             {
                 var enumBaseType = expressionType.GetEnum().BaseType.ToMugValueType(_generator);
 
-                _emitter.ForceConstantIntSizeTo(enumBaseType);
+                _emitter.CoerceConstantSizeTo(enumBaseType);
 
                 if (_emitter.PeekType().GetEnum().BaseType.ToMugValueType(_generator).TypeKind != castType.TypeKind)
                     Error(type.Position, "Enum base type is incompatible with type `", castType.ToString(), "`");
@@ -457,8 +484,12 @@ namespace Mug.Models.Generator
             }
             else if (p.Prefix == TokenKind.Minus) // '-' operator, for example -(9+2) or -8+2
             {
-                _generator.ExpectIntType(_emitter.PeekType(), p.Position);
-                _emitter.NegInt();
+                if (_emitter.PeekType().MatchIntType())
+                    _emitter.NegInt();
+                else if (_emitter.PeekType().MatchFloatType())
+                    _emitter.NegFloat();
+                else
+                    Error(p.Position, "Unable to perform operator `-` on type ", _emitter.PeekType().ToString());
             }
             else if (p.Prefix == TokenKind.Star)
                 _emitter.Load(_emitter.LoadFromPointer(_emitter.Pop(), p.Position));
@@ -500,7 +531,7 @@ namespace Mug.Models.Generator
             EvaluateExpression(a.IndexExpression);
 
             // arrays are indexed by int32
-            _emitter.ForceConstantIntSizeTo(MugValueType.Int32);
+            _emitter.CoerceConstantSizeTo(MugValueType.Int32);
 
             _emitter.ExpectIndexerType(a.IndexExpression.Position);
 
@@ -542,7 +573,7 @@ namespace Mug.Models.Generator
             {
                 EvaluateExpression(elem);
 
-                _emitter.ForceConstantIntSizeTo(arraytype.ArrayBaseElementType);
+                _emitter.CoerceConstantSizeTo(arraytype.ArrayBaseElementType);
 
                 if (!_emitter.PeekType().Equals(arraytype.ArrayBaseElementType))
                     Error(elem.Position, "Expected ", arraytype.ArrayBaseElementType.ToString(), ", got ", _emitter.PeekType().ToString());
@@ -587,7 +618,7 @@ namespace Mug.Models.Generator
 
                 var fieldType = structureInfo.GetFieldTypeFromName(field.Name, _generator, field.Position);
 
-                _emitter.ForceConstantIntSizeTo(fieldType);
+                _emitter.CoerceConstantSizeTo(fieldType);
 
                 _generator.ExpectSameTypes(
                     fieldType, field.Body.Position, $"expected {fieldType}, but got {_emitter.PeekType()}", _emitter.PeekType());
@@ -1012,7 +1043,7 @@ namespace Mug.Models.Generator
                  */
                 EvaluateExpression(@return.Body);
 
-                _emitter.ForceConstantIntSizeTo(type);
+                _emitter.CoerceConstantSizeTo(type);
 
                 var exprType = _emitter.PeekType();
                 var errorMessage = $"Expected {type} type, got {exprType} type";
@@ -1027,7 +1058,7 @@ namespace Mug.Models.Generator
                         error = _emitter.Pop().LLVMValue;
                     else
                     {
-                        _emitter.ForceConstantIntSizeTo(enumerrorType.SuccessType);
+                        _emitter.CoerceConstantSizeTo(enumerrorType.SuccessType);
                         exprType = _emitter.PeekType();
 
                         if (exprType.Equals(enumerrorType.SuccessType))
@@ -1182,7 +1213,7 @@ namespace Mug.Models.Generator
 
             EvaluateExpression(assignment.Body);
 
-            _emitter.ForceConstantIntSizeTo(ptr.Type);
+            _emitter.CoerceConstantSizeTo(ptr.Type);
 
             if (assignment.Operator == TokenKind.Equal)
             {
@@ -1217,7 +1248,7 @@ namespace Mug.Models.Generator
             {
                 var constType = constant.Type.ToMugValueType(_generator);
 
-                _emitter.ForceConstantIntSizeTo(constType);
+                _emitter.CoerceConstantSizeTo(constType);
 
                 _generator.ExpectSameTypes(constType,
                     constant.Body.Position, $"Expected {constant.Type} type, got {_emitter.PeekType()} type", _emitter.PeekType());

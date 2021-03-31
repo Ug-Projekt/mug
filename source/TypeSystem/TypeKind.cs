@@ -19,6 +19,7 @@
         Void,
         Unknown,
         EnumError,
-        Reference
+        Reference,
+        Float32
     }
 }

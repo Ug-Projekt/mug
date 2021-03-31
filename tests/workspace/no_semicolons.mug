@@ -1,5 +1,4 @@
 import io
-import string
 
 error AllocationErr { CouldNotAllocate }
 
@@ -10,8 +9,12 @@ func Person(name: str, age: u8): AllocationErr!Person {
   return new Person { name: name, age: age }
 }
 
-func main() {
-  return (Person("carpal", 0 as u8) catch {
-           new Person { }
-         }).age.to_str()
+func main(): i32 {
+  println("ok")
+
+  return (
+    Person("carpal", 0 as u8) catch e {
+      new Person { age: (e as u8) + 100 }
+    }
+  ).age as i32
 }

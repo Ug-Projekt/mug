@@ -14,13 +14,13 @@ namespace MugTests
 
         // Well constructed code strings
         private const string OPERATION01 = "1 + 2";
-        private const string VARIABLE01 = "var x = 0;";
-        private const string VARIABLE02 = "var number: i32 = 50;";
+        private const string VARIABLE01 = "var x = 0 ";
+        private const string VARIABLE02 = "var number: i32 = 50 ";
 
-        private const string COMMENTS01 = "# This is a comment";
-        private const string COMMENTS02 = "#[ This is a  multi-line comment ]#";
+        private const string COMMENTS01 = "//This is a comment";
+        private const string COMMENTS02 = "/* This is a  multi-line comment */";
 
-        private const string SINGLE_TOKENS = "( ) [ ] { } < > = ! & | + - * / , ; : .  ";
+        private const string SINGLE_TOKENS = "( ) [ ] { } < > = ! & | + - * / ,   : .  ";
         private const string DOUBLE_TOKENS = "== != ++ += -- -= *= /= <= >= ..";
         private const string FULL_TOKENS = "return continue break while pub use import new for type as in to if elif else func var const str chr u1    i32 i64 u8 u32 u64 unknown when declare void";
         private const string RANDOM_TOKENS = "return == ( ) += continue pub ! *= ..";
@@ -47,13 +47,13 @@ namespace MugTests
         private const string BACKTICKS02 = "`/";
         private const string BACKTICKS03 = "``";
 
-        private const string VARIABLE03 = ";50 = i32 :number var";
+        private const string VARIABLE03 = " 50 = i32 :number var";
         private const string VARIABLE04 = "varnumber";
         private const string VARIABLE05 = "i33";
 
-        private const string COMMENTS03 = "#[ This is a non closed multi-line comment";
-        private const string COMMENTS04 = "#[ This is a nested ]# multi-line comment ]#";
-        private const string COMMENTS05 = "#[ This is a #[ nested ]# multi-line comment ]#";
+        private const string COMMENTS03 = "/* This is a non closed multi-line comment";
+        private const string COMMENTS04 = "/* This is a nested */ multi-line comment */";
+        private const string COMMENTS05 = "/* This is a /* nested */ multi-line comment */";
 
         [Test]
         public void GetLength_EmptyCollection_ReturnZero()
@@ -69,14 +69,13 @@ namespace MugTests
             MugLexer lexer = new MugLexer("test", VARIABLE01);
             lexer.Tokenize();
 
-            Assert.AreEqual(lexer.Length, 6);
+            Assert.AreEqual(lexer.Length, 5);
 
             Console.WriteLine($"0: {lexer.TokenCollection[0].Value}");
             Console.WriteLine($"1: {lexer.TokenCollection[1].Value}");
             Console.WriteLine($"2: {lexer.TokenCollection[2].Value}");
             Console.WriteLine($"3: {lexer.TokenCollection[3].Value}");
             Console.WriteLine($"4: {lexer.TokenCollection[4].Value}");
-            Console.WriteLine($"5: {lexer.TokenCollection[5].Value}");
         }
 
         public void AreListEqual(List<Token> expected, List<Token> reals)
@@ -113,7 +112,6 @@ namespace MugTests
                 new Token(TokenKind.Identifier, "x", 4..5),
                 new Token(TokenKind.Equal, "=", 6..7),
                 new Token(TokenKind.ConstantDigit, "0", 8..9),
-                new Token(TokenKind.Semicolon, ";", 9..10),
                 new Token(TokenKind.EOF, "<EOF>", 10..11)
             };
 
@@ -136,7 +134,6 @@ namespace MugTests
                 new Token(TokenKind.KeyTi32, "i32", 12..15),
                 new Token(TokenKind.Equal, "=", 16..17),
                 new Token(TokenKind.ConstantDigit, "50", 18..20),
-                new Token(TokenKind.Semicolon, ";", 20..21),
                 new Token(TokenKind.EOF, "<EOF>", 21..22)
             };
 
@@ -153,7 +150,6 @@ namespace MugTests
 
             List<Token> expected = new List<Token>
             {
-                new Token(TokenKind.Semicolon, ";", 0..1),
                 new Token(TokenKind.ConstantDigit, "50", 1..3),
                 new Token(TokenKind.Equal, "=", 4..5),
                 new Token(TokenKind.KeyTi32, "i32", 6..9),
@@ -266,8 +262,9 @@ namespace MugTests
                 new Token(TokenKind.Minus, "-", 28..29),
                 new Token(TokenKind.Identifier, "line", 29..33),
                 new Token(TokenKind.Identifier, "comment", 34..41),
-                new Token(TokenKind.CloseBracket, "]", 42..43),
-                new Token(TokenKind.EOF, "<EOF>", 45..46)
+                new Token(TokenKind.Star, "*", 42..43),
+                new Token(TokenKind.Slash, "/", 43..44),
+                new Token(TokenKind.EOF, "<EOF>", 44..45)
             };
 
             AreListEqual(expected, tokens);
@@ -288,8 +285,9 @@ namespace MugTests
                 new Token(TokenKind.Minus, "-", 31..32),
                 new Token(TokenKind.Identifier, "line", 32..36),
                 new Token(TokenKind.Identifier, "comment", 37..44),
-                new Token(TokenKind.CloseBracket, "]", 45..46),
-                new Token(TokenKind.EOF, "<EOF>", 48..49)
+                new Token(TokenKind.Star, "*", 45..46),
+                new Token(TokenKind.Slash, "/", 46..47),
+                new Token(TokenKind.EOF, "<EOF>", 47..48)
             };
 
             AreListEqual(expected, tokens);
@@ -429,7 +427,6 @@ namespace MugTests
                 new Token(TokenKind.Star, "*", 28..29),
                 new Token(TokenKind.Slash, "/", 30..31),
                 new Token(TokenKind.Comma, ",", 32..33),
-                new Token(TokenKind.Semicolon, ";", 34..35),
                 new Token(TokenKind.Colon, ":", 36..37),
                 new Token(TokenKind.Dot, ".", 38..39),
                 new Token(TokenKind.EOF, "<EOF>", 41..42)

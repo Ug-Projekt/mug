@@ -344,7 +344,7 @@ namespace Mug.Models.Generator
         internal void ExpectIntType(MugValueType type, Range position)
         {
             if (!type.MatchIntType())
-                Error(position, $"Expected `u8`, `i32`, `i64` type, got `{type}`");
+                Error(position, $"Expected `u8`, `i32`, `i64`, `f32` type, got `{type}`");
         }
 
         /// <summary>

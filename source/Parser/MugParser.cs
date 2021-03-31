@@ -292,6 +292,7 @@ namespace Mug.Models.Parser
                 MatchAdvance(TokenKind.KeyTVoid, out type) ||
                 MatchAdvance(TokenKind.KeyTbool, out type) ||
                 MatchAdvance(TokenKind.KeyTchr, out type) ||
+                MatchAdvance(TokenKind.KeyTf32, out type) ||
                 MatchAdvance(TokenKind.KeyTi64, out type) ||
                 MatchAdvance(TokenKind.KeyTu32, out type) ||
                 MatchAdvance(TokenKind.KeyTu8, out type) ||

@@ -9,17 +9,16 @@ try
 #if DEBUG
 
     var test = @"
-[extern: ""some__""]
-func some()
 
 func main() {
-  a()
+  var y = 10f + 2
 }
 
 ";
 
     var unit = new CompilationUnit("test", test, true);
 
+    // unit.IRGenerator.Parser.Lexer.Tokenize().ForEach(token => Console.WriteLine(token));
     // Console.WriteLine(
     // unit.GenerateAST().Dump());
     unit.Generate(true, true);

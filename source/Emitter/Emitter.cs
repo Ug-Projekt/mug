@@ -88,11 +88,6 @@ namespace Mug.Models.Generator.Emitter
                 MugValue.From(Builder.BuildSDiv(Pop().LLVMValue, second.LLVMValue), second.Type));
         }
 
-        public void Duplicate()
-        {
-            Load(Peek());
-        }
-
         public void CastInt(MugValueType type)
         {
             Load(
@@ -138,7 +133,7 @@ namespace Mug.Models.Generator.Emitter
             return (firstType, secondType);
         }
 
-        public void ForceCoupleConstantIntSize()
+        private void CoerceCoupleConstantIntSize()
         {
             var second = Pop();
             var first = Pop();
@@ -155,7 +150,50 @@ namespace Mug.Models.Generator.Emitter
             Load(second);
         }
 
-        public void ForceConstantIntSizeTo(MugValueType type)
+        private void CoerceCoupleConstantFloatSize()
+        {
+            var second = Pop();
+            var first = Pop();
+
+            if (second.Type.MatchFloatType() && first.Type.MatchFloatType())
+            {
+                if (second.IsConstant())
+                    second = MugValue.From(Builder.BuildFPCast(second.LLVMValue, first.Type.LLVMType), first.Type);
+                else if (first.IsConstant())
+                    first = MugValue.From(Builder.BuildFPCast(first.LLVMValue, second.Type.LLVMType), second.Type);
+            }
+
+            Load(first);
+            Load(second);
+        }
+
+        private void CoerceCoupleConstantFloatIntSize()
+        {
+            var second = Pop();
+            var first = Pop();
+
+            if ((second.Type.MatchFloatType() && first.Type.MatchIntType()) || (first.Type.MatchFloatType() && second.Type.MatchIntType()))
+            {
+                if (second.IsConstant() && second.Type.MatchIntType())
+                {
+                    second = MugValue.From(Builder.BuildFPCast(second.LLVMValue, first.Type.LLVMType), first.Type);
+                }
+                else if (first.IsConstant() && first.Type.MatchIntType())
+                    first = MugValue.From(Builder.BuildFPCast(first.LLVMValue, second.Type.LLVMType), second.Type);
+            }
+
+            Load(first);
+            Load(second);
+        }
+
+        public void CoerceCoupleConstantSize()
+        {
+            CoerceCoupleConstantIntSize();
+            CoerceCoupleConstantFloatSize();
+            CoerceCoupleConstantFloatIntSize();
+        }
+
+        private void CoerceConstantIntSizeTo(MugValueType type)
         {
             var value = Pop();
 
@@ -163,6 +201,22 @@ namespace Mug.Models.Generator.Emitter
                 value = MugValue.From(Builder.BuildIntCast(value.LLVMValue, type.LLVMType), type);
 
             Load(value);
+        }
+
+        private void CoerceConstantFloatSizeTo(MugValueType type)
+        {
+            var value = Pop();
+
+            if (value.Type.MatchFloatType() && value.IsConstant() && type.MatchFloatType())
+                value = MugValue.From(Builder.BuildFPCast(value.LLVMValue, type.LLVMType), type);
+
+            Load(value);
+        }
+
+        public void CoerceConstantSizeTo(MugValueType type)
+        {
+            CoerceConstantIntSizeTo(type);
+            CoerceConstantFloatSizeTo(type);
         }
 
         private void MakeConst()
@@ -210,7 +264,7 @@ namespace Mug.Models.Generator.Emitter
             if (allocation.IsConst)
                 _generator.Error(position, "Unable to change the value of a constant");
 
-            ForceConstantIntSizeTo(allocation.Type);
+            CoerceConstantSizeTo(allocation.Type);
 
             _generator.ExpectSameTypes(
                 allocation.Type,
@@ -565,6 +619,46 @@ namespace Mug.Models.Generator.Emitter
             var tmp = Builder.BuildAlloca(type.LLVMType);
             Builder.BuildStore(value, tmp);
             SetMemory(name, MugValue.From(tmp, type, true));
+        }
+
+        public void AddFloat()
+        {
+            var second = Pop();
+            Load(
+                MugValue.From(Builder.BuildFAdd(Pop().LLVMValue, second.LLVMValue), second.Type));
+        }
+
+        public void SubFloat()
+        {
+            var second = Pop();
+            Load(
+                MugValue.From(Builder.BuildFSub(Pop().LLVMValue, second.LLVMValue), second.Type));
+        }
+
+        public void MulFloat()
+        {
+            var second = Pop();
+            Load(
+                MugValue.From(Builder.BuildFMul(Pop().LLVMValue, second.LLVMValue), second.Type));
+        }
+
+        public void DivFloat()
+        {
+            var second = Pop();
+            Load(
+                MugValue.From(Builder.BuildFDiv(Pop().LLVMValue, second.LLVMValue), second.Type));
+        }
+
+        public void NegFloat()
+        {
+            var value = Pop();
+            Load(MugValue.From(Builder.BuildFNeg(value.LLVMValue), value.Type));
+        }
+
+        public void CompareFloat(LLVMRealPredicate kind)
+        {
+            var second = Pop();
+            Load(MugValue.From(Builder.BuildFCmp(kind, Pop().LLVMValue, second.LLVMValue), MugValueType.Bool));
         }
     }
 }

@@ -17,6 +17,7 @@
         Unknown,
         EnumError,
         EnumErrorDefined,
-        Reference
+        Reference,
+        Float32
     }
 }
