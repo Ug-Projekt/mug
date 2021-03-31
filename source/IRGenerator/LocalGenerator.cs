@@ -705,6 +705,10 @@ namespace Mug.Models.Generator
                 case CatchExpressionNode ce:
                     EmitCatchStatement(ce, false);
                     break;
+                case AssignmentStatement ae:
+                    EmitAssignmentStatement(ae);
+                    EvaluateExpression(ae.Name);
+                    break;
                 default:
                     Error(expression.Position, "Expression not supported yet");
                     break;
@@ -975,7 +979,7 @@ namespace Mug.Models.Generator
                 MugValueTypeKind.Struct => GetDefaultValueOfDefinedType(type, position),
                 MugValueTypeKind.Unknown or
                 MugValueTypeKind.Reference or
-                MugValueTypeKind.Pointer => _generator.Error<MugValue>(position, "Pointers must be initialized"),
+                MugValueTypeKind.Pointer => _generator.Error<MugValue>(position, "References and unknown pointers must be initialized"),
             };
         }
 

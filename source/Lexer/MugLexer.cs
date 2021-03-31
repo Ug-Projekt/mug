@@ -134,7 +134,6 @@ namespace Mug.Models.Lexer
             '*' => TokenKind.Star,
             '/' => TokenKind.Slash,
             ',' => TokenKind.Comma,
-            ';' => TokenKind.Semicolon,
             ':' => TokenKind.Colon,
             '.' => TokenKind.Dot,
             _ => InExpressionError<TokenKind>("Invalid char")

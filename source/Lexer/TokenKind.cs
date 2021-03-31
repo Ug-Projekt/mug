@@ -26,8 +26,6 @@ namespace Mug.Models.Lexer
         OpenPar,
         [Description(")")]
         ClosePar,
-        [Description(";")]
-        Semicolon,
         [Description("void")]
         KeyTVoid,
         [Description(":")]

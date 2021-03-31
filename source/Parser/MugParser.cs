@@ -93,6 +93,9 @@ namespace Mug.Models.Parser
 
         private Token ExpectMultiple(string error, params TokenKind[] kinds)
         {
+            if (kinds.Length == 0)
+                return Token.NewInfo(TokenKind.Bad, null);
+
             for (int i = 0; i < kinds.Length; i++)
                 if (Current.Kind == kinds[i])
                 {
@@ -628,7 +631,6 @@ namespace Mug.Models.Parser
             Expect("In inline conditions there must be the else body: place it here", TokenKind.KeyElse);
 
             var elseBody = ExpectFactor();
-            _currentIndex++;
 
             return new InlineConditionalExpression() { Expression = expression, IFBody = ifBody, ElseBody = elseBody, Position = ifposition };
         }
@@ -662,23 +664,12 @@ namespace Mug.Models.Parser
                 }
 
                 Expect("", TokenKind.CloseBrace);
-                _currentIndex++;
 
                 return array;
             }
 
             var name = ExpectType();
             var allocation = new TypeAllocationNode() { Name = name, Position = newposition };
-
-            /*// struct generics
-            if (MatchAdvance(TokenKind.BooleanLess))
-            {
-                do
-                    allocation.Generics.Add(ExpectType());
-                while (MatchAdvance(TokenKind.Comma));
-
-                Expect("", TokenKind.BooleanGreater);
-            }*/
 
             Expect("Type allocation requires `{}`", TokenKind.OpenBrace);
 
@@ -688,7 +679,6 @@ namespace Mug.Models.Parser
                 while (MatchAdvance(TokenKind.Comma));
 
             Expect("", TokenKind.CloseBrace);
-            _currentIndex++;
 
             return allocation;
         }
@@ -700,39 +690,51 @@ namespace Mug.Models.Parser
 
             var right = ExpectExpression(false, end);
             e = new BooleanExpressionNode() { Operator = ToOperatorKind(boolOP.Kind), Position = boolOP.Position, Left = e, Right = right };
-            _currentIndex--;
 
-            if (MatchBooleanOperator(out _))
-            {
-                _currentIndex--;
-                ParseError("Double boolean operator not allowed, to compare two boolean expressions please put two operands into `()`");
-            }
-
-            _currentIndex++;
             return e;
+        }
+
+        private bool MatchExpression(out INode expression)
+        {
+            var pos = _currentIndex;
+
+            try
+            {
+                expression = ExpectExpression(true);
+                return true;
+            }
+            catch (CompilationException)
+            {
+                expression = null;
+                _currentIndex = pos;
+                return false;
+            }
         }
 
         private INode ExpectExpression(bool isFirst, params TokenKind[] end)
         {
+            INode e;
+
             if (MatchAdvance(TokenKind.KeyIf, out var token))
-                return CollectTernary(token.Position);
+            {
+                e = CollectTernary(token.Position);
+                goto returnAndCheck;
+            }
 
             if (MatchAdvance(TokenKind.KeyNew, out token))
-                return CollectNodeNew(token.Position);
+            {
+                e = CollectNodeNew(token.Position);
+                goto returnAndCheck;
+            }
 
-            if (MatchFactor(out INode e))
+            if (MatchFactor(out e))
             {
                 if (MatchAdvance(TokenKind.Equal, out var eq) ||
                     MatchAdvance(TokenKind.AddAssignment, out eq) ||
                     MatchAdvance(TokenKind.SubAssignment, out eq) ||
                     MatchAdvance(TokenKind.MulAssignment, out eq) ||
                     MatchAdvance(TokenKind.DivAssignment, out eq))
-                {
-                    if (!end.Contains(TokenKind.Semicolon))
-                        end = end.Append(TokenKind.Semicolon).ToArray();
-
                     return new AssignmentStatement() { Name = e, Operator = eq.Kind, Position = eq.Position, Body = ExpectExpression(true, end) };
-                }
 
                 if (MatchAdvance(TokenKind.Plus) ||
                     MatchAdvance(TokenKind.Minus))
@@ -753,10 +755,7 @@ namespace Mug.Models.Parser
             }
 
             if (e is null)
-            {
-                _currentIndex++;
                 ParseError("Expected expression, found `", Current.Value.ToString(), "`");
-            }
 
             if (MatchAdvance(TokenKind.KeyAs, out var asToken))
                 e = new CastExpressionNode() { Expression = e, Type = ExpectType(), Position = asToken.Position };
@@ -769,8 +768,12 @@ namespace Mug.Models.Parser
             }
 
             if (MatchBooleanOperator(out var boolOP))
-                return CollectBooleanExpression(ref e, boolOP, isFirst, end);
+            {
+                e = CollectBooleanExpression(ref e, boolOP, isFirst, end);
+                end = Array.Empty<TokenKind>(); // end already tested
+            }
 
+            returnAndCheck:
             ExpectMultiple($"Invalid token in the current context, maybe missing one of `{TokenKindsToString(end)}`", end);
 
             return e;
@@ -790,17 +793,9 @@ namespace Mug.Models.Parser
 
             var name = Expect("Expected the variable name", TokenKind.Identifier);
             var type = ExpectVariableType();
+            INode body = MatchAdvance(TokenKind.Equal) ? ExpectExpression(true) : null;
 
-            if (MatchAdvance(TokenKind.Semicolon))
-            {
-                statement = new VariableStatement() { Body = null, IsAssigned = false, Name = name.Value.ToString(), Position = name.Position, Type = type };
-                return true;
-            }
-
-            Expect("", TokenKind.Equal);
-
-            var body = ExpectExpression(true, TokenKind.Semicolon);
-            statement = new VariableStatement() { Body = body, IsAssigned = true, Name = name.Value.ToString(), Position = name.Position, Type = type };
+            statement = new VariableStatement() { Body = body, IsAssigned = body is not null, Name = name.Value.ToString(), Position = name.Position, Type = type };
 
             return true;
         }
@@ -815,12 +810,9 @@ namespace Mug.Models.Parser
             var name = Expect("Expected the constant name", TokenKind.Identifier);
             var type = ExpectVariableType();
 
-            if (Match(TokenKind.Semicolon))
-                ParseError("A constant cannot be declared without a body");
+            Expect("A constant cannot be declared without a body", TokenKind.Equal);
 
-            Expect("", TokenKind.Equal);
-
-            var body = ExpectExpression(true, TokenKind.Semicolon);
+            var body = ExpectExpression(true);
             statement = new ConstantStatement() { Body = body, Name = name.Value.ToString(), Position = name.Position, Type = type };
 
             return true;
@@ -835,13 +827,7 @@ namespace Mug.Models.Parser
 
             var pos = Back.Position;
 
-            if (MatchAdvance(TokenKind.Semicolon))
-            {
-                statement = new ReturnStatement() { Position = pos };
-                return true;
-            }
-
-            var body = ExpectExpression(true, TokenKind.Semicolon);
+            MatchExpression(out var body);
 
             statement = new ReturnStatement() { Position = pos, Body = body };
 
@@ -883,7 +869,7 @@ namespace Mug.Models.Parser
                 return true;
             }
 
-            var body = ExpectExpression(true, TokenKind.Semicolon);
+            var body = ExpectExpression(true);
             (statement as AssignmentStatement).Body = body;
 
             return true;
@@ -964,8 +950,6 @@ namespace Mug.Models.Parser
 
             statement = new LoopManagementStatement() { Management = Back, Position = Back.Position };
 
-            Expect("", TokenKind.Semicolon);
-
             return true;
         }
 
@@ -979,7 +963,7 @@ namespace Mug.Models.Parser
                 !MatchWhenStatement(out statement, false) && // when comptimecondition {}
                 !ForLoopDefinition(out statement) && // for x: type to, in value {}
                 !LoopManagerDefintion(out statement))        // continue, break
-                statement = ExpectExpression(true, TokenKind.Semicolon);
+                statement = ExpectExpression(true);
                 /*MatchCallStatement(out statement, true) // f();
                 !ValueAssignment(out statement)) // x = value;
                 ParseError("Invalid token here");*/
@@ -1095,8 +1079,6 @@ namespace Mug.Models.Parser
             }
             else // prototype
             {
-                Expect("", TokenKind.Semicolon);
-
                 if (@base is not null)
                     ParseError(@base.Value.Position, "The function base cannot be defined in function prototypes");
 
@@ -1128,8 +1110,6 @@ namespace Mug.Models.Parser
             else // import <path>
                 body = Expect("", TokenKind.Identifier);
 
-            Expect("Expected `;`, at the end of an import directive", TokenKind.Semicolon); // import .. <;>
-
             directive = new ImportDirective() { Mode = mode, Member = body, Position = token.Position };
             return true;
         }
@@ -1147,8 +1127,6 @@ namespace Mug.Models.Parser
 
             var alias = Expect("Expected the use path alias, after `as` in a use directive", TokenKind.Identifier); // use path as <alias>
 
-            Expect("Expected `;`, at the end of a use directive", TokenKind.Semicolon); // use path alias <;>
-
             directive = new UseDirective() { Body = body, Alias = alias, Position = token.Position };
             return true;
         }
@@ -1161,7 +1139,6 @@ namespace Mug.Models.Parser
                 return false;
 
             directive = new DeclareDirective() { Position = token.Position, Symbol = Expect("Expected symbol", TokenKind.Identifier) };
-            Expect("", TokenKind.Semicolon);
             return true;
         }
 
