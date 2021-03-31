@@ -94,6 +94,12 @@ namespace Mug.Models.Generator.Emitter
                 MugValue.From(Builder.BuildIntCast(Pop().LLVMValue, type.LLVMType), type));
         }
 
+        public void CastIntToFloat(MugValueType type)
+        {
+            Load(
+                MugValue.From(Builder.BuildSIToFP(Pop().LLVMValue, type.LLVMType), type));
+        }
+
         public MugValue GetMemoryAllocation(string name, Range position, bool loadreference = false)
         {
             if (!Memory.TryGetValue(name, out var variable))
@@ -659,6 +665,18 @@ namespace Mug.Models.Generator.Emitter
         {
             var second = Pop();
             Load(MugValue.From(Builder.BuildFCmp(kind, Pop().LLVMValue, second.LLVMValue), MugValueType.Bool));
+        }
+
+        public void CastFloat(MugValueType type)
+        {
+            Load(
+                MugValue.From(Builder.BuildFPCast(Pop().LLVMValue, type.LLVMType), type));
+        }
+
+        public void CastFloatToInt(MugValueType type)
+        {
+            Load(
+                MugValue.From(Builder.BuildFPToSI(Pop().LLVMValue, type.LLVMType), type));
         }
     }
 }

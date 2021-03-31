@@ -309,9 +309,14 @@ namespace Mug.Models.Generator
 
                 _emitter.Load(MugValue.From(_emitter.Builder.BuildBitCast(value.LLVMValue, castType.LLVMType), castType));
             }
-            else if (expressionType.MatchAnyTypeOfIntType() &&
-                castType.MatchAnyTypeOfIntType()) // LLVM has different instructions for each type convertion
+            else if (expressionType.MatchAnyTypeOfIntType() && castType.MatchAnyTypeOfIntType())
                 _emitter.CastInt(castType);
+            else if (expressionType.MatchIntType() && castType.MatchFloatType())
+                _emitter.CastIntToFloat(castType);
+            else if (expressionType.MatchFloatType() && castType.MatchFloatType())
+                _emitter.CastFloat(castType);
+            else if (expressionType.MatchFloatType() && castType.MatchIntType())
+                _emitter.CastFloatToInt(castType);
             else
                 _emitter.CallAsOperator(position, expressionType, type.ToMugValueType(_generator));
         }
