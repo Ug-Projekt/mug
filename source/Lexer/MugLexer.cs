@@ -483,7 +483,6 @@ namespace Mug.Models.Lexer
                 case "<=": AddDouble(TokenKind.BooleanLEQ, doubleToken); break;
                 case ">=": AddDouble(TokenKind.BooleanGEQ, doubleToken); break;
                 case "..": AddDouble(TokenKind.RangeDots, doubleToken); break;
-                case "@[": AddDouble(TokenKind.OpenPragmas, doubleToken); break;
                 default:
                     if (current == '"') CollectString();
                     else if (current == '\'') CollectChar();

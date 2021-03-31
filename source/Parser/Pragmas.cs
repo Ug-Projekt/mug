@@ -44,7 +44,7 @@ namespace Mug.Models.Parser
             if (!_table.ContainsKey(pragma))
             {
                 // going back to identifier token id(.)]
-                currentIndex -= 4;
+                currentIndex -= 3;
                 error(new[] { "Unknown pragma" });
             }
 

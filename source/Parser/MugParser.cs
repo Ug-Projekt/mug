@@ -1311,17 +1311,16 @@ namespace Mug.Models.Parser
 
         private void CollectPragmas()
         {
-            if (!MatchAdvance(TokenKind.OpenPragmas))
+            if (!MatchAdvance(TokenKind.OpenBracket))
                 return;
 
             _pragmas = new();
 
             do
             {
-                var name = Expect("", TokenKind.Identifier).Value;
-                Expect("", TokenKind.OpenPar);
+                var name = Expect("Expected pragma's name", TokenKind.Identifier).Value;
+                Expect("", TokenKind.Colon);
                 var value = ExpectConstant("Non-constant expressions not allowed in pragmas");
-                Expect("", TokenKind.ClosePar);
 
                 _pragmas.SetPragma(name, value, ParseError, ref _currentIndex);
             } while (MatchAdvance(TokenKind.Comma));

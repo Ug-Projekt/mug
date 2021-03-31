@@ -9,22 +9,11 @@ try
 #if DEBUG
 
     var test = @"
+[extern: ""some__""]
+func some()
 
-# import io
-# import string
-
-error AllocationErr { CouldNotAllocate }
-
-type Person { name: str, age: u8 }
-
-func Person(name: str, age: u8): AllocationErr!Person {
-  if age == 0 { return AllocationErr.CouldNotAllocate }
-  return new Person { name: name, age: age }
-}
-
-func main(): i32 {
-  var x: u8
-  return (x = 10) as i32
+func main() {
+  a()
 }
 
 ";

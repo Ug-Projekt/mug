@@ -140,8 +140,6 @@ namespace Mug.Models.Lexer
         BooleanAND,
         [Description("ptr")]
         KeyTPtr,
-        [Description("@[")]
-        OpenPragmas,
         [Description("priv")]
         KeyPriv,
         [Description("enum")]
