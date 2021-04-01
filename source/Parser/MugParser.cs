@@ -613,8 +613,6 @@ namespace Mug.Models.Parser
                 MatchAdvance(TokenKind.BooleanLess, out op) ||
                 MatchAdvance(TokenKind.BooleanGEQ, out op) ||
                 MatchAdvance(TokenKind.BooleanLEQ, out op) ||
-                MatchAdvance(TokenKind.BooleanOR, out op) ||
-                MatchAdvance(TokenKind.BooleanAND, out op) ||
                 MatchAdvance(TokenKind.KeyIn, out op);
         }
 
@@ -678,19 +676,13 @@ namespace Mug.Models.Parser
             return allocation;
         }
 
-        private INode CollectBooleanExpression(ref INode e, Token boolOP, bool isFirst, params TokenKind[] end)
-        {
-            if (!isFirst)
-            {
-                _currentIndex--;
-                ParseError("Put terms into `()`, multiple boolean operators are not allwed");
-            }
-            
+        /*private INode CollectBooleanExpression(ref INode e, Token boolOP, bool isFirst, params TokenKind[] end)
+        {   
             var right = ExpectExpression(false, end);
-            e = new BooleanExpressionNode() { Operator = ToOperatorKind(boolOP.Kind), Position = boolOP.Position, Left = e, Right = right };
+            
 
             return e;
-        }
+        }*/
 
         private bool MatchExpression(out INode expression)
         {
@@ -707,6 +699,11 @@ namespace Mug.Models.Parser
                 _currentIndex = pos;
                 return false;
             }
+        }
+
+        private bool MatchAndOrOperator()
+        {
+            return MatchAdvance(TokenKind.BooleanOR) || MatchAdvance(TokenKind.BooleanAND);
         }
 
         private INode ExpectExpression(bool isFirst, params TokenKind[] end)
@@ -765,9 +762,15 @@ namespace Mug.Models.Parser
                 e = new CatchExpressionNode() { Expression = e, OutError = match ? new Token?(error) : null, Position = Back.Position, Body = ExpectBlock() };
             }
 
-            while (MatchBooleanOperator(out var boolOP))
-            {    
-                e = CollectBooleanExpression(ref e, boolOP, isFirst, end);
+            while (isFirst && MatchBooleanOperator(out var boolOP))
+            {
+                e = new BooleanExpressionNode() { Operator = ToOperatorKind(boolOP.Kind), Position = boolOP.Position, Left = e, Right = ExpectExpression(false, end) };
+                end = Array.Empty<TokenKind>(); // end already tested
+            }
+
+            while (isFirst && MatchAndOrOperator())
+            {
+                e = new BooleanExpressionNode() { Operator = ToOperatorKind(Back.Kind), Position = Back.Position, Left = e, Right = ExpectExpression(false, end) };
                 end = Array.Empty<TokenKind>(); // end already tested
             }
 

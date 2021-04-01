@@ -16,7 +16,7 @@ namespace Mug.Models.Generator.Emitter
         private readonly Stack<MugValue> _stack = new();
         private readonly IRGenerator _generator;
         public Dictionary<string, MugValue> Memory { get; set; }
-        internal LLVMBasicBlockRef ExitBlock { get; set; }
+        internal LLVMBasicBlockRef ExitBlock { get; }
         internal bool IsInsideSubBlock { get; }
 
         private const string GCMugLibSymbol = "include/standard_symbols/mug_gc";

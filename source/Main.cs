@@ -14,7 +14,8 @@ try
 func main() {
   var x = 10
   var y = 10
-  var z = false | true
+  var z = 10
+  var k = x == y == true | true
 }
 
 ";
@@ -22,9 +23,9 @@ func main() {
     var unit = new CompilationUnit("test", test, true);
 
     // unit.IRGenerator.Parser.Lexer.Tokenize().ForEach(token => Console.WriteLine(token));
-    // Console.WriteLine(
-    // unit.GenerateAST().Dump());
-    unit.Generate(true, true);
+    Console.WriteLine(
+    unit.GenerateAST().Dump());
+    // unit.Generate(true, true);
 
 #else
 
