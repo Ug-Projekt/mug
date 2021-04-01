@@ -3,7 +3,7 @@ using System;
 
 namespace Mug.Models.Parser.NodeKinds.Statements
 {
-    public class AssignmentStatement : INode
+    public class AssignmentStatement : IStatement
     {
         public string NodeKind => "Assignment";
         public TokenKind Operator { get; set; }

@@ -2,7 +2,7 @@
 
 namespace Mug.Models.Parser.NodeKinds
 {
-    public class FieldAssignmentNode : INode
+    public class FieldAssignmentNode : IStatement
     {
         public string NodeKind => "FieldAssignment";
         public String Name { get; set; }

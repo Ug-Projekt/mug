@@ -10,10 +10,10 @@ namespace Mug.Models.Parser.NodeKinds
         Range,
         CompareEQ,
         CompareNEQ,
-        CompareMajorEQ,
-        CompareMajor,
-        CompareMinorEQ,
-        CompareMinor,
+        CompareGEQ,
+        CompareGreater,
+        CompareLEQ,
+        CompareLess,
         And,
         Or
     }

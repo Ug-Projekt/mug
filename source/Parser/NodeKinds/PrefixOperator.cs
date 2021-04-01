@@ -3,7 +3,7 @@ using System;
 
 namespace Mug.Models.Parser.NodeKinds
 {
-    public class PrefixOperator : INode
+    public class PrefixOperator : IStatement
     {
         public string NodeKind => "PrefixOperator";
         public INode Expression { get; set; }

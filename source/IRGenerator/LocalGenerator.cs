@@ -3,6 +3,7 @@ using LLVMSharp.Interop;
 using Mug.Compilation;
 using Mug.Models.Generator.Emitter;
 using Mug.Models.Lexer;
+using Mug.Models.Lowerering;
 using Mug.Models.Parser;
 using Mug.Models.Parser.NodeKinds;
 using Mug.Models.Parser.NodeKinds.Statements;
@@ -231,16 +232,16 @@ namespace Mug.Models.Generator
                 case OperatorKind.CompareNEQ:
                     EmitBooleanOperator("!=", LLVMIntPredicate.LLVMIntNE, kind, position);
                     break;
-                case OperatorKind.CompareMajor:
+                case OperatorKind.CompareGreater:
                     EmitBooleanOperator(">", LLVMIntPredicate.LLVMIntSGT, kind, position);
                     break;
-                case OperatorKind.CompareMajorEQ:
+                case OperatorKind.CompareGEQ:
                     EmitBooleanOperator(">=", LLVMIntPredicate.LLVMIntSGE, kind, position);
                     break;
-                case OperatorKind.CompareMinor:
+                case OperatorKind.CompareLess:
                     EmitBooleanOperator("<", LLVMIntPredicate.LLVMIntSLT, kind, position);
                     break;
-                case OperatorKind.CompareMinorEQ:
+                case OperatorKind.CompareLEQ:
                     EmitBooleanOperator("<=", LLVMIntPredicate.LLVMIntSLE, kind, position);
                     break;
                 /*case OperatorKind.And
@@ -858,8 +859,14 @@ namespace Mug.Models.Generator
             _emitter.JumpOutOfScope(then.Terminator, endifelse);
         }
 
-        private void EvaluateConditionExpression(INode expression, Range position)
+        private void EvaluateConditionExpression(INode expression, Range position, bool allowNull= false)
         {
+            if (allowNull && expression is null)
+            {
+                _emitter.Load(MugValue.From(LLVMValueRef.CreateConstInt(LLVMTypeRef.Int1, 1), MugValueType.Bool));
+                return;
+            }
+
             // evaluating conditional expression
             EvaluateExpression(expression);
             // make sure the expression returned bool
@@ -1377,6 +1384,73 @@ namespace Mug.Models.Generator
             CycleExitBlock = oldCycleExitBlock;
         }
 
+        private void EmitForStatement(ForLoopStatement forstatement)
+        {
+            // if block
+            var compare = _llvmfunction.AppendBasicBlock("");
+
+            var cycle = _llvmfunction.AppendBasicBlock("");
+
+            var operate = _llvmfunction.AppendBasicBlock("");
+
+            var endcycle = _llvmfunction.AppendBasicBlock("");
+
+            var saveOldCondition = _oldcondition;
+
+            _oldcondition = cycle; // compare here
+
+            var oldMemory = _emitter.Memory;
+
+            if (forstatement.LeftExpression is not null)
+            {
+                _emitter.ReallocMemory();
+                EmitVariableStatement(forstatement.LeftExpression);
+            }
+
+            // jumping to the compare block
+            _emitter.Jump(compare);
+
+            // save the old emitter
+            var oldemitter = _emitter;
+
+            _emitter = new(_generator, oldemitter.Memory, cycle, true);
+            // locating the builder in the compare block
+            _emitter.Builder.PositionAtEnd(operate);
+
+            if (forstatement.RightExpression is not null)
+                RecognizeStatement(forstatement.RightExpression);
+
+            _emitter.Jump(compare);
+
+            // locating the builder in the compare block
+            _emitter.Builder.PositionAtEnd(compare);
+
+            // evaluate expression
+            EvaluateConditionExpression(forstatement.ConditionExpression, forstatement.Position, true);
+
+            // compare
+            _emitter.CompareJump(cycle, endcycle);
+
+            var oldCycleExitBlock = CycleExitBlock;
+            var oldCycleCompareBlock = CycleCompareBlock;
+
+            CycleExitBlock = endcycle;
+            CycleCompareBlock = compare;
+
+            // define if and else bodies
+            DefineConditionBody(cycle, operate, forstatement.Body, oldemitter);
+
+            // restore old emitter
+            _emitter = new(_generator, oldMemory, oldemitter.ExitBlock, oldemitter.IsInsideSubBlock);
+
+            // re emit the entry block
+            _emitter.Builder.PositionAtEnd(endcycle);
+
+            CycleExitBlock = oldCycleExitBlock;
+            CycleCompareBlock = oldCycleCompareBlock;
+            _oldcondition = saveOldCondition;
+        }
+
         /// <summary>
         /// 
         /// </summary>
@@ -1425,6 +1499,9 @@ namespace Mug.Models.Generator
                     }
                     else
                         goto default;
+                    break;
+                case ForLoopStatement forstatement:
+                    EmitForStatement(forstatement);
                     break;
                 default:
                     EvaluateExpression(statement);

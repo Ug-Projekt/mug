@@ -20,7 +20,6 @@ namespace Mug.Models.Parser
         private int _currentIndex = 0;
         private Pragmas _pragmas;
         private TokenKind _modifier = TokenKind.Bad;
-        private INode _leftvalue;
 
         private void ParseError(params string[] error)
         {
@@ -255,10 +254,10 @@ namespace Mug.Models.Parser
                 TokenKind.RangeDots => OperatorKind.Range,
                 TokenKind.BooleanEQ => OperatorKind.CompareEQ,
                 TokenKind.BooleanNEQ => OperatorKind.CompareNEQ,
-                TokenKind.BooleanGreater => OperatorKind.CompareMajor,
-                TokenKind.BooleanGEQ => OperatorKind.CompareMajorEQ,
-                TokenKind.BooleanLess => OperatorKind.CompareMinor,
-                TokenKind.BooleanLEQ => OperatorKind.CompareMinorEQ,
+                TokenKind.BooleanGreater => OperatorKind.CompareGreater,
+                TokenKind.BooleanGEQ => OperatorKind.CompareGEQ,
+                TokenKind.BooleanLess => OperatorKind.CompareLess,
+                TokenKind.BooleanLEQ => OperatorKind.CompareLEQ,
                 TokenKind.BooleanAND => OperatorKind.And,
                 TokenKind.BooleanOR => OperatorKind.Or,
                 _ => throw new Exception($"Unable to perform cast from TokenKind(`{op}`) to OperatorKind, if you see this error please open an issue on github")
@@ -415,7 +414,7 @@ namespace Mug.Models.Parser
 
             if (previousMember is null)
             {
-                if (!MatchTerm(out _leftvalue, false))
+                if (!MatchTerm(out name, false))
                     ParseError("Expressions not allowed as imperative statement");
             }
             else
@@ -425,9 +424,6 @@ namespace Mug.Models.Parser
 
             if (!MatchAdvance(TokenKind.OpenPar) && !Match(TokenKind.BooleanLess))
                 return false;
-
-            if (previousMember is null)
-                name = GetLeftValue();
 
             var parameters = new NodeBuilder();
 
@@ -796,7 +792,7 @@ namespace Mug.Models.Parser
             var type = ExpectVariableType();
             INode body = MatchAdvance(TokenKind.Equal) ? ExpectExpression(true) : null;
 
-            statement = new VariableStatement() { Body = body, IsAssigned = body is not null, Name = name.Value.ToString(), Position = name.Position, Type = type };
+            statement = new VariableStatement() { Body = body, Name = name.Value.ToString(), Position = name.Position, Type = type };
 
             return true;
         }
@@ -847,35 +843,6 @@ namespace Mug.Models.Parser
                 MatchAdvance(TokenKind.DivAssignment);
         }
 
-        private bool ValueAssignment(out INode statement)
-        {
-            statement = null;
-
-            var name = GetLeftValue();
-
-            if (!MatchAssigmentOperators())
-            {
-                _currentIndex--;
-                return false;
-            }
-
-            var op = Back.Kind;
-            var pos = Back.Position;
-
-            statement = new AssignmentStatement() { Operator = op, Position = pos, Name = name };
-
-            if (op == TokenKind.OperatorIncrement || op == TokenKind.OperatorDecrement)
-            {
-                _currentIndex++;
-                return true;
-            }
-
-            var body = ExpectExpression(true);
-            (statement as AssignmentStatement).Body = body;
-
-            return true;
-        }
-
         private bool ConditionDefinition(out INode statement, bool isFirstCondition = true)
         {
             statement = null;
@@ -910,7 +877,7 @@ namespace Mug.Models.Parser
             return true;
         }
 
-        private bool ForLoopDefinition(out INode statement)
+        /*private bool ForLoopDefinition(out INode statement)
         {
             statement = null;
 
@@ -937,6 +904,64 @@ namespace Mug.Models.Parser
             var body = ExpectBlock();
 
             statement = new ForLoopStatement() { Counter = counter, Position = key.Position, RightExpression = expression, Operator = op, Body = body };
+
+            return true;
+        }*/
+
+        private VariableStatement CollectForLeftExpression()
+        {
+            if (MatchAdvance(TokenKind.Comma))
+                return null;
+
+            var name = Expect("Expected left statement or comma", TokenKind.Identifier);
+            var result = new VariableStatement() { Name = name.Value, Position = name.Position };
+
+            if (MatchAdvance(TokenKind.Colon))
+                result.Type = ExpectType();
+            else
+            {
+                result.Type = MugType.Automatic(name.Position);
+                Expect("Type notation or body needed", TokenKind.Equal);
+                result.Body = ExpectExpression(true, TokenKind.Comma);
+            }
+
+            return result;
+        }
+
+        private T CollectOrNull<T>(string error, TokenKind end) where T: class, INode
+        {
+            if (MatchAdvance(end))
+                return null;
+
+            var pos = Current.Position;
+            var expr = ExpectExpression(true, end);
+            if (expr is not T)
+                ParseError(pos, error);
+
+            return (T)expr;
+        }
+
+        private bool ForLoopDefinition(out INode statement)
+        {
+            statement = null;
+
+            if (!MatchAdvance(TokenKind.KeyFor, out Token key))
+                return false;
+
+            var leftexpr = CollectForLeftExpression();
+            var conditionexpr = CollectOrNull<INode>("Expected condition expression or comma", TokenKind.Comma);
+            var rightexpr = CollectOrNull<IStatement>("Expected right statement or nothing", TokenKind.OpenBrace);
+
+            _currentIndex--; // returning on `{` token
+
+            statement = new ForLoopStatement()
+            {
+                Body = ExpectBlock(),
+                LeftExpression = leftexpr,
+                ConditionExpression = conditionexpr,
+                RightExpression = rightexpr,
+                Position = key.Position
+            };
 
             return true;
         }
@@ -1019,14 +1044,6 @@ namespace Mug.Models.Parser
             var result = _pragmas;
             _pragmas = null;
             return result is not null ? result : new();
-        }
-
-        private INode GetLeftValue()
-        {
-            var result = _leftvalue;
-            _leftvalue = null;
-
-            return result;
         }
 
         private ParameterNode? CollectBaseDefinition()

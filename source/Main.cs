@@ -11,9 +11,8 @@ try
     var test = @"
 
 func main() {
-  var x = 10f
-  var y = x as i32
-  x = y as f32
+  const x = true
+  for , false, { }
 }
 
 ";

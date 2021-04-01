@@ -14,4 +14,8 @@ namespace Mug.Models.Parser
             return JsonConvert.SerializeObject(this, Formatting.Indented);
         }
     }
+
+    public interface IStatement : INode
+    {
+    }
 }

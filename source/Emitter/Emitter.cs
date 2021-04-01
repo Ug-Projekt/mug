@@ -15,7 +15,7 @@ namespace Mug.Models.Generator.Emitter
 
         private readonly Stack<MugValue> _stack = new();
         private readonly IRGenerator _generator;
-        public Dictionary<string, MugValue> Memory { get; }
+        public Dictionary<string, MugValue> Memory { get; set; }
         internal LLVMBasicBlockRef ExitBlock { get; }
         internal bool IsInsideSubBlock { get; }
 
@@ -677,6 +677,11 @@ namespace Mug.Models.Generator.Emitter
         {
             Load(
                 MugValue.From(Builder.BuildFPToSI(Pop().LLVMValue, type.LLVMType), type));
+        }
+
+        public void ReallocMemory()
+        {
+            Memory = new Dictionary<string, MugValue>(Memory);
         }
     }
 }
