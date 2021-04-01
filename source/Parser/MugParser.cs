@@ -764,7 +764,7 @@ namespace Mug.Models.Parser
                 e = new CatchExpressionNode() { Expression = e, OutError = match ? new Token?(error) : null, Position = Back.Position, Body = ExpectBlock() };
             }
 
-            if (MatchBooleanOperator(out var boolOP))
+            while (isFirst && MatchBooleanOperator(out var boolOP))
             {
                 e = CollectBooleanExpression(ref e, boolOP, isFirst, end);
                 end = Array.Empty<TokenKind>(); // end already tested

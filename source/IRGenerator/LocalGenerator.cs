@@ -203,6 +203,10 @@ namespace Mug.Models.Generator
                 st.TypeKind == MugValueTypeKind.Char &&
                 (kind == OperatorKind.CompareEQ || kind == OperatorKind.CompareNEQ))
                 _emitter.CompareInt(llvmpredicate);
+            else if ((kind == OperatorKind.CompareEQ || kind == OperatorKind.CompareNEQ) &&
+                ft.TypeKind == MugValueTypeKind.Bool &&
+                st.TypeKind == MugValueTypeKind.Bool)
+                _emitter.CompareInt(llvmpredicate);
             else
                 _emitter.CallOperator(literal, position, true, ft, st);
         }

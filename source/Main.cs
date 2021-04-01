@@ -1,6 +1,7 @@
 ﻿using Mug.Compilation;
 using Mug.Models.Lexer;
 using Mug.Models.Parser;
+using Mug.Models.Parser.NodeKinds;
 using System;
 
 try
@@ -11,8 +12,8 @@ try
     var test = @"
 
 func main() {
-  const x = true
-  for , false, { }
+  var y = 10
+  var x = 10 == y == true != false
 }
 
 ";
