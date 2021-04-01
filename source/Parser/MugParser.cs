@@ -330,7 +330,7 @@ namespace Mug.Models.Parser
             if (!MatchAdvance(TokenKind.OpenPar, out var token))
                 return false;
 
-            e = ExpectExpression(true, TokenKind.ClosePar);
+            e = ExpectExpression(true, end: TokenKind.ClosePar);
 
             return true;
         }
@@ -341,7 +341,7 @@ namespace Mug.Models.Parser
             {
                 e = new ArraySelectElemNode()
                 {
-                    IndexExpression = ExpectExpression(true, TokenKind.CloseBracket),
+                    IndexExpression = ExpectExpression(end: TokenKind.CloseBracket),
                     Left = e,
                     Position = token.Position.Start..Back.Position.End
                 };
@@ -376,7 +376,7 @@ namespace Mug.Models.Parser
         {
             while (!MatchAdvance(TokenKind.ClosePar))
             {
-                parameters.Add(ExpectExpression(true, TokenKind.Comma, TokenKind.ClosePar));
+                parameters.Add(ExpectExpression(end: new[] { TokenKind.Comma, TokenKind.ClosePar}));
 
                 if (Back.Kind == TokenKind.ClosePar)
                     _currentIndex--;
@@ -565,7 +565,7 @@ namespace Mug.Models.Parser
             var name = Back;
             Expect($"When assigning a field, required `:`, not `{Current.Value}`", TokenKind.Colon);
 
-            var expression = ExpectExpression(true, TokenKind.Comma, TokenKind.CloseBrace);
+            var expression = ExpectExpression(true, true, TokenKind.Comma, TokenKind.CloseBrace);
             _currentIndex--;
 
             return new FieldAssignmentNode() { Name = name.Value.ToString(), Body = expression, Position = name.Position };
@@ -618,7 +618,7 @@ namespace Mug.Models.Parser
 
         private INode CollectTernary(Range ifposition)
         {
-            var expression = ExpectExpression(true, TokenKind.KeyTVoid);
+            var expression = ExpectExpression(end: TokenKind.KeyTVoid);
             var ifBody = ExpectFactor();
 
             Expect("In inline conditions there must be the else body: place it here", TokenKind.KeyElse);
@@ -637,7 +637,7 @@ namespace Mug.Models.Parser
 
                 if (MatchAdvance(TokenKind.Comma))
                 {
-                    size = ExpectExpression(true, TokenKind.CloseBracket);
+                    size = ExpectExpression(end: TokenKind.CloseBracket);
                     _currentIndex--;
                 }
                 
@@ -650,7 +650,7 @@ namespace Mug.Models.Parser
                 {
                     do
                     {
-                        array.AddArrayElement(ExpectExpression(true, TokenKind.Comma, TokenKind.CloseBrace));
+                        array.AddArrayElement(ExpectExpression(true, true, TokenKind.Comma, TokenKind.CloseBrace));
                         _currentIndex--;
                     }
                     while (MatchAdvance(TokenKind.Comma));
@@ -706,7 +706,7 @@ namespace Mug.Models.Parser
             return MatchAdvance(TokenKind.BooleanOR) || MatchAdvance(TokenKind.BooleanAND);
         }
 
-        private INode ExpectExpression(bool isFirst, params TokenKind[] end)
+        private INode ExpectExpression(bool allowBoolOP = true, bool allowLogicOP = true, params TokenKind[] end)
         {
             INode e;
 
@@ -729,7 +729,7 @@ namespace Mug.Models.Parser
                     MatchAdvance(TokenKind.SubAssignment, out eq) ||
                     MatchAdvance(TokenKind.MulAssignment, out eq) ||
                     MatchAdvance(TokenKind.DivAssignment, out eq))
-                    return new AssignmentStatement() { Name = e, Operator = eq.Kind, Position = eq.Position, Body = ExpectExpression(true, end) };
+                    return new AssignmentStatement() { Name = e, Operator = eq.Kind, Position = eq.Position, Body = ExpectExpression(end: end) };
 
                 if (MatchAdvance(TokenKind.Plus) ||
                     MatchAdvance(TokenKind.Minus))
@@ -762,15 +762,15 @@ namespace Mug.Models.Parser
                 e = new CatchExpressionNode() { Expression = e, OutError = match ? new Token?(error) : null, Position = Back.Position, Body = ExpectBlock() };
             }
 
-            while (isFirst && MatchBooleanOperator(out var boolOP))
+            while (allowBoolOP && MatchBooleanOperator(out var boolOP))
             {
-                e = new BooleanExpressionNode() { Operator = ToOperatorKind(boolOP.Kind), Position = boolOP.Position, Left = e, Right = ExpectExpression(false, end) };
+                e = new BooleanExpressionNode() { Operator = ToOperatorKind(boolOP.Kind), Position = boolOP.Position, Left = e, Right = ExpectExpression(false, false, end) };
                 end = Array.Empty<TokenKind>(); // end already tested
             }
 
-            while (isFirst && MatchAndOrOperator())
+            while (allowLogicOP && MatchAndOrOperator())
             {
-                e = new BooleanExpressionNode() { Operator = ToOperatorKind(Back.Kind), Position = Back.Position, Left = e, Right = ExpectExpression(false, end) };
+                e = new BooleanExpressionNode() { Operator = ToOperatorKind(Back.Kind), Position = Back.Position, Left = e, Right = ExpectExpression(true, false, end) };
                 end = Array.Empty<TokenKind>(); // end already tested
             }
 
@@ -866,7 +866,7 @@ namespace Mug.Models.Parser
             INode expression = null;
             if (key.Kind != TokenKind.KeyElse)
             {
-                expression = ExpectExpression(true, TokenKind.OpenBrace);
+                expression = ExpectExpression(end: TokenKind.OpenBrace);
                 _currentIndex--;
             }
 
@@ -926,7 +926,7 @@ namespace Mug.Models.Parser
             {
                 result.Type = MugType.Automatic(name.Position);
                 Expect("Type notation or body needed", TokenKind.Equal);
-                result.Body = ExpectExpression(true, TokenKind.Comma);
+                result.Body = ExpectExpression(end: TokenKind.Comma);
             }
 
             return result;
@@ -938,7 +938,7 @@ namespace Mug.Models.Parser
                 return null;
 
             var pos = Current.Position;
-            var expr = ExpectExpression(true, end);
+            var expr = ExpectExpression(end: end);
             if (expr is not T)
                 ParseError(pos, error);
 

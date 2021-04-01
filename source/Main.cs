@@ -12,10 +12,7 @@ try
     var test = @"
 
 func main() {
-  var x = 10
-  var y = 10
-  var z = 10
-  var k = x == y == true | true
+  const z = 10 == y & y == x & x == 10
 }
 
 ";
