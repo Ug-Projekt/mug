@@ -12,8 +12,9 @@ try
     var test = @"
 
 func main() {
+  var x = 10
   var y = 10
-  var x = 10 == y == true != false
+  var z = false | true
 }
 
 ";

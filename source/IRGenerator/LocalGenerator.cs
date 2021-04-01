@@ -23,6 +23,7 @@ namespace Mug.Models.Generator
         private readonly FunctionNode _function;
         // pointers
         internal readonly IRGenerator _generator;
+
         private readonly LLVMValueRef _llvmfunction;
         private LLVMBasicBlockRef _oldcondition;
         private LLVMBasicBlockRef CycleExitBlock { get; set; }
@@ -248,12 +249,62 @@ namespace Mug.Models.Generator
                 case OperatorKind.CompareLEQ:
                     EmitBooleanOperator("<=", LLVMIntPredicate.LLVMIntSLE, kind, position);
                     break;
-                /*case OperatorKind.And
-                    break;*/
                 default:
                     Error(position, "`", kind.ToString(), "` operator not supported yet");
                     break;
             }
+        }
+
+        private void EmitAndOperator(INode left, INode right)
+        {
+            var tmp = _emitter.Builder.BuildAlloca(LLVMTypeRef.Int1);
+            _emitter.Builder.BuildStore(LLVMValueRef.CreateConstInt(LLVMTypeRef.Int1, 0), tmp);
+
+            var iftrue = _llvmfunction.AppendBasicBlock("");
+            var @finally = _llvmfunction.AppendBasicBlock("");
+
+            EvaluateExpression(left);
+            var f = _emitter.Peek();
+            _generator.ExpectBoolType(f.Type, left.Position);
+
+            _emitter.CompareJump(iftrue, @finally);
+            _emitter.Builder.PositionAtEnd(iftrue);
+
+            EvaluateExpression(right);
+            var s = _emitter.Pop();
+            _generator.ExpectBoolType(s.Type, right.Position);
+            _emitter.Builder.BuildStore(s.LLVMValue, tmp);
+
+            _emitter.Jump(@finally);
+            _emitter.Builder.PositionAtEnd(@finally);
+
+            _emitter.Load(MugValue.From(_emitter.Builder.BuildLoad(tmp), MugValueType.Bool));
+        }
+
+        private void EmitOrOperator(INode left, INode right)
+        {
+            var tmp = _emitter.Builder.BuildAlloca(LLVMTypeRef.Int1);
+            
+            var iftrue = _llvmfunction.AppendBasicBlock("");
+            var @finally = _llvmfunction.AppendBasicBlock("");
+
+            EvaluateExpression(left);
+            var f = _emitter.Peek();
+            _generator.ExpectBoolType(f.Type, left.Position);
+            _emitter.Builder.BuildStore(f.LLVMValue, tmp);
+
+            _emitter.CompareJump(@finally, iftrue);
+            _emitter.Builder.PositionAtEnd(iftrue);
+
+            EvaluateExpression(right);
+            var s = _emitter.Pop();
+            _generator.ExpectBoolType(s.Type, right.Position);
+            _emitter.Builder.BuildStore(s.LLVMValue, tmp);
+
+            _emitter.Jump(@finally);
+            _emitter.Builder.PositionAtEnd(@finally);
+
+            _emitter.Load(MugValue.From(_emitter.Builder.BuildLoad(tmp), MugValueType.Bool));
         }
 
         private bool IsABitcast(MugValueType expressionType, MugValueType castType)
@@ -525,9 +576,16 @@ namespace Mug.Models.Generator
 
         private void EmitExprBool(BooleanExpressionNode b)
         {
-            EvaluateExpression(b.Left);
-            EvaluateExpression(b.Right);
-            EmitOperator(b.Operator, b.Position);
+            if (b.Operator == OperatorKind.And)
+                EmitAndOperator(b.Left, b.Right);
+            else if (b.Operator == OperatorKind.Or)
+                EmitOrOperator(b.Left, b.Right);
+            else
+            {
+                EvaluateExpression(b.Left);
+                EvaluateExpression(b.Right);
+                EmitOperator(b.Operator, b.Position);
+            }
         }
 
         private void EmitExprArrayElemSelect(ArraySelectElemNode a, bool buildload = true)

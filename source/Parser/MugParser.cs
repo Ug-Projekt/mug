@@ -332,8 +332,6 @@ namespace Mug.Models.Parser
 
             e = ExpectExpression(true, TokenKind.ClosePar);
 
-            e.Position = token.Position.Start..e.Position.End;
-
             return true;
         }
 
@@ -683,8 +681,11 @@ namespace Mug.Models.Parser
         private INode CollectBooleanExpression(ref INode e, Token boolOP, bool isFirst, params TokenKind[] end)
         {
             if (!isFirst)
-                return e;
-
+            {
+                _currentIndex--;
+                ParseError("Put terms into `()`, multiple boolean operators are not allwed");
+            }
+            
             var right = ExpectExpression(false, end);
             e = new BooleanExpressionNode() { Operator = ToOperatorKind(boolOP.Kind), Position = boolOP.Position, Left = e, Right = right };
 
@@ -764,8 +765,8 @@ namespace Mug.Models.Parser
                 e = new CatchExpressionNode() { Expression = e, OutError = match ? new Token?(error) : null, Position = Back.Position, Body = ExpectBlock() };
             }
 
-            while (isFirst && MatchBooleanOperator(out var boolOP))
-            {
+            while (MatchBooleanOperator(out var boolOP))
+            {    
                 e = CollectBooleanExpression(ref e, boolOP, isFirst, end);
                 end = Array.Empty<TokenKind>(); // end already tested
             }

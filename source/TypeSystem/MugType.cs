@@ -4,6 +4,8 @@ using Mug.Models.Generator;
 using Mug.Models.Lexer;
 using Mug.Models.Parser;
 using Mug.MugValueSystem;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
@@ -13,6 +15,7 @@ namespace Mug.TypeSystem
     public class MugType : INode
     {
         public string NodeKind => "Type";
+        [JsonConverter(typeof(StringEnumConverter))]
         public TypeKind Kind { get; set; }
         public object BaseType { get; set; }
         public Range Position { get; set; }

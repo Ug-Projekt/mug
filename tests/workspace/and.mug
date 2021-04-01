@@ -1,0 +1,6 @@
+func main(): i32 {
+  const x = 10
+  const y = 10
+  const z = (10 == y) & ((y == x) & (x == 10))
+  return z as i32
+}

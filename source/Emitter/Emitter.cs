@@ -11,12 +11,12 @@ namespace Mug.Models.Generator.Emitter
 {
     internal class MugEmitter
     {
-        public unsafe LLVMBuilderRef Builder { get; private set; } = LLVM.CreateBuilder();
+        public unsafe LLVMBuilderRef Builder { get; internal set; } = LLVM.CreateBuilder();
 
         private readonly Stack<MugValue> _stack = new();
         private readonly IRGenerator _generator;
         public Dictionary<string, MugValue> Memory { get; set; }
-        internal LLVMBasicBlockRef ExitBlock { get; }
+        internal LLVMBasicBlockRef ExitBlock { get; set; }
         internal bool IsInsideSubBlock { get; }
 
         private const string GCMugLibSymbol = "include/standard_symbols/mug_gc";
