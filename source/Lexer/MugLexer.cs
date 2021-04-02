@@ -89,6 +89,8 @@ namespace Mug.Models.Lexer
             "i32" => AddKeyword(TokenKind.KeyTi32, s),
             "i64" => AddKeyword(TokenKind.KeyTi64, s),
             "f32" => AddKeyword(TokenKind.KeyTf32, s),
+            "f64" => AddKeyword(TokenKind.KeyTf64, s),
+            "f128" => AddKeyword(TokenKind.KeyTf128, s),
             "void" => AddKeyword(TokenKind.KeyTVoid, s),
             "u1" => AddKeyword(TokenKind.KeyTbool, s),
             "u8" => AddKeyword(TokenKind.KeyTu8, s),

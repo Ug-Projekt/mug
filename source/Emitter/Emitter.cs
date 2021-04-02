@@ -19,10 +19,6 @@ namespace Mug.Models.Generator.Emitter
         internal LLVMBasicBlockRef ExitBlock { get; }
         internal bool IsInsideSubBlock { get; }
 
-        private const string GCMugLibSymbol = "include/standard_symbols/mug_gc";
-        private const string GCPointerIncrementStandardSymbol = "gc_ptr_inc";
-        private const string GCPointerDecrementStandardSymbol = "gc_ptr_dec";
-
         public MugEmitter(IRGenerator generator, Dictionary<string, MugValue> memory, LLVMBasicBlockRef exitblock, bool isInsideSubBlock)
         {
             _generator = generator;
@@ -144,12 +140,19 @@ namespace Mug.Models.Generator.Emitter
             var second = Pop();
             var first = Pop();
 
-            if (second.Type.MatchIntType() && first.Type.MatchIntType())
+            if (first.IsConstant && second.IsConstant)
             {
-                if (second.IsConstant())
-                    second = MugValue.From(Builder.BuildIntCast(second.LLVMValue, first.Type.LLVMType), first.Type);
-                else if (first.IsConstant())
-                    first = MugValue.From(Builder.BuildIntCast(first.LLVMValue, second.Type.LLVMType), second.Type);
+                if (second.Type.Size(_generator.SizeOfPointer) >= first.Type.Size(_generator.SizeOfPointer))
+                    first = MugValue.From(Builder.BuildIntCast(first.LLVMValue, second.Type.LLVMType), second.Type, first.IsConst, first.IsConstant);
+                else
+                    second = MugValue.From(Builder.BuildIntCast(second.LLVMValue, first.Type.LLVMType), first.Type, second.IsConst, second.IsConstant);
+            }
+            else if (second.Type.MatchIntType() && first.Type.MatchIntType())
+            {
+                if (second.IsConstant)
+                    second = MugValue.From(Builder.BuildIntCast(second.LLVMValue, first.Type.LLVMType), first.Type, first.IsConst, second.IsConstant);
+                else if (first.IsConstant)
+                    first = MugValue.From(Builder.BuildIntCast(first.LLVMValue, second.Type.LLVMType), second.Type, second.IsConst, first.IsConstant);
             }
 
             Load(first);
@@ -161,12 +164,20 @@ namespace Mug.Models.Generator.Emitter
             var second = Pop();
             var first = Pop();
 
-            if (second.Type.MatchFloatType() && first.Type.MatchFloatType())
+            Console.WriteLine();
+            if (first.IsConstant && second.IsConstant)
             {
-                if (second.IsConstant())
-                    second = MugValue.From(Builder.BuildFPCast(second.LLVMValue, first.Type.LLVMType), first.Type);
-                else if (first.IsConstant())
-                    first = MugValue.From(Builder.BuildFPCast(first.LLVMValue, second.Type.LLVMType), second.Type);
+                if (second.Type.Size(_generator.SizeOfPointer) >= first.Type.Size(_generator.SizeOfPointer))
+                    first = MugValue.From(Builder.BuildFPCast(first.LLVMValue, second.Type.LLVMType), second.Type, first.IsConst, first.IsConstant);
+                else
+                    second = MugValue.From(Builder.BuildFPCast(second.LLVMValue, first.Type.LLVMType), first.Type, second.IsConst, second.IsConstant);
+            }
+            else if (second.Type.MatchFloatType() && first.Type.MatchFloatType())
+            {
+                if (second.IsConstant)
+                    second = MugValue.From(Builder.BuildFPCast(second.LLVMValue, first.Type.LLVMType), first.Type, first.IsConst, first.IsConstant);
+                else if (first.IsConstant)
+                    first = MugValue.From(Builder.BuildFPCast(first.LLVMValue, second.Type.LLVMType), second.Type, second.IsConst, second.IsConstant);
             }
 
             Load(first);
@@ -178,14 +189,12 @@ namespace Mug.Models.Generator.Emitter
             var second = Pop();
             var first = Pop();
 
-            if ((second.Type.MatchFloatType() && first.Type.MatchIntType()) || (first.Type.MatchFloatType() && second.Type.MatchIntType()))
+            if (first.IsConstant && second.IsConstant)
             {
-                if (second.IsConstant() && second.Type.MatchIntType())
-                {
-                    second = MugValue.From(Builder.BuildFPCast(second.LLVMValue, first.Type.LLVMType), first.Type);
-                }
-                else if (first.IsConstant() && first.Type.MatchIntType())
-                    first = MugValue.From(Builder.BuildFPCast(first.LLVMValue, second.Type.LLVMType), second.Type);
+                if (first.Type.MatchIntType() && second.Type.MatchFloatType())
+                    first = MugValue.From(Builder.BuildFPCast(first.LLVMValue, second.Type.LLVMType), second.Type, first.IsConst, first.IsConstant);
+                else if (second.Type.MatchIntType() && first.Type.MatchFloatType())
+                    second = MugValue.From(Builder.BuildFPCast(second.LLVMValue, first.Type.LLVMType), first.Type, second.IsConst, second.IsConstant);
             }
 
             Load(first);
@@ -194,17 +203,21 @@ namespace Mug.Models.Generator.Emitter
 
         public void CoerceCoupleConstantSize()
         {
-            CoerceCoupleConstantIntSize();
-            CoerceCoupleConstantFloatSize();
-            CoerceCoupleConstantFloatIntSize();
+            if (PeekType().MatchIntType())
+            {
+                CoerceCoupleConstantIntSize();
+                CoerceCoupleConstantFloatIntSize();
+            }
+            else if (PeekType().MatchFloatType())
+                CoerceCoupleConstantFloatSize();
         }
 
         private void CoerceConstantIntSizeTo(MugValueType type)
         {
             var value = Pop();
 
-            if (value.Type.MatchIntType() && value.IsConstant() && type.MatchIntType())
-                value = MugValue.From(Builder.BuildIntCast(value.LLVMValue, type.LLVMType), type);
+            if (value.Type.MatchIntType() && value.IsConstant)
+                value = MugValue.From(Builder.BuildIntCast(value.LLVMValue, type.LLVMType), type, value.IsConst, value.IsConstant);
 
             Load(value);
         }
@@ -213,16 +226,23 @@ namespace Mug.Models.Generator.Emitter
         {
             var value = Pop();
 
-            if (value.Type.MatchFloatType() && value.IsConstant() && type.MatchFloatType())
-                value = MugValue.From(Builder.BuildFPCast(value.LLVMValue, type.LLVMType), type);
+            if (value.IsConstant)
+            {
+                if (value.Type.MatchIntType())
+                    value = MugValue.From(Builder.BuildIntCast(value.LLVMValue, type.LLVMType), type, value.IsConst, value.IsConstant);
+                else if (value.Type.MatchFloatType())
+                    value = MugValue.From(Builder.BuildFPCast(value.LLVMValue, type.LLVMType), type, value.IsConst, value.IsConstant);
+            }
 
             Load(value);
         }
 
         public void CoerceConstantSizeTo(MugValueType type)
         {
-            CoerceConstantIntSizeTo(type);
-            CoerceConstantFloatSizeTo(type);
+            if (type.MatchIntType())
+                CoerceConstantIntSizeTo(type);
+            else if (type.MatchFloatType())
+                CoerceConstantFloatSizeTo(type);
         }
 
         private void MakeConst()
@@ -300,21 +320,6 @@ namespace Mug.Models.Generator.Emitter
             if (value is not null && IsDeclared(value))
                 Memory.Remove(value);
         }
-
-        private void EmitGCIncrementReferenceCounter(LLVMValueRef pointer)
-        {
-            /*Builder.BuildCall(
-                _generator.RequireStandardSymbol(GCPointerIncrementStandardSymbol, GCMugLibSymbol).LLVMValue,
-                new[] { pointer });*/
-        }
-
-        public void EmitGCDecrementReferenceCounter()
-        {
-            Pop();
-            /*Builder.BuildCall(
-                _generator.RequireStandardSymbol(GCPointerDecrementStandardSymbol, GCMugLibSymbol).LLVMValue,
-                new[] { Pop().LLVMValue });*/
-        }
         
         public void LoadFromMemory(string name, Range position)
         {
@@ -323,8 +328,8 @@ namespace Mug.Models.Generator.Emitter
             // variable
             if (!variable.IsConst)
             {
-                if (variable.Type.IsPointer())
-                    EmitGCIncrementReferenceCounter(variable.LLVMValue);
+                /*if (variable.Type.IsPointer())
+                    EmitGCIncrementReferenceCounter(variable.LLVMValue);*/
 
                 Load(MugValue.From(Builder.BuildLoad(variable.LLVMValue), variable.Type));
             }

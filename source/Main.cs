@@ -12,7 +12,8 @@ try
     var test = @"
 
 func main() {
-  if cur == 0 | curr != 1 { }
+  var x = 10
+  var i: u1 = x == 10 & x == 11 & x == 12
 }
 
 ";
@@ -20,9 +21,9 @@ func main() {
     var unit = new CompilationUnit("test", test, true);
 
     // unit.IRGenerator.Parser.Lexer.Tokenize().ForEach(token => Console.WriteLine(token));
-    Console.WriteLine(
-    unit.GenerateAST().Dump());
-    // unit.Generate(true, true);
+    // Console.WriteLine(
+    // unit.GenerateAST().Dump());
+    unit.Generate(true, true);
 
 #else
 

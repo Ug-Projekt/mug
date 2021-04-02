@@ -152,6 +152,11 @@ namespace Mug.Models.Lexer
         KeyCatch,
         [Description("error")]
         KeyError,
-        KeyTf32
+        [Description("f32")]
+        KeyTf32,
+        [Description("f64")]
+        KeyTf64,
+        [Description("f128")]
+        KeyTf128
     }
 }

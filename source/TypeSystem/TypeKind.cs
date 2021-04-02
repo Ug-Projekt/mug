@@ -20,6 +20,8 @@
         Unknown,
         EnumError,
         Reference,
-        Float32
+        Float32,
+        Float64,
+        Float128
     }
 }

@@ -63,6 +63,8 @@ namespace Mug.MugValueSystem
                 MugValueTypeKind.Int32 => 4,
                 MugValueTypeKind.Int64 => 8,
                 MugValueTypeKind.Float32 => 4,
+                MugValueTypeKind.Float64 => 8,
+                MugValueTypeKind.Float128 => 16,
                 MugValueTypeKind.Void => 0,
                 MugValueTypeKind.Char => 1,
                 MugValueTypeKind.String => sizeofpointer,
@@ -131,6 +133,8 @@ namespace Mug.MugValueSystem
         public static MugValueType String => From(LLVMTypeRef.CreatePointer(LLVMTypeRef.Int8, 0), MugValueTypeKind.String);
         public static MugValueType Unknown => From(LLVMTypeRef.CreatePointer(LLVMTypeRef.Int8, 0), MugValueTypeKind.Unknown);
         public static MugValueType Float32 => From(LLVMTypeRef.Float, MugValueTypeKind.Float32);
+        public static MugValueType Float64 => From(LLVMTypeRef.Double, MugValueTypeKind.Float64);
+        public static MugValueType Float128 => From(LLVMTypeRef.FP128, MugValueTypeKind.Float128);
 
         public static MugValueType Function(MugValueType[] paramTypes, MugValueType retType)
         {
@@ -161,6 +165,8 @@ namespace Mug.MugValueSystem
                 MugValueTypeKind.Int32 => "i32",
                 MugValueTypeKind.Int64 => "i64",
                 MugValueTypeKind.Float32 => "f32",
+                MugValueTypeKind.Float64 => "f64",
+                MugValueTypeKind.Float128 => "f128",
                 MugValueTypeKind.Void => "void",
                 MugValueTypeKind.Char => "chr",
                 MugValueTypeKind.String => "str",
@@ -292,7 +298,9 @@ namespace Mug.MugValueSystem
 
         public bool MatchFloatType()
         {
-            return TypeKind == MugValueTypeKind.Float32;
+            return TypeKind == MugValueTypeKind.Float32 ||
+                TypeKind == MugValueTypeKind.Float64 ||
+                TypeKind == MugValueTypeKind.Float128;
         }
     }
 }

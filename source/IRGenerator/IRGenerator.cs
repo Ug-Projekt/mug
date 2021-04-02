@@ -31,6 +31,9 @@ namespace Mug.Models.Generator
         private readonly Dictionary<string, List<FunctionNode>> _genericFunctions = new();
         private readonly bool _isMainModule = false;
 
+        internal int SizeOfPointer => (int)LLVMTargetDataRef.FromStringRepresentation(Module.DataLayout)
+                    .StoreSizeOfType(LLVMTypeRef.CreatePointer(LLVMTypeRef.Int32, 0));
+
         private const string EntryPointName = "main";
         private const string AsOperatorOverloading = "as";
 

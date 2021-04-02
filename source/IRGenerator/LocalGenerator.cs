@@ -97,7 +97,7 @@ namespace Mug.Models.Generator
                     break;
             }
 
-            return MugValue.From(llvmvalue, type);
+            return MugValue.From(llvmvalue, type, isconstant: true);
         }
 
         private void EmitSum(Range position)
@@ -255,10 +255,16 @@ namespace Mug.Models.Generator
             }
         }
 
+        private LLVMValueRef? tmp = null;
+
         private void EmitAndOperator(INode left, INode right)
         {
-            var tmp = _emitter.Builder.BuildAlloca(LLVMTypeRef.Int1);
-            _emitter.Builder.BuildStore(LLVMValueRef.CreateConstInt(LLVMTypeRef.Int1, 0), tmp);
+            var tmpisnull = !tmp.HasValue;
+            if (tmpisnull)
+            {
+                tmp = _emitter.Builder.BuildAlloca(LLVMTypeRef.Int1);
+                _emitter.Builder.BuildStore(LLVMValueRef.CreateConstInt(LLVMTypeRef.Int1, 0), tmp.Value);
+            }
 
             var iftrue = _llvmfunction.AppendBasicBlock("");
             var @finally = _llvmfunction.AppendBasicBlock("");
@@ -273,17 +279,23 @@ namespace Mug.Models.Generator
             EvaluateExpression(right);
             var s = _emitter.Pop();
             _generator.ExpectBoolType(s.Type, right.Position);
-            _emitter.Builder.BuildStore(s.LLVMValue, tmp);
+            _emitter.Builder.BuildStore(s.LLVMValue, tmp.Value);
 
             _emitter.Jump(@finally);
             _emitter.Builder.PositionAtEnd(@finally);
 
-            _emitter.Load(MugValue.From(_emitter.Builder.BuildLoad(tmp), MugValueType.Bool));
+            _emitter.Load(MugValue.From(_emitter.Builder.BuildLoad(tmp.Value), MugValueType.Bool));
+
+            if (tmpisnull)
+                tmp = null;
         }
 
         private void EmitOrOperator(INode left, INode right)
         {
-            var tmp = _emitter.Builder.BuildAlloca(LLVMTypeRef.Int1);
+            var tmpisnull = !tmp.HasValue;
+            
+            if (tmpisnull)
+                tmp = _emitter.Builder.BuildAlloca(LLVMTypeRef.Int1);
             
             var iftrue = _llvmfunction.AppendBasicBlock("");
             var @finally = _llvmfunction.AppendBasicBlock("");
@@ -291,7 +303,7 @@ namespace Mug.Models.Generator
             EvaluateExpression(left);
             var f = _emitter.Peek();
             _generator.ExpectBoolType(f.Type, left.Position);
-            _emitter.Builder.BuildStore(f.LLVMValue, tmp);
+            _emitter.Builder.BuildStore(f.LLVMValue, tmp.Value);
 
             _emitter.CompareJump(@finally, iftrue);
             _emitter.Builder.PositionAtEnd(iftrue);
@@ -299,12 +311,15 @@ namespace Mug.Models.Generator
             EvaluateExpression(right);
             var s = _emitter.Pop();
             _generator.ExpectBoolType(s.Type, right.Position);
-            _emitter.Builder.BuildStore(s.LLVMValue, tmp);
+            _emitter.Builder.BuildStore(s.LLVMValue, tmp.Value);
 
             _emitter.Jump(@finally);
             _emitter.Builder.PositionAtEnd(@finally);
 
-            _emitter.Load(MugValue.From(_emitter.Builder.BuildLoad(tmp), MugValueType.Bool));
+            _emitter.Load(MugValue.From(_emitter.Builder.BuildLoad(tmp.Value), MugValueType.Bool));
+
+            if (tmpisnull)
+                tmp = null;
         }
 
         private bool IsABitcast(MugValueType expressionType, MugValueType castType)
@@ -505,9 +520,7 @@ namespace Mug.Models.Generator
 
         private void CompTime_sizeof(List<MugType> generics, MugValueType[] parameters)
         {
-            var size = generics[0].ToMugValueType(_generator).Size(
-                (int)LLVMTargetDataRef.FromStringRepresentation(_generator.Module.DataLayout)
-                    .StoreSizeOfType(LLVMTypeRef.CreatePointer(LLVMTypeRef.Int32, 0)));
+            var size = generics[0].ToMugValueType(_generator).Size(_generator.SizeOfPointer);
 
             _emitter.Load(MugValue.From(LLVMValueRef.CreateConstInt(LLVMTypeRef.Int32, (uint)size), MugValueType.Int32));
         }
@@ -1078,6 +1091,9 @@ namespace Mug.Models.Generator
                 MugValueTypeKind.Int32 or
                 MugValueTypeKind.Int64 or
                 MugValueTypeKind.Bool => MugValue.From(LLVMValueRef.CreateConstInt(type.LLVMType, 0), type, true),
+                MugValueTypeKind.Float32 or
+                MugValueTypeKind.Float64 or
+                MugValueTypeKind.Float128 => MugValue.From(LLVMValueRef.CreateConstSIToFP(LLVMValueRef.CreateConstInt(LLVMTypeRef.Int32, 0), type.LLVMType), type, true),
                 MugValueTypeKind.String => MugValue.From(CreateConstString(""), type, true),
                 MugValueTypeKind.Array => MugValue.From(CreateHeapArray(type.ArrayBaseElementType.LLVMType, LLVMValueRef.CreateConstInt(LLVMTypeRef.Int32, 0)), type, true),
                 MugValueTypeKind.Enum or
