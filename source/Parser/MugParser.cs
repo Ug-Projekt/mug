@@ -762,20 +762,17 @@ namespace Mug.Models.Parser
                 e = new CatchExpressionNode() { Expression = e, OutError = match ? new Token?(error) : null, Position = Back.Position, Body = ExpectBlock() };
             }
 
+            // Console.WriteLine($"cur: {Current} allboolop: {allowBoolOP} alllogicop: {allowLogicOP}");
+            
             while (allowBoolOP && MatchBooleanOperator(out var boolOP))
-            {
                 e = new BooleanExpressionNode() { Operator = ToOperatorKind(boolOP.Kind), Position = boolOP.Position, Left = e, Right = ExpectExpression(false, false, end) };
-                end = Array.Empty<TokenKind>(); // end already tested
-            }
 
             while (allowLogicOP && MatchAndOrOperator())
-            {
-                e = new BooleanExpressionNode() { Operator = ToOperatorKind(Back.Kind), Position = Back.Position, Left = e, Right = ExpectExpression(true, false, end) };
-                end = Array.Empty<TokenKind>(); // end already tested
-            }
-
+                e = new BooleanExpressionNode() { Operator = ToOperatorKind(Back.Kind), Position = Back.Position, Left = e, Right = ExpectExpression(allowLogicOP: false, end: end) };
+            
             returnAndCheck:
-            ExpectMultiple($"Invalid token in the current context, maybe missing one of `{TokenKindsToString(end)}`", end);
+            if (allowBoolOP && allowLogicOP) // if is first call
+                ExpectMultiple($"Invalid token in the current context, maybe missing one of `{TokenKindsToString(end)}`", end);
 
             return e;
         }

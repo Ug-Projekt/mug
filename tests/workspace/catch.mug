@@ -1,51 +1,64 @@
-import io;
+import io
 
 error ParseErr { InvalidNumber, DoublePrefix }
 
 func (self: chr) is_digit(): u1 {
-  if (self as u8) >= ('0' as u8) { if (self as u8) <= ('9' as u8) { return true; } }
+  if (self as u8) >= ('0' as u8) { if (self as u8) <= ('9' as u8) { return true } }
 
-  return false;
+  return false
 }
 
 func (self: str) parse_i32(): ParseErr!i32 {
-  var res = 0;
-  var i = 0;
-	var prefixop = '\0';
+  var res = 0
+  var i = 0
+	var prefixop = '\0'
 
 	while true {
-		const cur = self[i++];
+		const cur = self[i++]
 
-    if cur == '\0' { break; }
-
-    var isprefix = false;
-
-    if cur == '+' { isprefix = true; }
-		if cur == '-' { isprefix = true; }
+    if cur == '\0' { break }
     
-    if isprefix {
+    if cur == '+' | cur == '-' {
 			if prefixop != '\0' {
-				return ParseErr.DoublePrefix;
+				return ParseErr.DoublePrefix
       }
 
-			prefixop = cur;
-			continue;
+			prefixop = cur
+			continue
 		}
 
 		if !cur.is_digit() {
-			return ParseErr.InvalidNumber;
+			return ParseErr.InvalidNumber
     }
 
-		res = res * 10 + (cur as i32) - ('0' as i32);
+		res = res * 10 + (cur as i32) - ('0' as i32)
 	}
   
-	if prefixop == '-' { res = -res; }
+	if prefixop == '-' { res = -res }
 
-  return res;
+  return res
 }
 
+[code:
+"
+#include<stdio.h> 
+
+const char* c_$readln(const char* prompt) { 
+	const char* str = malloc(100);
+	printf(\"%s\", prompt);
+	scanf(\"%[^\'\\n\']s\", str); 
+	return str;
+}  
+", extern: "c_$readln"]
+func readln(prompt: str): str
+
 func main(): i32 {
-  println("This program is returning to eax the input as int");
+  println("This program is returning to eax the input as int")
   
-  return readln("input: ").parse_i32() catch e {  };
+  return readln("input: ").parse_i32() catch e {
+		if e == ParseErr.DoublePrefix { println("why a double prefix?") }
+		else { println("mhh, bad number") }
+
+		-1
+	}
 }

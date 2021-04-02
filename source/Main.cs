@@ -12,7 +12,7 @@ try
     var test = @"
 
 func main() {
-  const z = 10 == y & y == x & x == 10
+  if cur == 0 | curr != 1 { }
 }
 
 ";
