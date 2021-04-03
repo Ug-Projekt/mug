@@ -12,8 +12,8 @@ try
     var test = @"
 
 func main(): i32 {
-  a(a(b()))
-  d()
+  return _
+  return true
 }
 
 ";
@@ -44,9 +44,10 @@ catch (CompilationException e)
     {
         try
         {
-            for (int i = 0; i < e.DiagnosticBag.Count; i++)
+            var errors = e.Lexer.DiagnosticBag.GetErrors();
+            for (int i = 0; i < errors.Count; i++)
             {
-                var error = e.DiagnosticBag[i];
+                var error = errors[i];
                 CompilationErrors.WriteSourceLineStyle(e.Lexer.ModuleName, error.Bad, error.LineAt(e.Lexer.Source), e.Lexer.Source, error.Message);
             }
         }

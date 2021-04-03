@@ -45,7 +45,7 @@ namespace Mug.Models.Generator
 
         internal bool Report(Range position, string error)
         {
-            _generator.Parser.Lexer.Report(position, error);
+            _generator.Parser.Lexer.DiagnosticBag.Report(position, error);
             return false;
         }
 
@@ -449,8 +449,7 @@ namespace Mug.Models.Generator
                     }
                     break;
                 case ArraySelectElemNode a:
-                    EmitExprArrayElemSelect(a);
-                    break;
+                    return EmitExprArrayElemSelect(a);
                 case PrefixOperator p:
                     if (!EvaluateMemberAccess(p.Expression, p.Prefix == TokenKind.Star))
                         return false;
@@ -623,14 +622,15 @@ namespace Mug.Models.Generator
             return true;
         }
 
-        private void EmitExpr(ExpressionNode e)
+        private bool EmitExpr(ExpressionNode e)
         {
-            // evaluated left
-            EvaluateExpression(e.Left);
-            // evaluated right
-            EvaluateExpression(e.Right);
+            // evaluated left and right
+            if (!EvaluateExpression(e.Left) || !EvaluateExpression(e.Right))
+                return false;
+
             // operator implementation
             EmitOperator(e.Operator, e.Position);
+            return true;
         }
 
         private bool EmitExprBool(BooleanExpressionNode b)
@@ -650,15 +650,17 @@ namespace Mug.Models.Generator
             return true;
         }
 
-        private void EmitExprArrayElemSelect(ArraySelectElemNode a, bool buildload = true)
+        private bool EmitExprArrayElemSelect(ArraySelectElemNode a, bool buildload = true)
         {
             // loading the array
-            EvaluateExpression(a.Left);
+            if (!EvaluateExpression(a.Left))
+                return false;
 
             var indexed = _emitter.PeekType();
 
             // loading the index expression
-            EvaluateExpression(a.IndexExpression);
+            if (!EvaluateExpression(a.IndexExpression))
+                return false;
 
             // arrays are indexed by int32
             _emitter.CoerceConstantSizeTo(MugValueType.Int32);
@@ -671,6 +673,8 @@ namespace Mug.Models.Generator
                 _emitter.SelectArrayElement(buildload);
             else
                 _emitter.CallOperator("[]", a.Position, true, indexed, index);
+
+            return true;
         }
 
         private LLVMValueRef CreateHeapArray(LLVMTypeRef baseElementType, LLVMValueRef size)
@@ -815,12 +819,11 @@ namespace Mug.Models.Generator
             switch (expression)
             {
                 case ExpressionNode e: // binary expression: left op right
-                    EmitExpr(e);
-                    break;
+                    return EmitExpr(e);
                 case Token t:
                     if (t.Kind == TokenKind.Identifier) // reference value
                     {
-                        if (_emitter.LoadFromMemory(t.Value, t.Position))
+                        if (!_emitter.LoadFromMemory(t.Value, t.Position))
                             return false;
 
                         if (loadreference && _emitter.PeekType().TypeKind == MugValueTypeKind.Reference)
@@ -856,8 +859,7 @@ namespace Mug.Models.Generator
                     EmitExprTernary(i);
                     break;*/
                 case ArraySelectElemNode a:
-                    EmitExprArrayElemSelect(a);
-                    break;
+                    return EmitExprArrayElemSelect(a);
                 case ArrayAllocationNode aa:
                     EmitExprAllocateArray(aa);
                     break;
@@ -1186,7 +1188,8 @@ namespace Mug.Models.Generator
                  * if instead the expression of the return statement has is nothing,
                  * it will be evaluated and then it will be compared the type of the result with the type of return of the function
                  */
-                EvaluateExpression(@return.Body);
+                if (!EvaluateExpression(@return.Body))
+                    return;
 
                 _emitter.CoerceConstantSizeTo(type);
 
@@ -1268,8 +1271,8 @@ namespace Mug.Models.Generator
 
                 _emitter.Load(GetDefaultValueOf(variable.Type.ToMugValueType(_generator), variable.Position));
             }
-            else // the expression in the variable’s body is evaluated
-                EvaluateExpression(variable.Body);
+            else if (!EvaluateExpression(variable.Body)) // the expression in the variable’s body is evaluated
+                return;
 
             /*
              * if in the statement of variable the type is specified explicitly,
@@ -1323,13 +1326,15 @@ namespace Mug.Models.Generator
             }
             else if (leftexpression is ArraySelectElemNode indexing)
             {
-                EmitExprArrayElemSelect(indexing, false);
+                if (!EmitExprArrayElemSelect(indexing, false))
+                    Stop();
 
                 return _emitter.Pop();
             }
             else if (leftexpression is MemberNode member)
             {
-                EmitExprMemberAccess(member, false);
+                if (!EmitExprMemberAccess(member, false))
+                    Stop();
 
                 return _emitter.Pop();
             }
@@ -1344,10 +1349,12 @@ namespace Mug.Models.Generator
             }
             else
             {
-                Error(leftexpression.Position, "Bad construction: illegal left expression");
-                EvaluateExpression(leftexpression);
+                Report(leftexpression.Position, "Bad construction: illegal left expression");
+                Stop();
+                throw new();
+                /*EvaluateExpression(leftexpression);
 
-                return _emitter.Pop();
+                return _emitter.Pop();*/
             }
         }
 
@@ -1645,7 +1652,8 @@ namespace Mug.Models.Generator
                     EmitForStatement(forstatement);
                     break;
                 default:
-                    EvaluateExpression(statement);
+                    if (!EvaluateExpression(statement))
+                        return;
 
                     if (!_buffer.Type.Equals(_emitter.PeekType()))
                         Report(statement.Position, $"Expected {_buffer.Type}, got {_emitter.PeekType()}");

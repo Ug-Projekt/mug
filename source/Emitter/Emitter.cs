@@ -36,6 +36,11 @@ namespace Mug.Models.Generator.Emitter
             IsInsideSubBlock = isInsideSubBlock;
         }
 
+        public void Report(Range position, string error)
+        {
+            _generator.Parser.Lexer.DiagnosticBag.Report(position, error);
+        }
+
         public void Load(MugValue value)
         {
             _stack.Push(value);
@@ -100,7 +105,7 @@ namespace Mug.Models.Generator.Emitter
         {
             if (!Memory.TryGetValue(name, out var variable))
             {
-                _generator.Parser.Lexer.Report(position, "Undeclared item");
+                Report(position, "Undeclared item");
                 return null;
             }
 

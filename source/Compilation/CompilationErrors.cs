@@ -7,22 +7,6 @@ namespace Mug.Compilation
 {
     public static class CompilationErrors
     {
-        public static void Report(this MugLexer Lexer, Range position, string error)
-        {
-            Lexer.DiagnosticBag.Add(new MugError(position, error));
-        }
-
-        public static void Report(this MugLexer Lexer, int pos, string error)
-        {
-            Lexer.Report(pos..(pos + 1), error);
-        }
-
-        public static void CheckDiagnostic(this MugLexer Lexer)
-        {
-            if (Lexer.DiagnosticBag.Count > 0)
-                throw new CompilationException(Lexer.DiagnosticBag, Lexer);
-        }
-
         /// <summary>
         /// general compilation-error that have no position in the text to report,
         /// for example "no argument passed" error
@@ -44,8 +28,8 @@ namespace Mug.Compilation
 
         public static void Throw(this MugLexer Lexer, Range position, string error)
         {
-            Lexer.DiagnosticBag.Add(new(position, error));
-            throw new CompilationException(Lexer.DiagnosticBag, Lexer);
+            Lexer.DiagnosticBag.Report(new(position, error));
+            throw new CompilationException(Lexer);
         }
 
         /// <summary>

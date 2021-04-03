@@ -1,4 +1,5 @@
-﻿using Mug.Compilation;
+﻿using Microsoft.VisualBasic;
+using Mug.Compilation;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,7 +9,8 @@ namespace Mug.Models.Lexer
 {
     public class MugLexer
     {
-        public readonly List<MugError> DiagnosticBag = new();
+        public MugDiagnostic DiagnosticBag { get; } = new();
+
 
         public readonly string Source;
         public readonly string ModuleName;
@@ -108,7 +110,7 @@ namespace Mug.Models.Lexer
 
         private T InExpressionError<T>(string error)
         {
-            this.Report(CurrentIndex, error);
+            DiagnosticBag.Report(CurrentIndex, error);
             return default;
         }
 
@@ -149,7 +151,7 @@ namespace Mug.Models.Lexer
             ',' => TokenKind.Comma,
             ':' => TokenKind.Colon,
             '.' => TokenKind.Dot,
-            _ => InExpressionError<TokenKind>("Invalid char")
+            _ => TokenKind.Bad
         };
 
         private void AddToken(TokenKind kind, string value)
@@ -182,59 +184,12 @@ namespace Mug.Models.Lexer
         }
 
         /// <summary>
-        /// inserts current symbol in the tokens stream and clears it if it's not empty
-        /// </summary>
-        /*private void InsertCurrentSymbol()
-        {
-            if (!string.IsNullOrWhiteSpace(CurrentSymbol.ToString()))
-            {
-                // symbol recognition
-                ProcessSymbol(CurrentSymbol.ToString());
-                CurrentSymbol.Clear();
-            }
-        }*/
-
-        private bool IsDigit(string s)
-        {
-            return long.TryParse(s, out _);
-        }
-
-        private bool IsFloatDigit(ref string s)
-        {
-            if (string.IsNullOrWhiteSpace(s))
-                return false;
-
-            return double.TryParse(s, out _);
-        }
-
-        /// <summary>
         /// tests if value is a boolean constant
         /// </summary>
         private bool IsBoolean(string value)
         {
             return value == "true" || value == "false";
         }
-
-        /// <summary>
-        /// adds a new token with the recognized kind (based on the symbol format)
-        /// </summary>
-        /*private void ProcessSymbol(string value)
-        {
-            if (IsDigit(value))
-                AddToken(TokenKind.ConstantDigit, value);
-            else if (IsFloatDigit(ref value))
-                AddToken(TokenKind.ConstantFloatDigit, value);
-            else if (IsBoolean(value))
-                AddToken(TokenKind.ConstantBoolean, value);
-            else if (!CheckAndSetKeyword(value)) // if value is a keyword InsertKeyword will add a new token and will return true, otherwise false
-            {
-                // value is an identifier
-                // the identifier must follow the language rules
-                CheckValidIdentifier(value);
-
-                AddToken(TokenKind.Identifier, value);
-            }
-        }*/
 
         /// <summary>
         /// matches '#'
@@ -320,9 +275,9 @@ namespace Mug.Models.Lexer
 
             //longer than one char
             if (CurrentSymbol.Length > 1)
-                this.Report(start..end, "Too many characters in const char");
+                DiagnosticBag.Report(start..end, "Too many characters in const char");
             else if (CurrentSymbol.Length < 1)
-                this.Report(start..end, "Not enough characters in const char");
+                DiagnosticBag.Report(start..end, "Not enough characters in const char");
 
             //else add closing simbol
             TokenCollection.Add(new(TokenKind.ConstantChar, CurrentSymbol.ToString(), new(start, end)));
@@ -408,17 +363,17 @@ namespace Mug.Models.Lexer
 
             //if you found an EOF, throw
             if (CurrentIndex == Source.Length && Source[CurrentIndex - 1] != '`')
-                this.Report(CurrentIndex - 1, $"Backtick sequence has not been correctly enclosed");
+                DiagnosticBag.Report(CurrentIndex - 1, $"Backtick sequence has not been correctly enclosed");
 
             var pos = start..(end+1);
 
             if (CurrentSymbol.Length < 1)
-                this.Report(pos, "Not enough characters in backtick sequence");
+                DiagnosticBag.Report(pos, "Not enough characters in backtick sequence");
 
             string sequence = CurrentSymbol.ToString().Replace(" ", "");
 
             if (!IsValidBackTickSequence(sequence) && !IsKeyword(sequence))
-                this.Report(pos, "Invalid backtick sequence");
+                DiagnosticBag.Report(pos, "Invalid backtick sequence");
 
             //else add closing simbol, removing whitespaces
             TokenCollection.Add(new(TokenKind.Identifier, sequence, pos));
@@ -508,7 +463,7 @@ namespace Mug.Models.Lexer
                 if (Current == '.')
                 {
                     if (isfloat)
-                        this.Report(CurrentIndex, "Invalid dot here");
+                        DiagnosticBag.Report(CurrentIndex, "Invalid dot here");
 
                     isfloat = true;
                     CurrentSymbol.Append(',');
@@ -527,14 +482,14 @@ namespace Mug.Models.Lexer
             }
 
             if (CurrentIndex < Source.Length && IsValidIdentifierChar(Current))
-                this.Report(CurrentIndex, "Invalid identifer's char here");
+                DiagnosticBag.Report(CurrentIndex, "Invalid identifer's char here");
 
             var position = pos..CurrentIndex;
             var s = CurrentSymbol.ToString();
 
             // could overflow
             if (s.Length >= 21)
-                this.Report(position, "Constant overflow");
+                DiagnosticBag.Report(position, "Constant overflow");
 
             TokenCollection.Add(new(isfloat ? TokenKind.ConstantFloatDigit : TokenKind.ConstantDigit, s, position));
             CurrentSymbol.Clear();
@@ -586,9 +541,12 @@ namespace Mug.Models.Lexer
             // end of file token
             AddSingle(TokenKind.EOF, "<EOF>");
 
-            this.CheckDiagnostic();
-
             return TokenCollection;
+        }
+
+        public void CheckDiagnostic()
+        {
+            DiagnosticBag.CheckDiagnostic(this);
         }
     }
 }

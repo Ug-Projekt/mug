@@ -1,0 +1,6 @@
+- match
+- `func some() !sometype`, this will mean that the function must be catched also if there is no real error to catch -> `some() catch { return }`
+- calls that return an enum error can be also not catched if in return expression, where the return's scope owner is a function that returns the same enum error
+- reference printing (ex. the function where there is the error)
+- default initialization of array members
+- try operator, at the begin of a call it stops the function's execution and return an error: make it with lowering `try some()` -> `some() catch e { return e }` (with !type `return` without e)

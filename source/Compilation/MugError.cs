@@ -5,7 +5,7 @@ using System.Text;
 
 namespace Mug.Compilation
 {
-    public class MugError
+    public struct MugError
     {
         public Range Bad { get; }
         public string Message { get; }

@@ -69,7 +69,7 @@ namespace Mug.Models.Generator
 
         public void Report(Range position, string error)
         {
-            Parser.Lexer.Report(position, error);
+            Parser.Lexer.DiagnosticBag.Report(position, error);
         }
 
         /// <summary>
@@ -301,7 +301,7 @@ namespace Mug.Models.Generator
         {
             for (int i = 0; i < types.Length; i++)
                 if (!firstType.Equals(types[i]))
-                    Parser.Lexer.Report(position, error);
+                    Report(position, error);
         }
 
         internal void ExpectBoolType(MugValueType type, Range position)
@@ -908,11 +908,11 @@ namespace Mug.Models.Generator
                 RecognizeMember(member);
 
             if (_isMainModule)
-            {
                 GenerateEntryPoint();
-                // checking for errors
-                Parser.Lexer.CheckDiagnostic();
-            }
+
+
+            // checking for errors
+            Parser.Lexer.CheckDiagnostic();
         }
     }
 }
