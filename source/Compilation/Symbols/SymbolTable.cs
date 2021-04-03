@@ -128,7 +128,10 @@ namespace Mug.Compilation.Symbols
             if (!Functions.TryAdd(name, new() { identifier }))
             {
                 if (Functions[name].FindIndex(id => id.Equals(identifier)) != -1)
-                    _generator.Error(position, $"Function `{name}` already declared");
+                {
+                    _generator.Report(position, $"Function `{name}` already declared");
+                    return;
+                }
 
                 Functions[name].Add(identifier);
             }
@@ -139,18 +142,25 @@ namespace Mug.Compilation.Symbols
             if (!Types.TryAdd(name, new() { identifier }))
             {
                 if (Types[name].FindIndex(id => id.Equals(identifier)) != -1)
-                    _generator.Error(position, $"Type `{name}` already declared");
+                {
+                    _generator.Report(position, $"Type `{name}` already declared");
+                    return;
+                }
 
                 Types[name].Add(identifier);
             }
         }
 
-        public void DeclareCompilerSymbol(string name, Range position)
+        public bool DeclareCompilerSymbol(string name, Range position)
         {
             if (CompilerSymbols.Contains(name))
-                _generator.Error(position, "Already declared compiler symbol");
+            {
+                _generator.Report(position, "Already declared compiler symbol");
+                return false;
+            }
 
             CompilerSymbols.Add(name);
+            return true;
         }
 
         public FunctionPrototypeIdentifier GetEntryPoint(out int index)
@@ -176,8 +186,13 @@ namespace Mug.Compilation.Symbols
 
         public IFunctionID GetFunction(string name, IFunctionID identifier, out int index, Range position)
         {
+            index = 0;
+
             if (!Functions.TryGetValue(name, out var overloads))
-                _generator.Error(position, $"Undeclared function `{name}`");
+            {
+                _generator.Report(position, $"Undeclared function `{name}`");
+                return null;
+            }
 
             index = overloads.FindIndex(id =>
             {
@@ -191,7 +206,7 @@ namespace Mug.Compilation.Symbols
             });
 
             if (index == -1)
-                _generator.Error(position, $"Cannot find a good overload for function `{name}`");
+                _generator.Report(position, $"Cannot find a good overload for function `{name}`");
 
             return overloads[index];
         }

@@ -67,6 +67,11 @@ namespace Mug.Models.Generator
             Parser.Lexer.Throw(position, error);
         }
 
+        public void Report(Range position, string error)
+        {
+            Parser.Lexer.Report(position, error);
+        }
+
         /// <summary>
         /// the function launches an exception and returns a generic value,
         /// this function comes in statement switch in expressions
@@ -296,7 +301,7 @@ namespace Mug.Models.Generator
         {
             for (int i = 0; i < types.Length; i++)
                 if (!firstType.Equals(types[i]))
-                    Error(position, error);
+                    Parser.Lexer.Report(position, error);
         }
 
         internal void ExpectBoolType(MugValueType type, Range position)
@@ -418,8 +423,8 @@ namespace Mug.Models.Generator
 
             var symbol = Map.GetFunction(name, new UndefinedFunctionID(basetype, genericsInput, parameters), out var index, position);
 
-            if (symbol is FunctionIdentifier identifier)
-                return identifier;
+            if (symbol is FunctionIdentifier || symbol is null)
+                return (FunctionIdentifier)symbol;
 
             return EvaluateFunction(name, ((FunctionPrototypeIdentifier)symbol).Prototype, index, genericsInput, true, position);
         }
@@ -903,14 +908,10 @@ namespace Mug.Models.Generator
                 RecognizeMember(member);
 
             if (_isMainModule)
-                GenerateEntryPoint();
-
-            foreach (var overloads in Map.Functions)
             {
-                foreach (var function in overloads.Value)
-                {
-
-                }
+                GenerateEntryPoint();
+                // checking for errors
+                Parser.Lexer.CheckDiagnostic();
             }
         }
     }

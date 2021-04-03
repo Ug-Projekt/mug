@@ -8,7 +8,7 @@ namespace Mug.Models.Lexer
 {
     public class MugLexer
     {
-        public List<MugError> DiagnosticBag { get; } = new();
+        public readonly List<MugError> DiagnosticBag = new();
 
         public readonly string Source;
         public readonly string ModuleName;

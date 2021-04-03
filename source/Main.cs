@@ -11,8 +11,9 @@ try
 
     var test = @"
 
-func main() {
-  
+func main(): i32 {
+  a(a(b()))
+  d()
 }
 
 ";

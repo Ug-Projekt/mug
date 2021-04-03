@@ -43,9 +43,15 @@ namespace Mug.Models.Generator
             _generator.Parser.Lexer.Throw(position, error);
         }
 
-        internal void Report(Range position, string error)
+        internal bool Report(Range position, string error)
         {
             _generator.Parser.Lexer.Report(position, error);
+            return false;
+        }
+
+        internal void Stop()
+        {
+            _generator.Parser.Lexer.CheckDiagnostic();
         }
 
         private LLVMValueRef CreateConstString(string value)
@@ -263,7 +269,7 @@ namespace Mug.Models.Generator
 
         private LLVMValueRef? tmp = null;
 
-        private void EmitAndOperator(INode left, INode right)
+        private bool EmitAndOperator(INode left, INode right)
         {
             var tmpisnull = !tmp.HasValue;
             if (tmpisnull)
@@ -275,14 +281,18 @@ namespace Mug.Models.Generator
             var iftrue = _llvmfunction.AppendBasicBlock("");
             var @finally = _llvmfunction.AppendBasicBlock("");
 
-            EvaluateExpression(left);
+            if (!EvaluateExpression(left))
+                return false;
+
             var f = _emitter.Peek();
             _generator.ExpectBoolType(f.Type, left.Position);
 
             _emitter.CompareJump(iftrue, @finally);
             _emitter.Builder.PositionAtEnd(iftrue);
 
-            EvaluateExpression(right);
+            if (!EvaluateExpression(right))
+                return false;
+
             var s = _emitter.Pop();
             _generator.ExpectBoolType(s.Type, right.Position);
             _emitter.Builder.BuildStore(s.LLVMValue, tmp.Value);
@@ -294,9 +304,11 @@ namespace Mug.Models.Generator
 
             if (tmpisnull)
                 tmp = null;
+
+            return true;
         }
 
-        private void EmitOrOperator(INode left, INode right)
+        private bool EmitOrOperator(INode left, INode right)
         {
             var tmpisnull = !tmp.HasValue;
             
@@ -306,7 +318,9 @@ namespace Mug.Models.Generator
             var iftrue = _llvmfunction.AppendBasicBlock("");
             var @finally = _llvmfunction.AppendBasicBlock("");
 
-            EvaluateExpression(left);
+            if (!EvaluateExpression(left))
+                return false;
+
             var f = _emitter.Peek();
             _generator.ExpectBoolType(f.Type, left.Position);
             _emitter.Builder.BuildStore(f.LLVMValue, tmp.Value);
@@ -314,7 +328,9 @@ namespace Mug.Models.Generator
             _emitter.CompareJump(@finally, iftrue);
             _emitter.Builder.PositionAtEnd(iftrue);
 
-            EvaluateExpression(right);
+            if (!EvaluateExpression(right))
+                return false;
+
             var s = _emitter.Pop();
             _generator.ExpectBoolType(s.Type, right.Position);
             _emitter.Builder.BuildStore(s.LLVMValue, tmp.Value);
@@ -326,6 +342,8 @@ namespace Mug.Models.Generator
 
             if (tmpisnull)
                 tmp = null;
+
+            return true;
         }
 
         private bool IsABitcast(MugValueType expressionType, MugValueType castType)
@@ -339,14 +357,14 @@ namespace Mug.Models.Generator
         /// <summary>
         /// the function manages the 'as' operator
         /// </summary>
-        private void EmitCastInstruction(MugType type, Range position)
+        private bool EmitCastInstruction(MugType type, Range position)
         {
             // the expression type to cast
             var expressionType = _emitter.PeekType();
             var castType = type.ToMugValueType(_generator);
 
             if (castType.RawEquals(expressionType))
-                Error(position, "Useless cast");
+                return Report(position, "Useless cast");
 
             if (castType.IsEnum())
             {
@@ -356,7 +374,7 @@ namespace Mug.Models.Generator
                 _emitter.CoerceConstantSizeTo(enumBaseType);
 
                 if (_emitter.PeekType().TypeKind != enumBaseType.TypeKind)
-                    Error(position, $"The base type of enum `{enumerated.Name}` is incompatible with type `{expressionType}`");
+                    return Report(position, $"The base type of enum `{enumerated.Name}` is incompatible with type `{expressionType}`");
 
                 _emitter.CastToEnumMemberFromBaseType(castType);
             }
@@ -367,7 +385,7 @@ namespace Mug.Models.Generator
                 _emitter.CoerceConstantSizeTo(enumBaseType);
 
                 if (_emitter.PeekType().GetEnum().BaseType.ToMugValueType(_generator).TypeKind != castType.TypeKind)
-                    Error(type.Position, $"Enum base type is incompatible with type `{castType.ToString()}`");
+                    return Report(type.Position, $"Enum base type is incompatible with type `{castType}`");
 
                 _emitter.CastEnumMemberToBaseType(castType);
             }
@@ -382,7 +400,7 @@ namespace Mug.Models.Generator
                 var value = _emitter.Pop();
 
                 if (!value.Type.IsPointer() && !value.Type.IsIndexable() && value.Type.TypeKind != MugValueTypeKind.Unknown)
-                    Error(position, "Expected pointer when in cast expression something is unknown");
+                    return Report(position, "Expected pointer when in cast expression something is unknown");
 
                 _emitter.Load(MugValue.From(_emitter.Builder.BuildBitCast(value.LLVMValue, castType.LLVMType), castType));
             }
@@ -396,18 +414,22 @@ namespace Mug.Models.Generator
                 _emitter.CastFloatToInt(castType);
             else
                 _emitter.CallAsOperator(position, expressionType, type.ToMugValueType(_generator));
+
+            return true;
         }
 
         /// <summary>
         /// wip function
         /// the function evaluates an instance node, for example: base.method()
         /// </summary>
-        private void EvaluateMemberAccess(INode member, bool load)
+        private bool EvaluateMemberAccess(INode member, bool load)
         {
             switch (member)
             {
                 case MemberNode m:
-                    EvaluateMemberAccess(m.Base, load);
+                    if (!EvaluateMemberAccess(m.Base, load))
+                        return false;
+
                     var structure = _emitter.PeekType().GetStructure();
                     _emitter.LoadField(
                         _emitter.Pop(),
@@ -416,31 +438,43 @@ namespace Mug.Models.Generator
                     break;
                 case Token t:
                     if (load)
-                        _emitter.LoadFromMemory(t.Value, t.Position);
+                    {
+                        if (!_emitter.LoadFromMemory(t.Value, t.Position))
+                            return false;
+                    }
                     else
-                        _emitter.LoadMemoryAllocation(t.Value, t.Position);
+                    {
+                        if (!_emitter.LoadMemoryAllocation(t.Value, t.Position))
+                            return false;
+                    }
                     break;
                 case ArraySelectElemNode a:
                     EmitExprArrayElemSelect(a);
                     break;
                 case PrefixOperator p:
-                    EvaluateMemberAccess(p.Expression, p.Prefix == TokenKind.Star);
+                    if (!EvaluateMemberAccess(p.Expression, p.Prefix == TokenKind.Star))
+                        return false;
 
                     if (p.Prefix == TokenKind.Star)
                         _emitter.Load(_emitter.LoadFromPointer(_emitter.Pop(), p.Position));
                     else if (p.Prefix == TokenKind.BooleanAND)
                     {
-                        EvaluateMemberAccess(p.Expression, load);
-                        _emitter.LoadReference(_emitter.Pop(), p.Position);
+                        if (!EvaluateMemberAccess(p.Expression, load))
+                            return false;
+
+                        if (!_emitter.LoadReference(_emitter.Pop(), p.Position))
+                            return false;
                     }
                     else
-                        Error(p.Position, "In member access, the base must be a non-expression");
+                        return Report(p.Position, "In member access, the base must be a non-expression");
 
                     break;
                 default:
                     Error(member.Position, "Not supported yet");
                     break;
             }
+
+            return true;
         }
 
         private FunctionIdentifier EvaluateFunctionCallName(INode leftexpression, MugValueType[] parameters, MugValueType[] genericsInput, out bool hasbase)
@@ -456,7 +490,8 @@ namespace Mug.Models.Generator
             }
             else if (leftexpression is MemberNode member) // (expr).function()
             {
-                EvaluateExpression(member.Base, false);
+                if (!EvaluateExpression(member.Base, false))
+                    return null;
 
                 name = member.Member.Value;
                 position = member.Member.Position;
@@ -474,18 +509,21 @@ namespace Mug.Models.Generator
         /// <summary>
         /// the function converts a Callstatement node to the corresponding low-level code
         /// </summary>
-        private void EmitCallStatement(CallStatement c, bool expectedNonVoid, bool isInCatch = false)
+        private bool EmitCallStatement(CallStatement c, bool expectedNonVoid, bool isInCatch = false)
         {
             // an array is prepared for the parameter types of function to call
             var parameters = new MugValueType[c.Parameters.Length];
+            var paramsAreOk = true;
 
             /* the array is cycled with the expressions of the respective parameters and each expression
              * is evaluated and assigned its type to the array of parameter types
              */
             for (int i = 0; i < c.Parameters.Length; i++)
             {
-                EvaluateExpression(c.Parameters.Nodes[i]);
-                parameters[i] = _emitter.PeekType();
+                paramsAreOk &= EvaluateExpression(c.Parameters.Nodes[i]);
+
+                if (paramsAreOk)
+                    parameters[i] = _emitter.PeekType();
             }
 
             /*
@@ -496,10 +534,13 @@ namespace Mug.Models.Generator
             if (IsBuiltInFunction(c.Name, c.Generics, parameters, out var comptimeExecute))
             {
                 comptimeExecute(c.Generics, parameters);
-                return;
+                return true;
             }
             
             var function = EvaluateFunctionCallName(c.Name, parameters, _generator.MugTypesToMugValueTypes(c.Generics), out bool hasbase);
+
+            if (function is null || !paramsAreOk)
+                return false;
 
             // function type: <ret_type> <param_types>
             var functionType = function.ReturnType;
@@ -513,10 +554,11 @@ namespace Mug.Models.Generator
             _emitter.Call(function.Value.LLVMValue, c.Parameters.Length, functionType, hasbase);
 
             if (!isInCatch && functionType.TypeKind == MugValueTypeKind.EnumErrorDefined)
-                Error(c.Position, "Uncatched enum error");
+                return Report(c.Position, "Uncatched enum error");
+            else if (isInCatch && functionType.TypeKind != MugValueTypeKind.EnumErrorDefined)
+                return Report(c.Position, "Catched a non enum error");
 
-            if (isInCatch && functionType.TypeKind != MugValueTypeKind.EnumErrorDefined)
-                Error(c.Position, "Catched a non enum error");
+            return true;
         }
 
         private void CompTime_sizeof(List<MugType> generics, MugValueType[] parameters)
@@ -542,15 +584,16 @@ namespace Mug.Models.Generator
             }
         }
 
-        private void EmitExprPrefixOperator(PrefixOperator p)
+        private bool EmitExprPrefixOperator(PrefixOperator p)
         {
             if (p.Prefix == TokenKind.BooleanAND) // &x reference
             {
-                _emitter.LoadReference(EvaluateLeftValue(p.Expression, false), p.Position);
-                return;
+                if (!_emitter.LoadReference(EvaluateLeftValue(p.Expression, false), p.Position))
+                    return false;
             }
 
-            EvaluateExpression(p.Expression);
+            if (!EvaluateExpression(p.Expression))
+                return false;
 
             if (p.Prefix == TokenKind.Negation) // '!' operator
             {
@@ -576,6 +619,8 @@ namespace Mug.Models.Generator
 
                 _emitter.Load(MugValue.From(_emitter.Builder.BuildLoad(left.LLVMValue), left.Type));
             }
+
+            return true;
         }
 
         private void EmitExpr(ExpressionNode e)
@@ -588,18 +633,21 @@ namespace Mug.Models.Generator
             EmitOperator(e.Operator, e.Position);
         }
 
-        private void EmitExprBool(BooleanExpressionNode b)
+        private bool EmitExprBool(BooleanExpressionNode b)
         {
             if (b.Operator == OperatorKind.And)
-                EmitAndOperator(b.Left, b.Right);
+                return EmitAndOperator(b.Left, b.Right);
             else if (b.Operator == OperatorKind.Or)
-                EmitOrOperator(b.Left, b.Right);
+                return EmitOrOperator(b.Left, b.Right);
             else
             {
-                EvaluateExpression(b.Left);
-                EvaluateExpression(b.Right);
+                if (!EvaluateExpression(b.Left) || !EvaluateExpression(b.Right))
+                    return false;
+
                 EmitOperator(b.Operator, b.Position);
             }
+
+            return true;
         }
 
         private void EmitExprArrayElemSelect(ArraySelectElemNode a, bool buildload = true)
@@ -658,7 +706,7 @@ namespace Mug.Models.Generator
                 _emitter.CoerceConstantSizeTo(arraytype.ArrayBaseElementType);
 
                 if (!_emitter.PeekType().Equals(arraytype.ArrayBaseElementType))
-                    Error(elem.Position, $"Expected {arraytype.ArrayBaseElementType}, got {_emitter.PeekType().ToString()}");
+                    Report(elem.Position, $"Expected {arraytype.ArrayBaseElementType}, got {_emitter.PeekType()}");
 
                 _emitter.StoreElementArray(arraypointer, i);
 
@@ -668,17 +716,17 @@ namespace Mug.Models.Generator
             _emitter.Load(MugValue.From(arraypointer, arraytype));
         }
 
-        private void EmitExprAllocateStruct(TypeAllocationNode ta)
+        private bool EmitExprAllocateStruct(TypeAllocationNode ta)
         {
             if (!ta.Name.IsAllocableTypeNew())
-                Error(ta.Position, $"Unable to allocate type {ta.Name} with `new` operator");
+                return Report(ta.Position, $"Unable to allocate type {ta.Name} with `new` operator");
 
             var structure = ta.Name.ToMugValueType(_generator);
 
             var tmp = _emitter.Builder.BuildAlloca(structure.LLVMType);
 
             if (structure.IsEnum())
-                Error(ta.Position, "Unable to allocate an enum");
+                return Report(ta.Position, "Unable to allocate an enum");
 
             var structureInfo = structure.GetStructure();
 
@@ -689,21 +737,25 @@ namespace Mug.Models.Generator
                 var field = ta.Body[i];
 
                 if (fields.Contains(field.Name))
-                    Error(field.Position, "Field reassignment in type allocation");
+                    Report(field.Position, "Field reassignment in type allocation");
 
                 fields.Add(field.Name);
 
-                EvaluateExpression(field.Body);
+                if (!EvaluateExpression(field.Body))
+                    return false;
 
                 if (!structureInfo.ContainsFieldWithName(field.Name))
-                    Error(field.Position, "Undeclared field");
+                {
+                    Report(field.Position, "Undeclared field");
+                    continue;
+                }
 
                 var fieldType = structureInfo.GetFieldTypeFromName(field.Name, _generator, field.Position);
 
                 _emitter.CoerceConstantSizeTo(fieldType);
 
                 _generator.ExpectSameTypes(
-                    fieldType, field.Body.Position, $"expected {fieldType}, but got {_emitter.PeekType()}", _emitter.PeekType());
+                    fieldType, field.Body.Position, $"Expected {fieldType}, but got {_emitter.PeekType()}", _emitter.PeekType());
 
                 _emitter.StoreField(tmp, structureInfo.GetFieldIndexFromName(field.Name, _generator, field.Position));
             }
@@ -719,20 +771,22 @@ namespace Mug.Models.Generator
             }
 
             _emitter.Load(MugValue.From(_emitter.Builder.BuildLoad(tmp), structure));
+            return true;
         }
 
-        private void EmitExprMemberAccess(MemberNode m, bool buildload = true)
+        private bool EmitExprMemberAccess(MemberNode m, bool buildload = true)
         {
             if (m.Base is Token token)
             {
                 if (_emitter.IsDeclared(token.Value))
                 {
-                    _emitter.LoadFieldName(token.Value, token.Position);
+                    if (!_emitter.LoadFieldName(token.Value, token.Position))
+                        return false;
                 }
                 else
                 {
                     _emitter.LoadEnumMember(token.Value, m.Member.Value, m.Member.Position, this);
-                    return;
+                    return true;
                 }
             }
             else
@@ -742,7 +796,7 @@ namespace Mug.Models.Generator
             }
 
             if (!_emitter.PeekType().IsStructure())
-                Error(m.Base.Position, "Accessed inaccessible type");
+                return Report(m.Base.Position, "Accessed inaccessible type");
 
             var structure = _emitter.PeekType().GetStructure();
             var type = structure.GetFieldTypeFromName(m.Member.Value, _generator, m.Member.Position);
@@ -750,12 +804,13 @@ namespace Mug.Models.Generator
             var instance = _emitter.Pop();
 
             _emitter.LoadField(instance, type, index, buildload);
+            return true;
         }
 
         /// <summary>
         /// the function evaluates an expression, looking at the given node type
         /// </summary>
-        private void EvaluateExpression(INode expression, bool loadreference = true)
+        private bool EvaluateExpression(INode expression, bool loadreference = true)
         {
             switch (expression)
             {
@@ -765,7 +820,8 @@ namespace Mug.Models.Generator
                 case Token t:
                     if (t.Kind == TokenKind.Identifier) // reference value
                     {
-                        _emitter.LoadFromMemory(t.Value, t.Position);
+                        if (_emitter.LoadFromMemory(t.Value, t.Position))
+                            return false;
 
                         if (loadreference && _emitter.PeekType().TypeKind == MugValueTypeKind.Reference)
                         {
@@ -777,8 +833,7 @@ namespace Mug.Models.Generator
                         _emitter.Load(ConstToMugConst(t, t.Position));
                     break;
                 case PrefixOperator p:
-                    EmitExprPrefixOperator(p);
-                    break;
+                    return EmitExprPrefixOperator(p);
                 case PostfixOperator pp:
                     var left = EvaluateLeftValue(pp.Expression);
                     var load = _emitter.Builder.BuildLoad(left.LLVMValue);
@@ -789,17 +844,14 @@ namespace Mug.Models.Generator
                     break;
                 case CallStatement c:
                     // call statement inside expression, true as second parameter because an expression cannot be void
-                    EmitCallStatement(c, true);
-                    break;
+                    return EmitCallStatement(c, true);
                 case CastExpressionNode ce:
                     // 'as' operator
                     EvaluateExpression(ce.Expression);
 
-                    EmitCastInstruction(ce.Type, ce.Position);
-                    break;
+                    return EmitCastInstruction(ce.Type, ce.Position);
                 case BooleanExpressionNode b:
-                    EmitExprBool(b);
-                    break;
+                    return EmitExprBool(b);
                 /*case InlineConditionalExpression i:
                     EmitExprTernary(i);
                     break;*/
@@ -810,14 +862,11 @@ namespace Mug.Models.Generator
                     EmitExprAllocateArray(aa);
                     break;
                 case TypeAllocationNode ta:
-                    EmitExprAllocateStruct(ta);
-                    break;
+                    return EmitExprAllocateStruct(ta);
                 case MemberNode m:
-                    EmitExprMemberAccess(m);
-                    break;
+                    return EmitExprMemberAccess(m);
                 case CatchExpressionNode ce:
-                    EmitCatchStatement(ce, false);
-                    break;
+                    return EmitCatchStatement(ce, false);
                 case AssignmentStatement ae:
                     EmitAssignmentStatement(ae);
                     EvaluateExpression(ae.Name);
@@ -826,6 +875,8 @@ namespace Mug.Models.Generator
                     Error(expression.Position, "Expression not supported yet");
                     break;
             }
+
+            return true;
         }
 
         /// <summary>
@@ -1124,7 +1175,10 @@ namespace Mug.Models.Generator
                 else if (type.TypeKind == MugValueTypeKind.Void)
                     _emitter.RetVoid();
                 else
-                    Error(@return.Position, "Expected non-void expression");
+                {
+                    Report(@return.Position, "Expected non-void expression");
+                    return;
+                }
             }
             else
             {
@@ -1159,8 +1213,8 @@ namespace Mug.Models.Generator
                         }
                         else
                         {
-                            Error(@return.Position, errorMessage);
-                            throw new();
+                            Report(@return.Position, errorMessage);
+                            return;
                         }
                     }
 
@@ -1207,7 +1261,10 @@ namespace Mug.Models.Generator
             if (!variable.IsAssigned)
             {
                 if (variable.Type.IsAutomatic())
-                    Error(variable.Position, "Type specification needed");
+                {
+                    Report(variable.Position, "Type specification needed");
+                    return;
+                }
 
                 _emitter.Load(GetDefaultValueOf(variable.Type.ToMugValueType(_generator), variable.Position));
             }
@@ -1256,12 +1313,13 @@ namespace Mug.Models.Generator
         /// </summary>
         private MugValue EvaluateLeftValue(INode leftexpression, bool isfirst = true)
         {
-            if (leftexpression is Token token)
+            if (leftexpression is Token token && token.Kind == TokenKind.Identifier)
             {
-                if (token.Kind != TokenKind.Identifier)
-                    Error(token.Position, "Invalid value in left expression");
+                var allocation = _emitter.GetMemoryAllocation(token.Value, token.Position, true);
+                if (!allocation.HasValue)
+                    Stop();
 
-                return _emitter.GetMemoryAllocation(token.Value, token.Position, true);
+                return allocation.Value;
             }
             else if (leftexpression is ArraySelectElemNode indexing)
             {
@@ -1298,7 +1356,10 @@ namespace Mug.Models.Generator
             var ptr = EvaluateLeftValue(assignment.Name);
 
             if (ptr.IsConst)
-                Error(assignment.Position, "Unable to change a constant value");
+            {
+                Report(assignment.Position, "Unable to change a constant value");
+                return;
+            }
 
             if (ptr.Type.TypeKind == MugValueTypeKind.Reference)
                 ptr = MugValue.From(_emitter.Builder.BuildLoad(ptr.LLVMValue), ptr.Type.PointerBaseElementType);
@@ -1354,12 +1415,11 @@ namespace Mug.Models.Generator
         {
             // is not inside a cycle
             if (CycleExitBlock.Handle == IntPtr.Zero)
-                Error(management.Position, "`break` only allowed inside cycles' and catches' block");
-
-            if (management.Management.Kind == TokenKind.KeyBreak)
+                Report(management.Position, "`break` only allowed inside cycles' and catches' block");
+            else if (management.Management.Kind == TokenKind.KeyBreak)
                 _emitter.Jump(CycleExitBlock);
             else if (CycleCompareBlock.Handle == IntPtr.Zero)
-                Error(management.Position, "`continue` only allowed inside cycles' block");
+                Report(management.Position, "`continue` only allowed inside cycles' block");
             else
                 _emitter.Jump(CycleCompareBlock);
         }
@@ -1383,15 +1443,14 @@ namespace Mug.Models.Generator
 
         private MugValue _buffer = new();
 
-        private void EmitCatchStatement(CatchExpressionNode catchstatement, bool isImperativeStatement)
+        private bool EmitCatchStatement(CatchExpressionNode catchstatement, bool isImperativeStatement)
         {
             if (catchstatement.Expression is not CallStatement call)
-            {
-                Error(catchstatement.Expression.Position, "Unable to catch this expression");
-                throw new();
-            }
+                return Report(catchstatement.Expression.Position, "Unable to catch this expression");
 
-            EmitCallStatement(call, true, true);
+            if (!EmitCallStatement(call, true, true))
+                return false;
+
             var value = _emitter.Pop();
             var enumerror = value.Type.GetEnumErrorDefined();
             var tmp = _emitter.Builder.BuildAlloca(enumerror.LLVMValue);
@@ -1455,13 +1514,15 @@ namespace Mug.Models.Generator
             if (!isImperativeStatement)
             {
                 if (resultIsVoid)
-                    Error(catchstatement.Expression.Position, "Unable to evaluate void in expression");
+                    return Report(catchstatement.Expression.Position, "Unable to evaluate void in expression");
 
                 _emitter.Load(MugValue.From(_emitter.Builder.BuildLoad(_buffer.LLVMValue), _buffer.Type));
             }
 
             _buffer = oldBuffer;
             CycleExitBlock = oldCycleExitBlock;
+
+            return true;
         }
 
         private void EmitForStatement(ForLoopStatement forstatement)
@@ -1587,7 +1648,7 @@ namespace Mug.Models.Generator
                     EvaluateExpression(statement);
 
                     if (!_buffer.Type.Equals(_emitter.PeekType()))
-                        Error(statement.Position, $"Expected {_buffer.Type}, got {_emitter.PeekType()}");
+                        Report(statement.Position, $"Expected {_buffer.Type}, got {_emitter.PeekType()}");
 
                     _emitter.Builder.BuildStore(_emitter.Pop().LLVMValue, _buffer.LLVMValue);
                     break;
@@ -1617,8 +1678,8 @@ namespace Mug.Models.Generator
             AllocParameters();
             Generate(_function.Body);
 
-            // checking for errors
-            _generator.Parser.Lexer.CheckDiagnostic();
+            if (_generator.IsEntryPoint(_function.Name, _function.ParameterList.Length))
+                _generator.Parser.Lexer.CheckDiagnostic();
         }
     }
 }
