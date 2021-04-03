@@ -112,7 +112,7 @@ namespace Mug.Compilation.Symbols
 
     public class SymbolTable
     {
-        private IRGenerator _generator;
+        private readonly IRGenerator _generator;
 
         public readonly Dictionary<string, List<IFunctionID>> Functions = new();
         public readonly Dictionary<string, List<TypeIdentifier>> Types = new();
@@ -129,7 +129,7 @@ namespace Mug.Compilation.Symbols
             {
                 if (Functions[name].FindIndex(id => id.Equals(identifier)) != -1)
                 {
-                    _generator.Report(position, $"Function `{name}` already declared");
+                    _generator.Report(position, $"Function '{name}' already declared");
                     return;
                 }
 
@@ -143,7 +143,7 @@ namespace Mug.Compilation.Symbols
             {
                 if (Types[name].FindIndex(id => id.Equals(identifier)) != -1)
                 {
-                    _generator.Report(position, $"Type `{name}` already declared");
+                    _generator.Report(position, $"Type '{name}' already declared");
                     return;
                 }
 
@@ -190,7 +190,7 @@ namespace Mug.Compilation.Symbols
 
             if (!Functions.TryGetValue(name, out var overloads))
             {
-                _generator.Report(position, $"Undeclared function `{name}`");
+                _generator.Report(position, $"Undeclared function '{name}'");
                 return null;
             }
 
@@ -206,7 +206,10 @@ namespace Mug.Compilation.Symbols
             });
 
             if (index == -1)
-                _generator.Report(position, $"Cannot find a good overload for function `{name}`");
+            {
+                _generator.Report(position, $"Cannot find a good overload for function '{name}'");
+                return null;
+            }
 
             return overloads[index];
         }
@@ -216,15 +219,21 @@ namespace Mug.Compilation.Symbols
             Functions[name][index] = definition;
         }
 
-        public TypeIdentifier GetType(string name, TypeIdentifier identifier, Range position)
+        public TypeIdentifier? GetType(string name, TypeIdentifier identifier, Range position)
         {
             if (!Types.TryGetValue(name, out var overloads))
-                _generator.Error(position, $"Undeclared type `{name}`");
+            {
+                _generator.Report(position, $"Undeclared type '{name}'");
+                return null;
+            }
 
             var index = overloads.FindIndex(id => id.Equals(identifier));
 
             if (index == -1)
-                _generator.Error(position, $"Cannot find a good overload for type `{name}`");
+            {
+                _generator.Error(position, $"Cannot find a good overload for type '{name}'");
+                return null;
+            }
 
             return overloads[index];
         }

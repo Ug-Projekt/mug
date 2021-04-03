@@ -78,7 +78,7 @@ namespace Mug.Models.Generator
         /// </summary>
         internal T NotSupportedType<T>(string type, Range position)
         {
-            return Error<T>(position, $"`{type}` type is not supported yet");
+            return Error<T>(position, $"'{type}' type is not supported yet");
         }
 
         internal T Error<T>(Range position, string error)
@@ -265,7 +265,7 @@ namespace Mug.Models.Generator
 
             if (Map.CompilerSymbolIsDeclared(symbol))
             {
-                var error = $"Compiler symbol `{symbol}` is already declared";
+                var error = $"Compiler symbol '{symbol}' is already declared";
 
                 if (!hasGoodPosition)
                     CompilationErrors.Throw(error);
@@ -306,13 +306,13 @@ namespace Mug.Models.Generator
 
         internal void ExpectBoolType(MugValueType type, Range position)
         {
-            ExpectSameTypes(type, position, $"Expected `u1` type, got `{type}`", MugValueType.Bool);
+            ExpectSameTypes(type, position, $"Expected 'u1' type, got '{type}'", MugValueType.Bool);
         }
 
         internal void ExpectIntType(MugValueType type, Range position)
         {
             if (!type.MatchIntType())
-                Error(position, $"Expected `u8`, `i32`, `i64`, `f32` type, got `{type}`");
+                Error(position, $"Expected 'u8', 'i32', 'i64', 'f32' type, got '{type}'");
         }
 
         /// <summary>
@@ -322,7 +322,7 @@ namespace Mug.Models.Generator
         public void ExpectNonVoidType(MugType type, Range position)
         {
             if (type.Kind == TypeKind.Void)
-                Error(position, "In the current context `void` is not allowed");
+                Error(position, "In the current context 'void' is not allowed");
         }
 
         /// <summary>
@@ -510,13 +510,13 @@ namespace Mug.Models.Generator
 
                 using (var marshalledFilename = new MarshaledString(filename))
                     if (LLVM.CreateMemoryBufferWithContentsOfFile(marshalledFilename, &memoryBuffer, &message) != 0)
-                        CompilationErrors.Throw($"Unable to open file: `{filename}`:\n{new string(message)}");
+                        CompilationErrors.Throw($"Unable to open file: '{filename}':\n{new string(message)}");
 
                 if (LLVM.ParseBitcode(memoryBuffer, &module, &message) != 0)
-                    CompilationErrors.Throw($"Unable to parse file: `{filename}`:\n{new string(message)}");
+                    CompilationErrors.Throw($"Unable to parse file: '{filename}':\n{new string(message)}");
 
                 if (LLVM.LinkModules2(Module, module) != 0)
-                    CompilationErrors.Throw($"Unable to link file: `{filename}`, with the main module");
+                    CompilationErrors.Throw($"Unable to link file: '{filename}', with the main module");
             }
         }
 
@@ -546,7 +546,7 @@ namespace Mug.Models.Generator
             if (code != "")
             {
                 if (header != "")
-                    Error(prototype.Position, "Pragam `code` is in conflict with `header`");
+                    Error(prototype.Position, "Pragam 'code' is in conflict with 'header'");
 
                 if (ext == "")
                     ext = ".c";
@@ -561,7 +561,7 @@ namespace Mug.Models.Generator
             if (header != "")
             {
                 if (ext != "")
-                    Error(prototype.Position, "Pragam `header` is in conflict with `ext`");
+                    Error(prototype.Position, "Pragam 'header' is in conflict with 'ext'");
 
                 var path = Path.GetFullPath(header, Path.GetDirectoryName(LocalPath));
 
@@ -700,7 +700,7 @@ namespace Mug.Models.Generator
                         IncludeCHeader(fullpath, "");
                         return;
                     case ".h":
-                        Error(extensionPosition, "LLVM Bitcode reader cannot parse a llvm bitcode module generated from an header, please change extension to `.c`");
+                        Error(extensionPosition, "LLVM Bitcode reader cannot parse a llvm bitcode module generated from an header, please change extension to '.c'");
                         throw new();
                     default:
                         Error(extensionPosition, "Unrecognized file kind");
@@ -738,7 +738,7 @@ namespace Mug.Models.Generator
                 var member = enumstatement.Body[i];
 
                 if (member.Value.Kind != expectedValue)
-                    Error(member.Position, $"Expected type `{basetype}`");
+                    Error(member.Position, $"Expected type '{basetype}'");
 
                 if (members.Contains(member.Name))
                     Error(member.Position, "Member already declared");

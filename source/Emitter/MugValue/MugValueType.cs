@@ -134,6 +134,7 @@ namespace Mug.MugValueSystem
         public static MugValueType Float32 => From(LLVMTypeRef.Float, MugValueTypeKind.Float32);
         public static MugValueType Float64 => From(LLVMTypeRef.Double, MugValueTypeKind.Float64);
         public static MugValueType Float128 => From(LLVMTypeRef.FP128, MugValueTypeKind.Float128);
+        public static MugValueType Undefinied => From(LLVMTypeRef.Void, MugValueTypeKind.Undefined);
 
         public static MugValueType EnumError(EnumErrorStatement enumerror)
         {

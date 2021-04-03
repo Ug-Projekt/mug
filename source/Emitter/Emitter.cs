@@ -323,12 +323,6 @@ namespace Mug.Models.Generator.Emitter
             return Memory.ContainsKey(name);
         }
 
-        public void UndeclareIFExists(string value)
-        {
-            if (value is not null && IsDeclared(value))
-                Memory.Remove(value);
-        }
-        
         public bool LoadFromMemory(string name, Range position)
         {
             var variable = GetMemoryAllocation(name, position);
@@ -487,7 +481,7 @@ namespace Mug.Models.Generator.Emitter
                     var index = enumerror.Body.FindIndex(member => member.Value == membername);
 
                     if (index == -1)
-                        _generator.Error(position, $"`{enumname}` does not contain a definition for `{membername}`");
+                        _generator.Error(position, $"'{enumname}' does not contain a definition for '{membername}'");
 
                     Load(MugValue.EnumMember(enumerated.Type, LLVMValueRef.CreateConstInt(LLVMTypeRef.Int8, (uint)index)));
                     return;
@@ -566,7 +560,7 @@ namespace Mug.Models.Generator.Emitter
         public void ExpectIndexerType(Range position)
         {
             if (!PeekType().MatchIntType())
-                _generator.Error(position, $"`{PeekType()}` is not an indexer type");
+                _generator.Error(position, $"'{PeekType()}' is not an indexer type");
         }
 
         public bool LoadReference(MugValue allocation, Range position)

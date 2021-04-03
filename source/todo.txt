@@ -1,6 +1,15 @@
 - match
-- `func some() !sometype`, this will mean that the function must be catched also if there is no real error to catch -> `some() catch { return }`
+- 'func some() !sometype', this will mean that the function must be catched also if there is no real error to catch -> 'some() catch { return }'
 - calls that return an enum error can be also not catched if in return expression, where the return's scope owner is a function that returns the same enum error
 - reference printing (ex. the function where there is the error)
 - default initialization of array members
-- try operator, at the begin of a call it stops the function's execution and return an error: make it with lowering `try some()` -> `some() catch e { return e }` (with !type `return` without e)
+- try operator, at the begin of a call it stops the function's execution and return an error: make it with lowering 'try some()' -> 'some() catch e { return e }' (with !type 'return' without e)
+- enum can be negatives
+- fix lexer tests
+- add support for multiline errors
+- add constant bitness coercion in function's calls
+- make built in functions under 'funcname!<>()' pattern
+- remove the 'isbuildinfunction' in 'callfunction' and add a pragma 'builtin' only for macros
+- write a path checker to make sure all paths of a scope returns a value, also with hidden subscope buffers
+- add 'static code evaluator' -> 'static if some comp-time evaluable expression {}', 'static if size<T>!() > 10 { error!("too big") }'
+- replace the 'when' statement with 'static' block 'static if os == Os.Win32 {}', evaluated at compile time

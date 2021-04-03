@@ -19,6 +19,7 @@
         Reference,
         Float32,
         Float64,
-        Float128
+        Float128,
+        Undefined
     }
 }
