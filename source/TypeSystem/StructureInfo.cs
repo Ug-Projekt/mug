@@ -44,7 +44,7 @@ namespace Mug.TypeSystem
                 if (FieldNames[i] == name)
                     return i;
 
-            generator.Error(position, "Undeclared field `", name, "`");
+            generator.Error(position, $"Undeclared field `{name}`");
             throw new();
         }
 

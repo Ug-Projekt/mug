@@ -73,8 +73,7 @@ namespace Mug.MugValueSystem
                 MugValueTypeKind.Pointer or
                 MugValueTypeKind.Reference => sizeofpointer,
                 MugValueTypeKind.Enum => GetEnumInfo().Item1.Size(sizeofpointer),
-                MugValueTypeKind.Array => sizeofpointer,
-                MugValueTypeKind.Function => sizeofpointer
+                MugValueTypeKind.Array => sizeofpointer
             };
         }
 
@@ -136,11 +135,6 @@ namespace Mug.MugValueSystem
         public static MugValueType Float64 => From(LLVMTypeRef.Double, MugValueTypeKind.Float64);
         public static MugValueType Float128 => From(LLVMTypeRef.FP128, MugValueTypeKind.Float128);
 
-        public static MugValueType Function(MugValueType[] paramTypes, MugValueType retType)
-        {
-            return new MugValueType() { TypeKind = MugValueTypeKind.Function, BaseType = (paramTypes, retType) };
-        }
-
         public static MugValueType EnumError(EnumErrorStatement enumerror)
         {
             return new MugValueType() { TypeKind = MugValueTypeKind.EnumError, BaseType = enumerror };
@@ -176,7 +170,6 @@ namespace Mug.MugValueSystem
                 MugValueTypeKind.Reference => $"&{BaseType}",
                 MugValueTypeKind.Enum => GetEnum().Name,
                 MugValueTypeKind.Array => $"[{BaseType}]",
-                MugValueTypeKind.Function => $"func({string.Join(", ", GetFunction().Item1)}): {GetFunction().Item2}",
                 MugValueTypeKind.EnumError => $"{GetEnumError().Name}",
                 MugValueTypeKind.EnumErrorDefined => $"{GetEnumErrorDefined().Name}"
             };
@@ -219,11 +212,6 @@ namespace Mug.MugValueSystem
             return TypeKind == MugValueTypeKind.Pointer;
         }
 
-        public bool IsFunction()
-        {
-            return TypeKind == MugValueTypeKind.Function;
-        }
-
         public StructureInfo GetStructure()
         {
             return (StructureInfo)BaseType;
@@ -237,11 +225,6 @@ namespace Mug.MugValueSystem
         public EnumErrorInfo GetEnumErrorDefined()
         {
             return (EnumErrorInfo)BaseType;
-        }
-
-        public (MugValueType[], MugValueType) GetFunction()
-        {
-            return ((MugValueType[], MugValueType))BaseType;
         }
 
         private (MugValueType, EnumStatement) GetEnumInfo()

@@ -1,6 +1,7 @@
 ﻿using LLVMSharp;
 using LLVMSharp.Interop;
 using Mug.Compilation;
+using Mug.Compilation.Symbols;
 using Mug.Models.Generator.Emitter;
 using Mug.Models.Lexer;
 using Mug.Models.Lowerering;
@@ -37,9 +38,14 @@ namespace Mug.Models.Generator
             _llvmfunction = llvmfunction;
         }
 
-        internal void Error(Range position, params string[] error)
+        internal void Error(Range position, string error)
         {
             _generator.Parser.Lexer.Throw(position, error);
+        }
+
+        internal void Report(Range position, string error)
+        {
+            _generator.Parser.Lexer.Report(position, error);
         }
 
         private LLVMValueRef CreateConstString(string value)
@@ -250,7 +256,7 @@ namespace Mug.Models.Generator
                     EmitBooleanOperator("<=", LLVMIntPredicate.LLVMIntSLE, kind, position);
                     break;
                 default:
-                    Error(position, "`", kind.ToString(), "` operator not supported yet");
+                    Error(position, $"`{kind}` operator not supported yet");
                     break;
             }
         }
@@ -350,7 +356,7 @@ namespace Mug.Models.Generator
                 _emitter.CoerceConstantSizeTo(enumBaseType);
 
                 if (_emitter.PeekType().TypeKind != enumBaseType.TypeKind)
-                    Error(position, "The base type of enum `", enumerated.Name, "` is incompatible with type `", expressionType.ToString(), "`");
+                    Error(position, $"The base type of enum `{enumerated.Name}` is incompatible with type `{expressionType}`");
 
                 _emitter.CastToEnumMemberFromBaseType(castType);
             }
@@ -361,7 +367,7 @@ namespace Mug.Models.Generator
                 _emitter.CoerceConstantSizeTo(enumBaseType);
 
                 if (_emitter.PeekType().GetEnum().BaseType.ToMugValueType(_generator).TypeKind != castType.TypeKind)
-                    Error(type.Position, "Enum base type is incompatible with type `", castType.ToString(), "`");
+                    Error(type.Position, $"Enum base type is incompatible with type `{castType.ToString()}`");
 
                 _emitter.CastEnumMemberToBaseType(castType);
             }
@@ -437,7 +443,7 @@ namespace Mug.Models.Generator
             }
         }
 
-        private void EvaluateFunctionCallName(INode leftexpression, MugValueType[] parameters, MugValueType[] genericsInput, out bool hasbase)
+        private FunctionIdentifier EvaluateFunctionCallName(INode leftexpression, MugValueType[] parameters, MugValueType[] genericsInput, out bool hasbase)
         {
             string name;
             Range position;
@@ -459,10 +465,10 @@ namespace Mug.Models.Generator
             else // (expr)()
             {
                 EvaluateExpression(leftexpression);
-                return;
+                throw new(); // tofix
             }
 
-            _emitter.Load(_generator.EvaluateFunction($"{new string ('.', Convert.ToInt32(hasbase))}{name}", hasbase ? new MugValueType?(_emitter.PeekType()) : null, parameters, genericsInput, position));
+            return _generator.EvaluateFunction(name, hasbase ? new MugValueType?(_emitter.PeekType()) : null, parameters, genericsInput, position);
         }
 
         /// <summary>
@@ -493,15 +499,10 @@ namespace Mug.Models.Generator
                 return;
             }
             
-            EvaluateFunctionCallName(c.Name, parameters, _generator.MugTypesToMugValueTypes(c.Generics), out bool hasbase);
-
-            var function = _emitter.Pop();
-
-            if (!function.IsFunction())
-                _generator.Error(c.Position, "Unable to call this member");
+            var function = EvaluateFunctionCallName(c.Name, parameters, _generator.MugTypesToMugValueTypes(c.Generics), out bool hasbase);
 
             // function type: <ret_type> <param_types>
-            var functionType = function.Type.GetFunction().Item2;
+            var functionType = function.ReturnType;
 
             if (expectedNonVoid)
                 _generator.ExpectNonVoidType(
@@ -509,7 +510,7 @@ namespace Mug.Models.Generator
                     functionType.LLVMType,
                     c.Position);
 
-            _emitter.Call(function.LLVMValue, c.Parameters.Length, functionType, hasbase);
+            _emitter.Call(function.Value.LLVMValue, c.Parameters.Length, functionType, hasbase);
 
             if (!isInCatch && functionType.TypeKind == MugValueTypeKind.EnumErrorDefined)
                 Error(c.Position, "Uncatched enum error");
@@ -563,7 +564,7 @@ namespace Mug.Models.Generator
                 else if (_emitter.PeekType().MatchFloatType())
                     _emitter.NegFloat();
                 else
-                    Error(p.Position, "Unable to perform operator `-` on type ", _emitter.PeekType().ToString());
+                    Error(p.Position, $"Unable to perform operator `-` on type {_emitter.PeekType()}");
             }
             else if (p.Prefix == TokenKind.Star)
                 _emitter.Load(_emitter.LoadFromPointer(_emitter.Pop(), p.Position));
@@ -657,7 +658,7 @@ namespace Mug.Models.Generator
                 _emitter.CoerceConstantSizeTo(arraytype.ArrayBaseElementType);
 
                 if (!_emitter.PeekType().Equals(arraytype.ArrayBaseElementType))
-                    Error(elem.Position, "Expected ", arraytype.ArrayBaseElementType.ToString(), ", got ", _emitter.PeekType().ToString());
+                    Error(elem.Position, $"Expected {arraytype.ArrayBaseElementType}, got {_emitter.PeekType().ToString()}");
 
                 _emitter.StoreElementArray(arraypointer, i);
 
@@ -670,7 +671,7 @@ namespace Mug.Models.Generator
         private void EmitExprAllocateStruct(TypeAllocationNode ta)
         {
             if (!ta.Name.IsAllocableTypeNew())
-                Error(ta.Position, "Unable to allocate type ", ta.Name.ToString(), " with `new` operator");
+                Error(ta.Position, $"Unable to allocate type {ta.Name} with `new` operator");
 
             var structure = ta.Name.ToMugValueType(_generator);
 
@@ -1285,6 +1286,7 @@ namespace Mug.Models.Generator
             }
             else
             {
+                Error(leftexpression.Position, "Bad construction: illegal left expression");
                 EvaluateExpression(leftexpression);
 
                 return _emitter.Pop();
@@ -1585,7 +1587,7 @@ namespace Mug.Models.Generator
                     EvaluateExpression(statement);
 
                     if (!_buffer.Type.Equals(_emitter.PeekType()))
-                        Error(statement.Position, "Expected ", _buffer.Type.ToString(), ", got ", _emitter.PeekType().ToString());
+                        Error(statement.Position, $"Expected {_buffer.Type}, got {_emitter.PeekType()}");
 
                     _emitter.Builder.BuildStore(_emitter.Pop().LLVMValue, _buffer.LLVMValue);
                     break;
@@ -1614,6 +1616,9 @@ namespace Mug.Models.Generator
             // allocating parameters as local variable
             AllocParameters();
             Generate(_function.Body);
+
+            // checking for errors
+            _generator.Parser.Lexer.CheckDiagnostic();
         }
     }
 }

@@ -341,26 +341,20 @@ namespace Mug.Models.Generator.Emitter
         {
             var function = _generator.EvaluateFunction(op, null, types, Array.Empty<MugValueType>(), position);
 
-            if (!function.IsFunction())
-                _generator.Error(position, "Unable to call this member");
-
-            var functionRetType = function.Type.GetFunction().Item2;
+            var functionRetType = function.ReturnType;
 
             if (expectedNonVoid)
                 // check the operator overloading is not void
                 _generator.ExpectNonVoidType(functionRetType.LLVMType, position);
 
-            Call(function.LLVMValue, types.Length, functionRetType, false);
+            Call(function.Value.LLVMValue, types.Length, functionRetType, false);
         }
 
         public void CallAsOperator(Range position, MugValueType type, MugValueType returntype)
         {
             var function = _generator.EvaluateFunction($"as({type}): {returntype}", null, Array.Empty<MugValueType>(), Array.Empty<MugValueType>(), position, true);
 
-            if (!function.IsFunction())
-                _generator.Error(position, "Unable to call this member");
-
-            Call(function.LLVMValue, 1, returntype, false);
+            Call(function.Value.LLVMValue, 1, returntype, false);
         }
 
         public void Ret()
@@ -472,7 +466,7 @@ namespace Mug.Models.Generator.Emitter
 
         public void LoadEnumMember(string enumname, string membername, Range position, LocalGenerator localgenerator)
         {
-            var enumerated = _generator.GetSymbol(enumname, position).GetValue<MugValue>();
+            var enumerated = _generator.Map.GetType(enumname, position).Value.Value;
 
             if (!enumerated.Type.IsEnum())
             {
@@ -482,7 +476,7 @@ namespace Mug.Models.Generator.Emitter
                     var index = enumerror.Body.FindIndex(member => member.Value == membername);
 
                     if (index == -1)
-                        _generator.Error(position, "`", enumname, "` does not contain a definition for `", membername, "`");
+                        _generator.Error(position, $"`{enumname}` does not contain a definition for `{membername}`");
 
                     Load(MugValue.EnumMember(enumerated.Type, LLVMValueRef.CreateConstInt(LLVMTypeRef.Int8, (uint)index)));
                     return;
@@ -556,7 +550,7 @@ namespace Mug.Models.Generator.Emitter
         public void ExpectIndexerType(Range position)
         {
             if (!PeekType().MatchIntType())
-                _generator.Error(position, "`", PeekType().ToString(), "` is not an indexer type");
+                _generator.Error(position, $"`{PeekType()}` is not an indexer type");
         }
 
         public void LoadReference(MugValue allocation, Range position)

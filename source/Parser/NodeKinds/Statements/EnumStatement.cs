@@ -33,7 +33,7 @@ namespace Mug.Models.Parser.NodeKinds.Statements
                 if (Body[i].Name == name)
                     return MugValue.EnumMember(enumerated, localgenerator.ConstToMugConst(Body[i].Value, Body[i].Position, true, enumeratedBaseType).LLVMValue);
 
-            localgenerator.Error(position, "Enum `", Name, "` does not contain a definition for `", name, "`");
+            localgenerator.Error(position, $"Enum `{Name}` does not contain a definition for `{name}`");
 
             throw new(); // unreachable
         }

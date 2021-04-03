@@ -230,7 +230,7 @@ HELP: uses the next argument as output file name. The extension is not required
         private string CheckPath(string path)
         {
             if (!File.Exists(path))
-                CompilationErrors.Throw("Unable to find path `", path, "`");
+                CompilationErrors.Throw($"Unable to find path `{path}`");
 
             return path;
         }
@@ -240,7 +240,7 @@ HELP: uses the next argument as output file name. The extension is not required
             CheckPath(src);
 
             if (!_allowedExtensions.Contains(Path.GetExtension(src)))
-                CompilationErrors.Throw("Unable to recognize source file kind `", src, "`");
+                CompilationErrors.Throw($"Unable to recognize source file kind `{src}`");
 
             return src;
         }
@@ -248,7 +248,7 @@ HELP: uses the next argument as output file name. The extension is not required
         private void ConfigureFlag(string flag, object value)
         {
             if (!IsDefault(flag))
-                CompilationErrors.Throw("Impossible to specify multiple times the flag `", flag, "`");
+                CompilationErrors.Throw($"Impossible to specify multiple times the flag `{flag}`");
             else
                 SetFlag(flag, value);
         }
@@ -256,7 +256,7 @@ HELP: uses the next argument as output file name. The extension is not required
         private string NextArgument()
         {
             if (++_argumentSelector >= _arguments.Length)
-                CompilationErrors.Throw("Expected a specification after flag `", _arguments[_argumentSelector-1][1..], "`");
+                CompilationErrors.Throw($"Expected a specification after flag `{_arguments[_argumentSelector-1][1..]}`");
 
             return _arguments[_argumentSelector];
         }
@@ -277,7 +277,7 @@ HELP: uses the next argument as output file name. The extension is not required
                 case "ast": return CompilationTarget.AbstractSyntaxTree;
                 case "ll": return CompilationTarget.Bytecode;
                 default:
-                    CompilationErrors.Throw("Unable to recognize target `", target, "`");
+                    CompilationErrors.Throw($"Unable to recognize target `{target}`");
                     return CompilationTarget.Executable;
             }
         }
@@ -289,7 +289,7 @@ HELP: uses the next argument as output file name. The extension is not required
                 case "debug": return CompilationMode.Debug;
                 case "release": return CompilationMode.Release;
                 default:
-                    CompilationErrors.Throw("Unable to recognize compilation mode `", mode, "`");
+                    CompilationErrors.Throw($"Unable to recognize compilation mode `{mode}`");
                     return CompilationMode.Debug;
             }
         }
@@ -344,7 +344,7 @@ HELP: uses the next argument as output file name. The extension is not required
                         CompilationErrors.Throw("Invalid empty flag");
                         break;
                     default:
-                        CompilationErrors.Throw("Unknown compiler flag `", arg, "`");
+                        CompilationErrors.Throw($"Unknown compiler flag `{arg}`");
                         break;
                 }
             }
@@ -386,7 +386,7 @@ HELP: uses the next argument as output file name. The extension is not required
                     Console.Write(DEC_HELP);
                     break;
                 default:
-                    CompilationErrors.Throw("Unkown compiler flag `", flag, "`");
+                    CompilationErrors.Throw($"Unkown compiler flag `{flag}`");
                     break;
             }
         }
@@ -415,7 +415,7 @@ HELP: uses the next argument as output file name. The extension is not required
                     Help();
                     break;
                 default:
-                    CompilationErrors.Throw("Invalid compilation action `", actionid, "`");
+                    CompilationErrors.Throw($"Invalid compilation action `{actionid}`");
                     break;
             }
         }

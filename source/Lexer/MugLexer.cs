@@ -8,6 +8,8 @@ namespace Mug.Models.Lexer
 {
     public class MugLexer
     {
+        public List<MugError> DiagnosticBag { get; } = new();
+
         public readonly string Source;
         public readonly string ModuleName;
         public readonly char[] ValidBacktickSequenceCharacters = { '[', ']', '!', '-', '+', '*', '/', '=' };
@@ -106,8 +108,8 @@ namespace Mug.Models.Lexer
 
         private T InExpressionError<T>(string error)
         {
-            this.Throw(CurrentIndex, error);
-            throw new Exception("unreachable");
+            this.Report(CurrentIndex, error);
+            return default;
         }
 
         /// <summary>
@@ -206,20 +208,6 @@ namespace Mug.Models.Lexer
         }
 
         /// <summary>
-        /// checks if an identifier matches the language rules
-        /// </summary>
-        private void CheckValidIdentifier(string identifier)
-        {
-            var bad = new Token(TokenKind.Bad, null, (CurrentIndex - identifier.Length)..CurrentIndex);
-
-            if (!char.IsLetter(identifier[0]) && identifier[0] != '_')
-                this.Throw(bad, "Invalid identifier, following the mug's syntax rules, an ident cannot start by `", identifier[0].ToString(), "`;");
-
-            if (identifier.Contains('.'))
-                this.Throw(bad, "Invalid identifier, following the mug's syntax rules, an ident cannot contain `.`;");
-        }
-
-        /// <summary>
         /// tests if value is a boolean constant
         /// </summary>
         private bool IsBoolean(string value)
@@ -314,7 +302,10 @@ namespace Mug.Models.Lexer
                 char c = Source[CurrentIndex++];
 
                 if (c == '\\')
-                    c = RecognizeEscapedChar(Source[CurrentIndex++]);
+                {
+                    c = RecognizeEscapedChar(Current); // @1
+                    CurrentIndex++; // cursor now points to the next character after the escaped one, if operated at @1 the position was broken with unrecognized chars
+                }
 
                 CurrentSymbol.Append(c);
             }
@@ -329,9 +320,9 @@ namespace Mug.Models.Lexer
 
             //longer than one char
             if (CurrentSymbol.Length > 1)
-                this.Throw(start..end, "Too many characters in const char");
+                this.Report(start..end, "Too many characters in const char");
             else if (CurrentSymbol.Length < 1)
-                this.Throw(start..end, "Not enough characters in const char");
+                this.Report(start..end, "Not enough characters in const char");
 
             //else add closing simbol
             TokenCollection.Add(new(TokenKind.ConstantChar, CurrentSymbol.ToString(), new(start, end)));
@@ -417,17 +408,17 @@ namespace Mug.Models.Lexer
 
             //if you found an EOF, throw
             if (CurrentIndex == Source.Length && Source[CurrentIndex - 1] != '`')
-                this.Throw(CurrentIndex - 1, $"Backtick sequence has not been correctly enclosed");
+                this.Report(CurrentIndex - 1, $"Backtick sequence has not been correctly enclosed");
 
             var pos = start..(end+1);
 
             if (CurrentSymbol.Length < 1)
-                this.Throw(pos, "Not enough characters in backtick sequence");
+                this.Report(pos, "Not enough characters in backtick sequence");
 
             string sequence = CurrentSymbol.ToString().Replace(" ", "");
 
             if (!IsValidBackTickSequence(sequence) && !IsKeyword(sequence))
-                this.Throw(pos, "Invalid backtick sequence");
+                this.Report(pos, "Invalid backtick sequence");
 
             //else add closing simbol, removing whitespaces
             TokenCollection.Add(new(TokenKind.Identifier, sequence, pos));
@@ -517,7 +508,7 @@ namespace Mug.Models.Lexer
                 if (Current == '.')
                 {
                     if (isfloat)
-                        this.Throw(CurrentIndex, "Invalid dot here");
+                        this.Report(CurrentIndex, "Invalid dot here");
 
                     isfloat = true;
                     CurrentSymbol.Append(',');
@@ -536,9 +527,16 @@ namespace Mug.Models.Lexer
             }
 
             if (CurrentIndex < Source.Length && IsValidIdentifierChar(Current))
-                this.Throw(CurrentIndex, "Invalid identifer's char here");
+                this.Report(CurrentIndex, "Invalid identifer's char here");
 
-            TokenCollection.Add(new(isfloat ? TokenKind.ConstantFloatDigit : TokenKind.ConstantDigit, CurrentSymbol.ToString(), pos..CurrentIndex));
+            var position = pos..CurrentIndex;
+            var s = CurrentSymbol.ToString();
+
+            // could overflow
+            if (s.Length >= 21)
+                this.Report(position, "Constant overflow");
+
+            TokenCollection.Add(new(isfloat ? TokenKind.ConstantFloatDigit : TokenKind.ConstantDigit, s, position));
             CurrentSymbol.Clear();
 
             CurrentIndex--;
@@ -587,6 +585,8 @@ namespace Mug.Models.Lexer
 
             // end of file token
             AddSingle(TokenKind.EOF, "<EOF>");
+
+            this.CheckDiagnostic();
 
             return TokenCollection;
         }

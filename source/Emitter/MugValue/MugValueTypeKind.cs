@@ -13,7 +13,6 @@
         Struct,
         Enum,
         Array,
-        Function,
         Unknown,
         EnumError,
         EnumErrorDefined,

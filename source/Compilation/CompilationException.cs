@@ -1,23 +1,29 @@
 ﻿using Mug.Models.Lexer;
 using System;
+using System.Collections.Generic;
 
 namespace Mug.Compilation
 {
     public class CompilationException : Exception
     {
+        public List<MugError> DiagnosticBag { get; }
         public MugLexer Lexer { get; }
-        public Range Bad { get; }
-        public int LineAt
+        public bool IsGlobalError
         {
             get
             {
-                return CompilationErrors.CountLines(Lexer.Source, Bad.Start.Value);
+                return DiagnosticBag is null;
             }
         }
-        public CompilationException(MugLexer lexer, Range bad, string message) : base(message)
+
+        public CompilationException(List<MugError> diagnosticbag, MugLexer lexer) : this("Cannot build due to previous errors", lexer)
+        {
+            DiagnosticBag = diagnosticbag;
+        }
+
+        public CompilationException(string error, MugLexer lexer = null) : base(error)
         {
             Lexer = lexer;
-            Bad = bad;
         }
     }
 }

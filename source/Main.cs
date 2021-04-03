@@ -12,13 +12,12 @@ try
     var test = @"
 
 func main() {
-  var x = 10
-  var i: u1 = x == 10 & x == 11 & x == 12
+  
 }
 
 ";
 
-    var unit = new CompilationUnit("test", test, true);
+    var unit = new CompilationUnit("test.mug", test, true);
 
     // unit.IRGenerator.Parser.Lexer.Tokenize().ForEach(token => Console.WriteLine(token));
     // Console.WriteLine(
@@ -40,20 +39,21 @@ func main() {
 }
 catch (CompilationException e)
 {
-    // Console.WriteLine($"{(e.Lexer is not null ? $"(`{e.Lexer.Source[e.Bad]}`: {e.Bad} in {e.Lexer.ModuleName}): " : "")}{e.Message}");
-    if (e.Lexer is not null)
+    if (!e.IsGlobalError)
     {
-        CompilationErrors.WriteModule(e.Lexer.ModuleName, e.LineAt);
-
         try
         {
-            CompilationErrors.WriteSourceLine(e.Bad, e.LineAt, e.Lexer.Source, e.Message);
+            for (int i = 0; i < e.DiagnosticBag.Count; i++)
+            {
+                var error = e.DiagnosticBag[i];
+                CompilationErrors.WriteSourceLineStyle(e.Lexer.ModuleName, error.Bad, error.LineAt(e.Lexer.Source), e.Lexer.Source, error.Message);
+            }
         }
         catch
         {
-            CompilationErrors.WriteFail(e.Message);
+            CompilationErrors.WriteFail(e.Lexer is not null ? e.Lexer.ModuleName : "", e.Message);
         }
     }
     else
-        CompilationErrors.WriteFail(e.Message);
+        CompilationErrors.WriteFail(e.Lexer is not null ? e.Lexer.ModuleName : "", e.Message);
 }

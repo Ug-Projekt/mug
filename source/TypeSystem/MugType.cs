@@ -57,7 +57,7 @@ namespace Mug.TypeSystem
 
         private static MugType Error(string kind)
         {
-            CompilationErrors.Throw("´", kind, "´ is not a type");
+            CompilationErrors.Throw($"´{kind}´ is not a type");
             throw new();
         }
 

@@ -111,7 +111,7 @@ namespace Mug.Compilation
                 if (output == "")
                     output = clang.StandardError.ReadToEnd();
 
-                CompilationErrors.Throw("External compiler: ", output);
+                CompilationErrors.Throw($"External compiler: {output}");
             }
         }
 

@@ -1,0 +1,3 @@
+- match
+- `func some() !sometype`, this will mean that the function must be catched also if there is no real error to catch
+- calls that return an enum error can be also not catched if in return expression, where the return's scope owner is a function that returns the same enum error
