@@ -54,7 +54,10 @@ namespace Mug.Compilation.Symbols
                 if (!id.GenericParameters[i].Equals(GenericParameters[i]))
                     return false;
 
-            return id.BaseType.Equals(BaseType);
+            if (id.BaseType.HasValue != BaseType.HasValue)
+                return false;
+
+            return id.BaseType.HasValue ? id.BaseType.Value.Equals(BaseType.Value) : true;
         }
 
         public static UndefinedFunctionID EntryPoint()
@@ -231,7 +234,7 @@ namespace Mug.Compilation.Symbols
 
             if (index == -1)
             {
-                _generator.Error(position, $"Cannot find a good overload for type '{name}'");
+                _generator.Report(position, $"Cannot find a good overload for type '{name}'");
                 return null;
             }
 

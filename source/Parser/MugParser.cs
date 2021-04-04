@@ -96,7 +96,7 @@ namespace Mug.Models.Parser
             {
 
                 for (int i = 0; i < kinds.Length; i++)
-                    if (Current.Kind == kinds[i])
+                    if (Match(kinds[i]))
                     {
                         _currentIndex++;
                         return Back;
@@ -113,7 +113,7 @@ namespace Mug.Models.Parser
 
         private Token Expect(string error, TokenKind kind)
         {
-            if (Current.Kind != kind)
+            if (!Match(kind))
             {
                 if (error == "")
                     Report($"Expected '{kind.GetDescription()}', found '{Current.Value}'");
@@ -125,14 +125,23 @@ namespace Mug.Models.Parser
             return Back;
         }
 
-        private bool Match(TokenKind kind)
+        private bool Match(TokenKind kind, bool linesensitive = false)
         {
+            if (!linesensitive && Current.Kind == TokenKind.EOL)
+            {
+                if (_currentIndex < Lexer.TokenCollection.Count && Lexer.TokenCollection[_currentIndex+1].Kind == kind)
+                    _currentIndex++;
+            }
+
+            if (!linesensitive && Current.Kind == TokenKind.EOL)
+                return false;
+
             return Current.Kind == kind;
         }
 
-        private bool MatchAdvance(TokenKind kind)
+        private bool MatchAdvance(TokenKind kind, bool linesensitive = false)
         {
-            var expect = Match(kind);
+            var expect = Match(kind, linesensitive);
 
             if (expect)
                 _currentIndex++;
@@ -140,10 +149,10 @@ namespace Mug.Models.Parser
             return expect;
         }
 
-        private MugType ExpectType(bool allowEnumError = false, bool allowReference = true)
+        private MugType ExpectType(bool allowEnumError = false)
         {
-            if (allowReference && MatchAdvance(TokenKind.BooleanAND, out var token))
-                return new MugType(token.Position, TypeKind.Reference, ExpectType(false, false));
+            if (MatchAdvance(TokenKind.BooleanAND, out var token))
+                return new MugType(token.Position, TypeKind.Reference, ExpectType(false));
             if (MatchAdvance(TokenKind.OpenBracket, out token))
             {
                 var type = ExpectType();
@@ -199,16 +208,10 @@ namespace Mug.Models.Parser
             return true;
         }
 
-        private bool MatchAdvance(TokenKind kind, out Token token)
+        private bool MatchAdvance(TokenKind kind, out Token token, bool linesensitive = false)
         {
-            token = new();
-
-            if (MatchAdvance(kind))
-            {
-                token = Back;
-                return true;
-            }
-            return false;
+            token = Current;
+            return MatchAdvance(kind, linesensitive);
         }
 
         private Token ExpectConstant(string error)
@@ -353,19 +356,16 @@ namespace Mug.Models.Parser
 
         private bool MatchMember(out INode name)
         {
-            name = null;
-
             if (MatchValue())
                 name = Back;
             else if (!MatchInParExpression(out name))
                 return false;
 
-
             CollectPossibleArrayAccessNode(ref name);
 
             while (MatchAdvance(TokenKind.Dot))
             {
-                var id = Expect("expected member after '.'", TokenKind.Identifier);
+                var id = Expect("Expected member after '.'", TokenKind.Identifier);
 
                 name = new MemberNode() { Base = name, Member = id, Position = name.Position.Start.Value..id.Position.End.Value };
 
@@ -390,7 +390,7 @@ namespace Mug.Models.Parser
         {
             var oldindex = _currentIndex;
 
-            if (MatchAdvance(TokenKind.BooleanLess))
+            if (MatchAdvance(TokenKind.BooleanLess, true))
             {
                 if (MatchType(out var type))
                 {
@@ -411,7 +411,7 @@ namespace Mug.Models.Parser
         private bool MatchCallStatement(out INode e, INode previousMember = null)
         {
             e = null;
-            INode name = null;
+            INode name;
 
             if (previousMember is null)
             {
@@ -423,7 +423,7 @@ namespace Mug.Models.Parser
 
             var token = Current;
 
-            if (!MatchAdvance(TokenKind.OpenPar) && !Match(TokenKind.BooleanLess))
+            if (!MatchAdvance(TokenKind.OpenPar, true) && !Match(TokenKind.BooleanLess, true))
                 return false;
 
             var parameters = new NodeBuilder();
@@ -437,7 +437,7 @@ namespace Mug.Models.Parser
 
             var generics = CollectGenericParameters();
 
-            if (token.Kind == TokenKind.BooleanLess && !MatchAdvance(TokenKind.OpenPar))
+            if (token.Kind == TokenKind.BooleanLess && !MatchAdvance(TokenKind.OpenPar, true))
             {
                 if (generics.Count != 0)
                     ParseError("Expected call after generic parameter specification");
@@ -455,7 +455,7 @@ namespace Mug.Models.Parser
 
                 generics = CollectGenericParameters();
 
-                if (MatchAdvance(TokenKind.OpenPar))
+                if (MatchAdvance(TokenKind.OpenPar, true))
                 {
                     parameters = new NodeBuilder();
 
@@ -489,7 +489,7 @@ namespace Mug.Models.Parser
                 MatchAdvance(TokenKind.OperatorDecrement, out prefix);
         }
 
-        private bool HasElseBody(ConditionalStatement condition)
+        internal static bool HasElseBody(ConditionalStatement condition)
         {
             while (condition is not null && condition.Expression is not null)
                 condition = condition.ElseNode;
@@ -523,13 +523,7 @@ namespace Mug.Models.Parser
                 if (MatchAdvance(TokenKind.KeyNew, out var token))
                     e = CollectNodeNew(token.Position);
                 else if (ConditionDefinition(out e))
-                {
-                    var haselsebody = HasElseBody(e as ConditionalStatement);
-                    if (!haselsebody)
-                        Report(e.Position, "Condition in expression must be exhaustive: missing else body");
-
-                    return haselsebody;
-                }
+                    return true;
             }
 
             CollectPossibleArrayAccessNode(ref e);
@@ -590,7 +584,7 @@ namespace Mug.Models.Parser
         private bool MatchFactor(out INode e)
         {
             e = null;
-
+            
             if (!MatchTerm(out INode left))
                 return false;
 
@@ -602,7 +596,7 @@ namespace Mug.Models.Parser
                 var right = ExpectTerm();
                 do
                 {
-                    e = new ExpressionNode() { Left = e, Right = right, Operator = ToOperatorKind(op.Kind), Position = new(left.Position.Start, right.Position.End) };
+                    e = new ExpressionNode() { Left = e, Right = right, Operator = ToOperatorKind(op.Kind), Position = op.Position };
                     if (MatchFactorOps())
                         op = Back;
                     else
@@ -615,7 +609,8 @@ namespace Mug.Models.Parser
 
         private bool MatchBooleanOperator(out Token op)
         {
-            return MatchAdvance(TokenKind.BooleanEQ, out op) ||
+            return
+                MatchAdvance(TokenKind.BooleanEQ, out op) ||
                 MatchAdvance(TokenKind.BooleanNEQ, out op) ||
                 MatchAdvance(TokenKind.BooleanGreater, out op) ||
                 MatchAdvance(TokenKind.BooleanLess, out op) ||
@@ -684,15 +679,15 @@ namespace Mug.Models.Parser
                 if (MatchAdvance(TokenKind.Plus) ||
                     MatchAdvance(TokenKind.Minus))
                 {
-                    var op = Back.Kind;
+                    var op = Back;
                     var right = ExpectFactor();
 
                     do
                     {
-                        e = new ExpressionNode() { Operator = ToOperatorKind(op), Left = e, Right = right, Position = new(e.Position.Start, right.Position.End) };
+                        e = new ExpressionNode() { Operator = ToOperatorKind(op.Kind), Left = e, Right = right, Position = op.Position };
                         if (MatchAdvance(TokenKind.Plus) ||
                             MatchAdvance(TokenKind.Minus))
-                            op = Back.Kind;
+                            op = Back;
                         else
                             break;
                     } while (MatchFactor(out right));

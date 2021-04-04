@@ -391,9 +391,9 @@ namespace Mug.Models.Lexer
         /// <summary>
         /// tests if current is an escaped char or a white space
         /// </summary>
-        private bool IsEscapedChar(char current)
+        private bool IsSkippableControl(char current)
         {
-            return char.IsControl(current) || char.IsWhiteSpace(current);
+            return (char.IsControl(current) || char.IsWhiteSpace(current));
         }
 
         /// <summary>
@@ -462,6 +462,9 @@ namespace Mug.Models.Lexer
             {
                 if (Current == '.')
                 {
+                    if (CurrentIndex >= Source.Length || !char.IsDigit(Source[CurrentIndex + 1]))
+                        goto end;
+
                     if (isfloat)
                         DiagnosticBag.Report(CurrentIndex, "Invalid dot here");
 
@@ -481,8 +484,7 @@ namespace Mug.Models.Lexer
                 isfloat = true;
             }
 
-            if (CurrentIndex < Source.Length && IsValidIdentifierChar(Current))
-                DiagnosticBag.Report(CurrentIndex, "Invalid identifer's char here");
+        end:
 
             var position = pos..CurrentIndex;
             var s = CurrentSymbol.ToString();
@@ -509,10 +511,21 @@ namespace Mug.Models.Lexer
             if (CurrentIndex >= Source.Length)
                 return;
 
-            // to avoid a massive array access, also better to read
-            char current = Source[CurrentIndex];
+            if (Current == '\n')
+            {
+                TokenCollection.Add(new(TokenKind.EOL, "\\n", (CurrentIndex-1)..CurrentIndex));
+                // consumes all contiguous \n in one token
+                while (CurrentIndex < Source.Length && Current == '\n')
+                    CurrentIndex += 2;
 
-            if (IsEscapedChar(current)) // skipping it and add the symbol if it's not empty
+                CurrentIndex -= 2;
+                return;
+            }
+
+            // to avoid a massive array access, also better to read
+            char current = Current;
+
+            if (IsSkippableControl(current)) // skipping it and add the symbol if it's not empty
                 return;
 
             if (IsValidIdentifierChar(current)) // identifiers

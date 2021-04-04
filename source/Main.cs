@@ -11,22 +11,21 @@ try
 
     var test = @"
 
-func fib(n: i32): i32 {
-  return
-    if n > 2 { n }
-    else { fib(n - 1) + fib(n - 2) }
-}
+// func (a: &i32) add(b: i32): i32 { return a + b }
 
-func main(): i32 { return fib(40) }
+func main() {
+  var i = x
+  (1).add()
+}
 
 ";
 
     var unit = new CompilationUnit("test.mug", test, true);
 
     // unit.IRGenerator.Parser.Lexer.Tokenize().ForEach(token => Console.WriteLine(token));
-    // Console.WriteLine(
-    // unit.GenerateAST().Dump());
-    unit.Generate(true, true);
+    Console.WriteLine(
+    unit.GenerateAST().Dump());
+    // unit.Generate(true, true);
 
 #else
 

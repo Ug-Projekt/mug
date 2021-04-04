@@ -38,7 +38,7 @@ namespace Mug.Models.Generator.Emitter
 
         public void Report(Range position, string error)
         {
-            _generator.Parser.Lexer.DiagnosticBag.Report(position, error);
+            _generator.Report(position, error);
         }
 
         public void Load(MugValue value)
@@ -101,16 +101,13 @@ namespace Mug.Models.Generator.Emitter
                 MugValue.From(Builder.BuildSIToFP(Pop().LLVMValue, type.LLVMType), type));
         }
 
-        public MugValue? GetMemoryAllocation(string name, Range position, bool loadreference = false)
+        public MugValue? GetMemoryAllocation(string name, Range position)
         {
             if (!Memory.TryGetValue(name, out var variable))
             {
                 Report(position, "Undeclared item");
                 return null;
             }
-
-            if (loadreference && variable.Type.TypeKind == MugValueTypeKind.Reference)
-                variable = MugValue.From(Builder.BuildLoad(variable.LLVMValue), variable.Type.PointerBaseElementType);
 
             return variable;
         }
@@ -258,10 +255,21 @@ namespace Mug.Models.Generator.Emitter
             Load(value);
         }
 
-        public void DeclareVariable(string name, MugValueType type, Range position)
+        private bool AlreadyDeclared(string name, Range position)
         {
             if (IsDeclared(name))
-                _generator.Error(position, "Variable already declared");
+            {
+                _generator.Report(position, "Variable already declared");
+                return true;
+            }
+
+            return false;
+        }
+
+        public void DeclareVariable(string name, MugValueType type, Range position)
+        {
+            if (AlreadyDeclared(name, position))
+                return;
 
             SetMemory(
                 name,
@@ -270,8 +278,8 @@ namespace Mug.Models.Generator.Emitter
 
         public void DeclareConstant(string name, Range position)
         {
-            if (IsDeclared(name))
-                _generator.Error(position, "Variable already declared");
+            if (AlreadyDeclared(name, position))
+                return;
 
             MakeConst();
 
@@ -296,14 +304,17 @@ namespace Mug.Models.Generator.Emitter
         {
             // check it is a variable and not a constant
             if (allocation.IsConst)
-                _generator.Error(position, "Unable to change the value of a constant");
+            {
+                Report(position, "Unable to change the value of a constant");
+                return;
+            }
 
             CoerceConstantSizeTo(allocation.Type);
 
             _generator.ExpectSameTypes(
                 allocation.Type,
                 bodyPosition,
-                $"Expected {allocation.Type} type, got {PeekType()} type",
+                $"Expected '{allocation.Type}' type, got '{PeekType()}' type",
                 PeekType());
 
             Builder.BuildStore(Pop().LLVMValue, allocation.LLVMValue);
@@ -343,9 +354,12 @@ namespace Mug.Models.Generator.Emitter
             return true;
         }
 
-        public void CallOperator(string op, Range position, bool expectedNonVoid, params MugValueType[] types)
+        public bool CallOperator(string op, Range position, bool expectedNonVoid, params MugValueType[] types)
         {
             var function = _generator.EvaluateFunction(op, null, types, Array.Empty<MugValueType>(), position);
+
+            if (function is null)
+                return false;
 
             var functionRetType = function.ReturnType;
 
@@ -354,6 +368,8 @@ namespace Mug.Models.Generator.Emitter
                 _generator.ExpectNonVoidType(functionRetType.LLVMType, position);
 
             Call(function.Value.LLVMValue, types.Length, functionRetType, false);
+
+            return true;
         }
 
         public void CallAsOperator(Range position, MugValueType type, MugValueType returntype)
@@ -402,7 +418,7 @@ namespace Mug.Models.Generator.Emitter
                 parameters.Insert(0, Pop());
 
             for (int i = 0; i < paramCount; i++)
-                parameters.Insert(baseoffset, Pop());
+                parameters.Insert(i + baseoffset, Pop());
 
             var result = Builder.BuildCall(function, _generator.MugValuesToLLVMValues(parameters.ToArray()));
 
@@ -481,13 +497,19 @@ namespace Mug.Models.Generator.Emitter
                     var index = enumerror.Body.FindIndex(member => member.Value == membername);
 
                     if (index == -1)
-                        _generator.Error(position, $"'{enumname}' does not contain a definition for '{membername}'");
+                    {
+                        _generator.Report(position, $"'{enumname}' does not contain a definition for '{membername}'");
+                        return;
+                    }
 
                     Load(MugValue.EnumMember(enumerated.Type, LLVMValueRef.CreateConstInt(LLVMTypeRef.Int8, (uint)index)));
                     return;
                 }
                 else
-                    _generator.Error(position, "Not an enum");
+                {
+                    _generator.Report(position, "Not an enum");
+                    return;
+                }
             }
 
             var type = enumerated.Type.GetEnum();
@@ -527,9 +549,6 @@ namespace Mug.Models.Generator.Emitter
                 instance.LLVMValue = tmp;
             }
             
-            if (instance.Type.TypeKind == MugValueTypeKind.Reference)
-                instance = MugValue.From(Builder.BuildLoad(instance.LLVMValue), instance.Type.PointerBaseElementType);
-            
             Load(instance);
             return true;
         }
@@ -560,7 +579,7 @@ namespace Mug.Models.Generator.Emitter
         public void ExpectIndexerType(Range position)
         {
             if (!PeekType().MatchIntType())
-                _generator.Error(position, $"'{PeekType()}' is not an indexer type");
+                _generator.Report(position, $"'{PeekType()}' is not an indexer type");
         }
 
         public bool LoadReference(MugValue allocation, Range position)
@@ -578,7 +597,7 @@ namespace Mug.Models.Generator.Emitter
         public MugValue LoadFromPointer(MugValue value, Range position)
         {
             if (!value.Type.IsPointer())
-                _generator.Error(position, "Expected a pointer");
+                _generator.Report(position, "Expected a pointer");
 
             return MugValue.From(Builder.BuildLoad(value.LLVMValue), value.Type.PointerBaseElementType);
         }
@@ -631,13 +650,6 @@ namespace Mug.Models.Generator.Emitter
             var first = Pop();
             Load(second);
             Load(first);
-        }
-
-        public void DeclareBaseReference(string name, LLVMValueRef value, MugValueType type)
-        {
-            var tmp = Builder.BuildAlloca(type.LLVMType);
-            Builder.BuildStore(value, tmp);
-            SetMemory(name, MugValue.From(tmp, type, true));
         }
 
         public void AddFloat()

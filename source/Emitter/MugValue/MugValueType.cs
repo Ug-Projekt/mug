@@ -181,12 +181,17 @@ namespace Mug.MugValueSystem
             return MatchIntType() && st.MatchIntType() && TypeKind == st.TypeKind;
         }
 
+        public bool MatchSameAnyIntType(MugValueType st)
+        {
+            return MatchAnyIntType() && st.MatchAnyIntType() && TypeKind == st.TypeKind;
+        }
+
         internal bool MatchSameFloatType(MugValueType st)
         {
             return MatchFloatType() && st.MatchFloatType() && TypeKind == st.TypeKind;
         }
 
-        public bool MatchAnyTypeOfIntType()
+        public bool MatchAnyIntType()
         {
             return
                 LLVMType == LLVMTypeRef.Int1 ||
