@@ -438,7 +438,7 @@ namespace Mug.Models.Generator
             return true;
         }
 
-        private FunctionIdentifier EvaluateFunctionCallName(INode leftexpression, MugValueType[] parameters, MugValueType[] genericsInput, out bool hasbase)
+        private FunctionSymbol? EvaluateFunctionCallName(INode leftexpression, MugValue[] parameters, MugValueType[] genericsInput, out bool hasbase)
         {
             string name;
             Range position;
@@ -464,7 +464,71 @@ namespace Mug.Models.Generator
                 throw new(); // tofix
             }
 
-            return _generator.EvaluateFunction(name, hasbase ? new MugValueType?(_emitter.PeekType()) : null, parameters, genericsInput, position);
+            return GetFunctionSymbol(hasbase ? new MugValueType?(_emitter.PeekType()) : null, name, genericsInput, parameters, position);
+        }
+
+        private void LoadParameters(MugValue[] parameters)
+        {
+            for (int i = parameters.Length - 1; i >= 0; i--)
+                _emitter.Load(parameters[i]);
+        }
+
+        private FunctionSymbol? GetFunctionSymbol(MugValueType? basetype, string name, MugValueType[] generics, MugValue[] parameters, Range position)
+        {
+            if (!_generator.Table.DefinedFunctions.TryGetValue(name, out var overloads))
+            {
+                Report(position, $"Undeclared function '{name}'");
+                return null;
+            }
+
+            var oldparameters = parameters;
+
+            foreach (var function in overloads)
+            {
+                if (parameters.Length != function.Parameters.Length || !basetype.Equals(function.BaseType))
+                    continue;
+
+                var i = 0;
+                
+                while (i < function.Parameters.Length)
+                {
+                    // using the stack utilities to make bitness coersions with constants
+                    _emitter.Load(parameters[i]);
+                    _emitter.CoerceConstantSizeTo(function.Parameters[i]);
+
+                    // value is useless on the stack so we can pop it
+                    if (!function.Parameters[i].Equals(_emitter.PeekType()))
+                    {
+                        // removing the value from the top
+                        _emitter.Pop();
+                        goto mismatch;
+                    }
+                    else
+                        parameters[i] = _emitter.Pop();
+
+                    i++;
+                }
+                // saving the basevalue
+                MugValue? basevalue = basetype.HasValue ? _emitter.Pop() : null;
+
+                LoadParameters(parameters);
+
+                // repushing the base value (it must be the last on the stack)
+                if (basetype.HasValue)
+                    _emitter.Load(basevalue.Value);
+
+                return function;
+
+            mismatch:;
+                parameters = oldparameters;
+            }
+
+            var types = new MugValueType[parameters.Length];
+            for (int i = 0; i < parameters.Length; i++)
+                types[i] = parameters[i].Type;
+            
+            Report(position, $"Unable to find a good overload for function '{name}', which accepts {(parameters.Length > 0 ? $"'{string.Join("', '", types)}' as parameters" : "no parameters")}");
+            return null;
         }
 
         /// <summary>
@@ -473,48 +537,46 @@ namespace Mug.Models.Generator
         private bool EmitCallStatement(CallStatement c, bool expectedNonVoid, bool isInCatch = false)
         {
             // an array is prepared for the parameter types of function to call
-            var parameters = new MugValueType[c.Parameters.Length];
+            var parameters = new MugValue[c.Parameters.Length];
             var paramsAreOk = true;
+
+            // here you can infer the generic type
 
             /* the array is cycled with the expressions of the respective parameters and each expression
              * is evaluated and assigned its type to the array of parameter types
              */
             for (int i = 0; i < c.Parameters.Length; i++)
-            {
                 if (paramsAreOk &= EvaluateExpression(c.Parameters.Nodes[i]))
-                    parameters[i] = _emitter.PeekType();
-            }
+                    parameters[i] = _emitter.Pop();
 
             /*
              * the symbol of the function is taken by passing the name of the complete function which consists
              * of the function id and in brackets the list of parameter types separated by ', '
              */
 
-            if (IsBuiltInFunction(c.Name, c.Generics, parameters, out var comptimeExecute))
+            // to replace with built in macros
+            /*if (IsBuiltInFunction(c.Name, c.Generics, parameters, out var comptimeExecute))
             {
                 comptimeExecute(c.Generics, parameters);
                 return true;
-            }
-            
+            }*/
+
             var function = EvaluateFunctionCallName(c.Name, parameters, _generator.MugTypesToMugValueTypes(c.Generics), out bool hasbase);
 
             if (function is null || !paramsAreOk)
                 return false;
 
             // function type: <ret_type> <param_types>
-            var functionType = function.ReturnType;
+            var functionType = function?.ReturnType;
 
             if (expectedNonVoid)
-                _generator.ExpectNonVoidType(
-                    // (<ret_type> <param_types>).GetElementType() -> <ret_type>
-                    functionType.LLVMType,
-                    c.Position);
+                _generator.ExpectNonVoidType(functionType.Value.LLVMType,c.Position);
 
-            _emitter.Call(function.Value.LLVMValue, c.Parameters.Length, functionType, hasbase);
+            _emitter.Call(function.Value.Value.LLVMValue, c.Parameters.Length, functionType.Value, hasbase);
 
-            if (!isInCatch && functionType.TypeKind == MugValueTypeKind.EnumErrorDefined)
+            if (!isInCatch && functionType.Value.TypeKind == MugValueTypeKind.EnumErrorDefined)
                 return Report(c.Position, "Uncatched enum error");
-            else if (isInCatch && functionType.TypeKind != MugValueTypeKind.EnumErrorDefined)
+            else if (isInCatch && functionType.Value.TypeKind != MugValueTypeKind.EnumErrorDefined)
                 return Report(c.Position, "Catched a non enum error");
 
             return true;
@@ -1129,7 +1191,7 @@ namespace Mug.Models.Generator
 
         private void EmitReturnStatement(ReturnStatement @return)
         {
-            var type = _function.Type.ToMugValueType(_generator);
+            var type = _function.ReturnType.ToMugValueType(_generator);
             /*
              * if the expression in the return statement is null, condition verified by calling Returnstatement.Isvoid(),
              * check that the type of function in which it is found returns void.

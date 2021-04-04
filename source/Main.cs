@@ -11,21 +11,23 @@ try
 
     var test = @"
 
-// func (a: &i32) add(b: i32): i32 { return a + b }
+// func add<T>(a: T, b: T) { return a + b }
+// func add(a: i32, b: i32) { return a + b }
+
+func add(a: u8, b: u8): u8 { return a + b }
+func add(a: i32, b: i32): i32 { return a + b }
 
 func main() {
-  var i = x
-  (1).add()
+  var i = 10
+  add(1, i)
 }
-
 ";
 
     var unit = new CompilationUnit("test.mug", test, true);
 
     // unit.IRGenerator.Parser.Lexer.Tokenize().ForEach(token => Console.WriteLine(token));
-    Console.WriteLine(
-    unit.GenerateAST().Dump());
-    // unit.Generate(true, true);
+    // Console.WriteLine(unit.GenerateAST().Dump());
+    unit.Generate(true, true);
 
 #else
 

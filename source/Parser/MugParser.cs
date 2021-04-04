@@ -409,19 +409,9 @@ namespace Mug.Models.Parser
             return new List<MugType>();
         }
 
-        private bool MatchCallStatement(out INode e, INode previousMember = null)
+        private bool MatchCallStatement(out INode e, INode name)
         {
             e = null;
-            INode name;
-
-            if (previousMember is null)
-            {
-                if (!MatchTerm(out name, false))
-                    ParseError("Expressions not allowed as imperative statement");
-            }
-            else
-                name = previousMember;
-
             var token = Current;
 
             if (!MatchAdvance(TokenKind.OpenPar, true) && !Match(TokenKind.BooleanLess, true))
@@ -448,7 +438,7 @@ namespace Mug.Models.Parser
 
             CollectParameters(ref parameters);
             
-            e = new CallStatement() { Generics = generics, Name = name, Parameters = parameters, Position = previousMember is null ? name.Position : previousMember.Position };
+            e = new CallStatement() { Generics = generics, Name = name, Parameters = parameters, Position = name is null ? name.Position : name.Position };
 
             while (MatchAdvance(TokenKind.Dot))
             {
@@ -481,13 +471,13 @@ namespace Mug.Models.Parser
         private bool MatchPrefixOperator(out Token prefix)
         {
             return
-                MatchAdvance(TokenKind.Minus, out prefix)      ||
-                MatchAdvance(TokenKind.Plus, out prefix)       ||
-                MatchAdvance(TokenKind.Negation, out prefix)   ||
-                MatchAdvance(TokenKind.BooleanAND, out prefix) ||
-                MatchAdvance(TokenKind.Star, out prefix)       ||
-                MatchAdvance(TokenKind.OperatorIncrement, out prefix) ||
-                MatchAdvance(TokenKind.OperatorDecrement, out prefix);
+                MatchAdvance(TokenKind.Minus, out prefix, true)             ||
+                MatchAdvance(TokenKind.Plus, out prefix, true)              ||
+                MatchAdvance(TokenKind.Negation, out prefix, true)          ||
+                MatchAdvance(TokenKind.BooleanAND, out prefix, true)        ||
+                MatchAdvance(TokenKind.Star, out prefix, true)              ||
+                MatchAdvance(TokenKind.OperatorIncrement, out prefix, true) ||
+                MatchAdvance(TokenKind.OperatorDecrement, out prefix, true);
         }
 
         internal static bool HasElseBody(ConditionalStatement condition)
@@ -500,6 +490,9 @@ namespace Mug.Models.Parser
 
         private bool MatchTerm(out INode e, bool allowCallStatement = true)
         {
+            /*if (Current.Kind == TokenKind.EOL)
+                Console.WriteLine("eol");*/
+
             if (MatchPrefixOperator(out var prefixOP))
             {
                 if (!MatchTerm(out e, allowCallStatement))
@@ -534,7 +527,7 @@ namespace Mug.Models.Parser
 
             CollectPossibleArrayAccessNode(ref e);
 
-            if (MatchAdvance(TokenKind.OperatorIncrement) || MatchAdvance(TokenKind.OperatorDecrement))
+            if (MatchAdvance(TokenKind.OperatorIncrement, true) || MatchAdvance(TokenKind.OperatorDecrement, true))
                 e = new PostfixOperator() { Expression = e, Position = Back.Position, Postfix = Back.Kind };
 
             return true;
@@ -584,12 +577,8 @@ namespace Mug.Models.Parser
 
         private bool MatchFactor(out INode e)
         {
-            e = null;
-            
-            if (!MatchTerm(out INode left))
+            if (!MatchTerm(out e))
                 return false;
-
-            e = left;
             
             if (MatchFactorOps())
             {
@@ -682,6 +671,10 @@ namespace Mug.Models.Parser
 
         private INode ExpectExpression(bool allowBoolOP = true, bool allowLogicOP = true, bool allowNullExpression = false, params TokenKind[] end)
         {
+            // skipping new line in expressions
+            if (Current.Kind == TokenKind.EOL)
+                _currentIndex++;
+
             if (MatchFactor(out var e))
             {
                 if (MatchPlusMinus())
@@ -1009,7 +1002,7 @@ namespace Mug.Models.Parser
             {
                 var body = ExpectBlock();
 
-                var f = new FunctionNode() { Base = @base, Modifier = modifier, Pragmas = pragmas, Body = body, Name = name.Value.ToString(), ParameterList = parameters, Type = type, Position = name.Position };
+                var f = new FunctionNode() { Base = @base, Modifier = modifier, Pragmas = pragmas, Body = body, Name = name.Value.ToString(), ParameterList = parameters, ReturnType = type, Position = name.Position };
 
                 f.Generics = generics;
 

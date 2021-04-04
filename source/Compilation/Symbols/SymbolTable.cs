@@ -2,46 +2,38 @@
 using Mug.Models.Generator;
 using Mug.Models.Parser.NodeKinds.Statements;
 using Mug.MugValueSystem;
+using Mug.TypeSystem;
 using System;
 using System.Collections.Generic;
 using System.Text;
 
 namespace Mug.Compilation.Symbols
 {
-    public interface IFunctionID
+    public struct FunctionSymbol
     {
-
-    }
-
-    public class FunctionPrototypeIdentifier : IFunctionID
-    {
-        public FunctionNode Prototype { get; set; }
-
-        public FunctionPrototypeIdentifier(FunctionNode prototype)
-        {
-            Prototype = prototype;
-        }
-    }
-
-    public class UndefinedFunctionID : IFunctionID
-    {
+        public MugValueType ReturnType { get; }
+        public MugValue Value { get; }
         public MugValueType? BaseType { get; }
         public MugValueType[] GenericParameters { get; }
         public MugValueType[] Parameters { get; }
 
-        public UndefinedFunctionID(
+        public FunctionSymbol(
             MugValueType? baseType,
             MugValueType[] genericParameters,
-            MugValueType[] parameters)
+            MugValueType[] parameters,
+            MugValueType returntype,
+            MugValue value)
         {
             BaseType = baseType;
             GenericParameters = genericParameters;
             Parameters = parameters;
+            Value = value;
+            ReturnType = returntype;
         }
 
         public override bool Equals(object obj)
         {
-            if (obj is not UndefinedFunctionID id ||
+            if (obj is not FunctionSymbol id ||
                 id.Parameters.Length != Parameters.Length ||
                 id.GenericParameters.Length != GenericParameters.Length)
                 return false;
@@ -57,29 +49,7 @@ namespace Mug.Compilation.Symbols
             if (id.BaseType.HasValue != BaseType.HasValue)
                 return false;
 
-            return id.BaseType.HasValue ? id.BaseType.Value.Equals(BaseType.Value) : true;
-        }
-
-        public static UndefinedFunctionID EntryPoint()
-        {
-            return new UndefinedFunctionID(null, Array.Empty<MugValueType>(), Array.Empty<MugValueType>());
-        }
-    }
-
-    public class FunctionIdentifier : UndefinedFunctionID
-    {
-        public MugValueType ReturnType { get; }
-        public MugValue Value { get; }
-
-        public FunctionIdentifier(
-            MugValueType? baseType,
-            MugValueType[] genericParameters,
-            MugValueType[] parameters,
-            MugValueType returnType,
-            MugValue value) : base(baseType, genericParameters, parameters)
-        {
-            ReturnType = returnType;
-            Value = value;
+            return !id.BaseType.HasValue || id.BaseType.Value.Equals(BaseType.Value);
         }
     }
 
@@ -117,7 +87,8 @@ namespace Mug.Compilation.Symbols
     {
         private readonly IRGenerator _generator;
 
-        public readonly Dictionary<string, List<IFunctionID>> Functions = new();
+        public readonly Dictionary<string, List<FunctionSymbol>> DefinedFunctions = new();
+        public readonly List<FunctionNode> DeclaredFunctions = new();
         public readonly Dictionary<string, List<TypeIdentifier>> Types = new();
         public readonly List<string> CompilerSymbols = new();
 
@@ -126,17 +97,17 @@ namespace Mug.Compilation.Symbols
             _generator = generator;
         }
 
-        public void DeclareFunctionSymbol(string name, IFunctionID identifier, Range position)
+        public void DeclareFunctionSymbol(string name, FunctionSymbol identifier, Range position)
         {
-            if (!Functions.TryAdd(name, new() { identifier }))
+            if (!DefinedFunctions.TryAdd(name, new() { identifier }))
             {
-                if (Functions[name].FindIndex(id => id.Equals(identifier)) != -1)
+                if (DefinedFunctions[name].FindIndex(id => id.Equals(identifier)) != -1)
                 {
                     _generator.Report(position, $"Function '{name}' already declared");
                     return;
                 }
 
-                Functions[name].Add(identifier);
+                DefinedFunctions[name].Add(identifier);
             }
         }
 
@@ -166,60 +137,24 @@ namespace Mug.Compilation.Symbols
             return true;
         }
 
-        public FunctionPrototypeIdentifier GetEntryPoint(out int index)
+        /*public FunctionNode GetEntryPoint()
         {
-            if (!Functions.TryGetValue(IRGenerator.EntryPointName, out var overloads))
+            var index = DeclaredFunctions.FindIndex(
+                function =>
+                function.Name == IRGenerator.EntryPointName &&
+                function.ParameterList.Length == 0 &&
+                function.Generics.Count == 0 &&
+                function.Base == null);
+            
+            if (index == -1)
                 CompilationErrors.Throw("No entry point declared");
 
-            index = overloads.FindIndex(id =>
-            {
-                var prototype = (FunctionPrototypeIdentifier)id;
-                var symbol = new UndefinedFunctionID(
-                    prototype.Prototype.Base?.Type.ToMugValueType(_generator),
-                    Array.Empty<MugValueType>(),
-                    _generator.ParameterTypesToMugTypes(prototype.Prototype.ParameterList.Parameters));
-                return symbol.Equals(UndefinedFunctionID.EntryPoint());
-            });
+            return DeclaredFunctions[index];
+        }*/
 
-            if (index == -1)
-                CompilationErrors.Throw("Cannot find a good overload for entry point");
-
-            return (FunctionPrototypeIdentifier)overloads[index];
-        }
-
-        public IFunctionID GetFunction(string name, IFunctionID identifier, out int index, Range position)
+        public void DefineFunctionSymbol(string name, int index, FunctionSymbol definition)
         {
-            index = 0;
-
-            if (!Functions.TryGetValue(name, out var overloads))
-            {
-                _generator.Report(position, $"Undeclared function '{name}'");
-                return null;
-            }
-
-            index = overloads.FindIndex(id =>
-            {
-                if (id is FunctionPrototypeIdentifier prototype)
-                    id = new UndefinedFunctionID(
-                        prototype.Prototype.Base?.Type.ToMugValueType(_generator),
-                        Array.Empty<MugValueType>(),
-                        _generator.ParameterTypesToMugTypes(prototype.Prototype.ParameterList.Parameters));
-                
-                return id.Equals(identifier);
-            });
-
-            if (index == -1)
-            {
-                _generator.Report(position, $"Cannot find a good overload for function '{name}'");
-                return null;
-            }
-
-            return overloads[index];
-        }
-
-        public void DefineFunctionSymbol(string name, int index, FunctionIdentifier definition)
-        {
-            Functions[name][index] = definition;
+            DefinedFunctions[name][index] = definition;
         }
 
         public TypeIdentifier? GetType(string name, TypeIdentifier identifier, Range position)

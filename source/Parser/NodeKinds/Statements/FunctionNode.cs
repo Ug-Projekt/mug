@@ -10,7 +10,7 @@ namespace Mug.Models.Parser.NodeKinds.Statements
         public string NodeKind => "Function";
         public Pragmas Pragmas { get; set; }
         public string Name { get; set; }
-        public MugType Type { get; set; }
+        public MugType ReturnType { get; set; }
         public ParameterListNode ParameterList { get; set; } = new();
         public List<Token> Generics { get; set; } = new();
         public BlockNode Body { get; set; } = new();

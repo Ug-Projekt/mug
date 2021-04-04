@@ -1,3 +1,6 @@
+todo: -
+done: +
+
 - match
 - 'func some() !sometype', this will mean that the function must be catched also if there is no real error to catch -> 'some() catch { return }'
 - calls that return an enum error can be also not catched if in return expression, where the return's scope owner is a function that returns the same enum error
@@ -7,7 +10,7 @@
 - enum can be negatives
 - fix lexer tests
 - add support for multiline errors
-- add constant bitness coercion in function's calls
++ add constant bitness coercion in function's calls
 - make built in functions under 'funcname!<>()' pattern
 - remove the 'isbuildinfunction' in 'callfunction' and add a pragma 'builtin' only for macros
 - write a path checker to make sure all paths of a scope returns a value, also with hidden subscope buffers
@@ -17,3 +20,4 @@
 - implement 'dyn' type
 - add a raw pointer 'i32*', manged pointer '*i32'
 - to fix references (at the moment they works as left values in assignment but not in expression because there's not coercion system, it is disabled since the coercion bugs calls)
+- reuse the pragmas when new system table is finished
