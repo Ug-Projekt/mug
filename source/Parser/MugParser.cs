@@ -210,8 +210,9 @@ namespace Mug.Models.Parser
 
         private bool MatchAdvance(TokenKind kind, out Token token, bool linesensitive = false)
         {
-            token = Current;
-            return MatchAdvance(kind, linesensitive);
+            var match = MatchAdvance(kind, linesensitive);
+            token = Back;
+            return match;
         }
 
         private Token ExpectConstant(string error)
@@ -551,9 +552,9 @@ namespace Mug.Models.Parser
         private bool MatchFactorOps()
         {
             return
-                MatchAdvance(TokenKind.Star) ||
-                MatchAdvance(TokenKind.Slash) ||
-                MatchAdvance(TokenKind.RangeDots);
+                MatchAdvance(TokenKind.Star, true) ||
+                MatchAdvance(TokenKind.Slash, true) ||
+                MatchAdvance(TokenKind.RangeDots, true);
         }
 
         private FieldAssignmentNode ExpectFieldAssign()
@@ -669,15 +670,21 @@ namespace Mug.Models.Parser
 
         private bool MatchAndOrOperator()
         {
-            return MatchAdvance(TokenKind.BooleanOR) || MatchAdvance(TokenKind.BooleanAND);
+            return MatchAdvance(TokenKind.BooleanOR, true) || MatchAdvance(TokenKind.BooleanAND, true);
+        }
+
+        private bool MatchPlusMinus()
+        {
+            return
+                MatchAdvance(TokenKind.Plus, true) ||
+                MatchAdvance(TokenKind.Minus, true);
         }
 
         private INode ExpectExpression(bool allowBoolOP = true, bool allowLogicOP = true, bool allowNullExpression = false, params TokenKind[] end)
         {
             if (MatchFactor(out var e))
             {
-                if (MatchAdvance(TokenKind.Plus) ||
-                    MatchAdvance(TokenKind.Minus))
+                if (MatchPlusMinus())
                 {
                     var op = Back;
                     var right = ExpectFactor();
@@ -685,8 +692,7 @@ namespace Mug.Models.Parser
                     do
                     {
                         e = new ExpressionNode() { Operator = ToOperatorKind(op.Kind), Left = e, Right = right, Position = op.Position };
-                        if (MatchAdvance(TokenKind.Plus) ||
-                            MatchAdvance(TokenKind.Minus))
+                        if (MatchPlusMinus())
                             op = Back;
                         else
                             break;
