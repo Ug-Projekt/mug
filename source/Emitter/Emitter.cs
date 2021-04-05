@@ -7,6 +7,7 @@ using Mug.Models.Parser.NodeKinds.Statements;
 using Mug.MugValueSystem;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 
 namespace Mug.Models.Generator.Emitter
@@ -421,18 +422,11 @@ namespace Mug.Models.Generator.Emitter
         /// <summary>
         /// buils an array of the parameters to pass and calls the function
         /// </summary>
-        public void Call(LLVMValueRef function, int paramCount, MugValueType returnType, bool hasbase)
+        public void Call(LLVMValueRef function, MugValue[] parameters, MugValueType returnType, MugValue? basevalue)
         {
-            var baseoffset = Convert.ToInt32(hasbase);
-            var parameters = new List<MugValue>(paramCount + baseoffset);
+            var llvmparameters = _generator.MugValuesToLLVMValues(parameters);
 
-            if (hasbase)
-                parameters.Insert(0, Pop());
-
-            for (int i = 0; i < paramCount; i++)
-                parameters.Insert(i + baseoffset, Pop());
-
-            var result = Builder.BuildCall(function, _generator.MugValuesToLLVMValues(parameters.ToArray()));
+            var result = Builder.BuildCall(function, basevalue.HasValue ? llvmparameters.Prepend(basevalue.Value.LLVMValue).ToArray() : llvmparameters);
 
             if (result.TypeOf.Kind != LLVMTypeKind.LLVMVoidTypeKind)
                 Load(MugValue.From(result, returnType));

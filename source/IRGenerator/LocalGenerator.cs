@@ -438,11 +438,11 @@ namespace Mug.Models.Generator
             return true;
         }
 
-        private FunctionSymbol? EvaluateFunctionCallName(INode leftexpression, MugValue[] parameters, MugValueType[] genericsInput, out bool hasbase)
+        private FunctionSymbol? EvaluateFunctionCallName(INode leftexpression, ref MugValue[] parameters, MugValueType[] genericsInput, out MugValue? basetype)
         {
             string name;
             Range position;
-            hasbase = false;
+            basetype = null;
 
             if (leftexpression is Token token)
             {
@@ -460,9 +460,9 @@ namespace Mug.Models.Generator
                 if (!EvaluateExpression(member.Base))
                     return null;
 
+                basetype = _emitter.Pop();
                 name = member.Member.Value;
                 position = member.Member.Position;
-                hasbase = true;
             }
             else // (expr)()
             {
@@ -470,16 +470,10 @@ namespace Mug.Models.Generator
                 throw new(); // tofix
             }
 
-            return GetFunctionSymbol(hasbase ? _emitter.Pop() : null, name, genericsInput, parameters, position);
+            return GetFunctionSymbol(ref basetype, name, genericsInput, ref parameters, position);
         }
 
-        private void LoadParameters(MugValue[] parameters)
-        {
-            for (int i = parameters.Length - 1; i >= 0; i--)
-                _emitter.Load(parameters[i]);
-        }
-
-        private FunctionSymbol? GetFunctionSymbol(MugValue? basevalue, string name, MugValueType[] generics, MugValue[] parameters, Range position)
+        private FunctionSymbol? GetFunctionSymbol(ref MugValue? basevalue, string name, MugValueType[] generics, ref MugValue[] parameters, Range position)
         {
             if (!_generator.Table.DefinedFunctions.TryGetValue(name, out var overloads))
             {
@@ -501,6 +495,8 @@ namespace Mug.Models.Generator
                     _emitter.Load(basevalue.Value);
                     _emitter.CoerceConstantSizeTo(function.BaseType.Value);
                     basevalue = _emitter.Pop();
+                    if (!basevalue.Value.Type.Equals(function.BaseType.Value))
+                        continue;
                 }
 
                 var i = 0;
@@ -524,10 +520,6 @@ namespace Mug.Models.Generator
                     i++;
                 }
 
-                LoadParameters(parameters);
-
-                _emitter.Load(basevalue.Value);
-
                 return function;
 
             mismatch:;
@@ -539,7 +531,7 @@ namespace Mug.Models.Generator
             for (int i = 0; i < parameters.Length; i++)
                 types[i] = parameters[i].Type;
             
-            Report(position, $"No overload for function '{name}' accepts {(parameters.Length > 0 ? $"'{string.Join("', '", types)}' as parameters" : "no parameters")}{(basevalue.HasValue ? $" and with '{basevalue.Value}' as base type" : "")}");
+            Report(position, $"No overload for function '{name}' accepts {(parameters.Length > 0 ? $"'{string.Join("', '", types)}' as parameters" : "no parameters")}{(basevalue.HasValue ? $" and with '{basevalue.Value.Type}' as base type" : "")}");
             return null;
         }
 
@@ -576,7 +568,8 @@ namespace Mug.Models.Generator
             if (!paramsAreOk)
                 return false;
 
-            var function = EvaluateFunctionCallName(c.Name, parameters, _generator.MugTypesToMugValueTypes(c.Generics), out bool hasbase);
+            // passing as ref to get result of constant bitness coercion
+            var function = EvaluateFunctionCallName(c.Name, ref parameters, _generator.MugTypesToMugValueTypes(c.Generics), out var basevalue);
 
             if (function is null)
                 return false;
@@ -587,7 +580,7 @@ namespace Mug.Models.Generator
             if (expectedNonVoid)
                 _generator.ExpectNonVoidType(functionType.Value.LLVMType,c.Position);
 
-            _emitter.Call(function.Value.Value.LLVMValue, c.Parameters.Length, functionType.Value, hasbase);
+            _emitter.Call(function.Value.Value.LLVMValue, parameters, functionType.Value, basevalue);
 
             if (!isInCatch && functionType.Value.TypeKind == MugValueTypeKind.EnumErrorDefined)
                 return Report(c.Position, "Uncatched enum error");
