@@ -446,6 +446,12 @@ namespace Mug.Models.Generator
 
             if (leftexpression is Token token)
             {
+                if (token.Kind != TokenKind.Identifier)
+                {
+                    Report(token.Position, "Uncallable item");
+                    return null;
+                }
+
                 name = token.Value;
                 position = token.Position;
             }
@@ -464,7 +470,7 @@ namespace Mug.Models.Generator
                 throw new(); // tofix
             }
 
-            return GetFunctionSymbol(hasbase ? new MugValueType?(_emitter.PeekType()) : null, name, genericsInput, parameters, position);
+            return GetFunctionSymbol(hasbase ? _emitter.Pop() : null, name, genericsInput, parameters, position);
         }
 
         private void LoadParameters(MugValue[] parameters)
@@ -473,7 +479,7 @@ namespace Mug.Models.Generator
                 _emitter.Load(parameters[i]);
         }
 
-        private FunctionSymbol? GetFunctionSymbol(MugValueType? basetype, string name, MugValueType[] generics, MugValue[] parameters, Range position)
+        private FunctionSymbol? GetFunctionSymbol(MugValue? basevalue, string name, MugValueType[] generics, MugValue[] parameters, Range position)
         {
             if (!_generator.Table.DefinedFunctions.TryGetValue(name, out var overloads))
             {
@@ -481,12 +487,21 @@ namespace Mug.Models.Generator
                 return null;
             }
 
+            // this should be useless
             var oldparameters = parameters;
+            var oldbasevalue = basevalue;
 
             foreach (var function in overloads)
             {
-                if (parameters.Length != function.Parameters.Length || !basetype.Equals(function.BaseType))
+                if (parameters.Length != function.Parameters.Length || basevalue.HasValue != function.BaseType.HasValue)
                     continue;
+
+                if (basevalue.HasValue)
+                {
+                    _emitter.Load(basevalue.Value);
+                    _emitter.CoerceConstantSizeTo(function.BaseType.Value);
+                    basevalue = _emitter.Pop();
+                }
 
                 var i = 0;
                 
@@ -508,26 +523,23 @@ namespace Mug.Models.Generator
 
                     i++;
                 }
-                // saving the basevalue
-                MugValue? basevalue = basetype.HasValue ? _emitter.Pop() : null;
 
                 LoadParameters(parameters);
 
-                // repushing the base value (it must be the last on the stack)
-                if (basetype.HasValue)
-                    _emitter.Load(basevalue.Value);
+                _emitter.Load(basevalue.Value);
 
                 return function;
 
             mismatch:;
                 parameters = oldparameters;
+                basevalue = oldbasevalue;
             }
 
             var types = new MugValueType[parameters.Length];
             for (int i = 0; i < parameters.Length; i++)
                 types[i] = parameters[i].Type;
             
-            Report(position, $"Unable to find a good overload for function '{name}', which accepts {(parameters.Length > 0 ? $"'{string.Join("', '", types)}' as parameters" : "no parameters")}");
+            Report(position, $"No overload for function '{name}' accepts {(parameters.Length > 0 ? $"'{string.Join("', '", types)}' as parameters" : "no parameters")}{(basevalue.HasValue ? $" and with '{basevalue.Value}' as base type" : "")}");
             return null;
         }
 
@@ -561,9 +573,12 @@ namespace Mug.Models.Generator
                 return true;
             }*/
 
+            if (!paramsAreOk)
+                return false;
+
             var function = EvaluateFunctionCallName(c.Name, parameters, _generator.MugTypesToMugValueTypes(c.Generics), out bool hasbase);
 
-            if (function is null || !paramsAreOk)
+            if (function is null)
                 return false;
 
             // function type: <ret_type> <param_types>

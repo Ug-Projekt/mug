@@ -14,12 +14,11 @@ try
 // func add<T>(a: T, b: T) { return a + b }
 // func add(a: i32, b: i32) { return a + b }
 
-func add(a: u8, b: u8): u8 { return a + b }
-func add(a: i32, b: i32): i32 { return a + b }
+func (a: u8) add(b: u8): u8 { return a + b }
 
 func main() {
-  var i = 10
-  add(1, i)
+  var i: u8 = 10
+  1.add(i)
 }
 ";
 
